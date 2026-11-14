@@ -7,6 +7,42 @@ touchscreen:
   - platform: gt911
     id: touch
     interrupt_pin: GPIO4
+    on_update:
+      then:
+        - if:
+            condition:
+              lambda: |-
+                for (auto touch : touches) {
+                  if (touch.state >= 4) {
+                    const int dx = touch.x - touch.x_org;
+                    const int dy = touch.y - touch.y_org;
+                    const int abs_dx = dx < 0 ? -dx : dx;
+                    const int abs_dy = dy < 0 ? -dy : dy;
+                    if (dx < -100 && abs_dx > abs_dy) {
+                      return true;
+                    }
+                  }
+                }
+                return false;
+            then:
+              - lvgl.page.next:
+        - if:
+            condition:
+              lambda: |-
+                for (auto touch : touches) {
+                  if (touch.state >= 4) {
+                    const int dx = touch.x - touch.x_org;
+                    const int dy = touch.y - touch.y_org;
+                    const int abs_dx = dx < 0 ? -dx : dx;
+                    const int abs_dy = dy < 0 ? -dy : dy;
+                    if (dx > 100 && abs_dx > abs_dy) {
+                      return true;
+                    }
+                  }
+                }
+                return false;
+            then:
+              - lvgl.page.previous:
 
 display:
   - platform: rpi_dpi_rgb

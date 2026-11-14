@@ -3,3 +3,4 @@ packages:
   hardware: !include esphome/hardware.yaml
   home_assistant: !include esphome/home_assistant.yaml
   dashboard: !include esphome/dashboard.yaml
+  entities: !include esphome/entities.yaml

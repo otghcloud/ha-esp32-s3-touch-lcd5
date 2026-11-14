@@ -1,280 +1,360 @@
+# Generated from ../config.yaml by scripts/generate_dashboard.py. Do not edit directly.
 font:
-  - file: "gfonts://Roboto"
-    id: font_large
-    size: 38
-
-  - file: "gfonts://Roboto"
-    id: font_medium
-    size: 24
-
-  - file: "gfonts://Roboto"
-    id: font_small
-    size: 16
-
+- file: gfonts://Roboto
+  id: font_large
+  size: 38
+- file: gfonts://Roboto
+  id: font_medium
+  size: 24
+- file: gfonts://Roboto
+  id: font_small
+  size: 16
 image:
-  - platform: file
-    file: "mdi:lightbulb"
-    id: icon_lamp
-    type: GRAYSCALE
-    transparency: alpha_channel
-    resize: 72x72
-
-  - platform: file
-    file: "mdi:ceiling-light"
-    id: icon_ceiling
-    type: GRAYSCALE
-    transparency: alpha_channel
-    resize: 72x72
-
-  - platform: file
-    file: "mdi:lightbulb-group-outline"
-    id: icon_cupboard
-    type: GRAYSCALE
-    transparency: alpha_channel
-    resize: 72x72
-
-  - platform: file
-    file: "mdi:door"
-    id: icon_door
-    type: GRAYSCALE
-    transparency: alpha_channel
-    resize: 72x72
-
+- platform: file
+  file: mdi:lightbulb
+  id: icon_lightbulb
+  type: GRAYSCALE
+  transparency: alpha_channel
+  resize: 72x72
+- platform: file
+  file: mdi:ceiling-light
+  id: icon_ceiling_light
+  type: GRAYSCALE
+  transparency: alpha_channel
+  resize: 72x72
+- platform: file
+  file: mdi:lightbulb-group-outline
+  id: icon_lightbulb_group_outline
+  type: GRAYSCALE
+  transparency: alpha_channel
+  resize: 72x72
+- platform: file
+  file: mdi:door
+  id: icon_door
+  type: GRAYSCALE
+  transparency: alpha_channel
+  resize: 72x72
+- platform: file
+  file: mdi:robot
+  id: icon_robot
+  type: GRAYSCALE
+  transparency: alpha_channel
+  resize: 72x72
 lvgl:
+  page_wrap: false
+  top_layer:
+    widgets:
+    - label:
+        id: lbl_time
+        text: --:--
+        text_font: font_large
+        text_color: 0xF2F4F8
+        align: TOP_RIGHT
+        x: -24
+        y: 4
   pages:
-    - id: main_page
-      bg_color: 0x111827
-      bg_opa: COVER
-
-      widgets:
+  - id: office
+    bg_color: 0x111827
+    bg_opa: COVER
+    widgets:
+    - label:
+        id: page_title_office
+        text: Office
+        text_font: font_medium
+        text_color: 0xF2F4F8
+        align: TOP_LEFT
+        x: 24
+        y: 10
+    - button:
+        x: 20
+        y: 65
+        width: 360
+        height: 155
+        bg_color: 0x171F2C
+        bg_opa: 90%
+        border_color: 0x344154
+        border_width: 1
+        radius: 18
+        on_click:
+        - homeassistant.action:
+            action: light.toggle
+            data:
+              entity_id: light.office_lamp
+        widgets:
+        - image:
+            src: icon_lightbulb
+            x: 22
+            y: 42
+            image_recolor: 0xF2C66D
+            image_recolor_opa: COVER
         - label:
-            text: "Office"
+            text: Lamp
             text_font: font_medium
             text_color: 0xF2F4F8
-            align: TOP_LEFT
-            x: 24
-            y: 10
-
+            x: 112
+            y: 30
         - label:
-            id: lbl_time
-            text: "--:--"
-            text_font: font_large
-            text_color: 0xF2F4F8
-            align: TOP_RIGHT
-            x: -24
-            y: 4
-
-        - button:
-            x: 20
-            y: 65
-            width: 360
-            height: 155
-            bg_color: 0x171F2C
-            bg_opa: 90%
-            border_color: 0x344154
-            border_width: 1
-            radius: 18
-
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.office_lamp
-
-            widgets:
-              - image:
-                  src: icon_lamp
-                  x: 22
-                  y: 42
-                  image_recolor: 0xF2C66D
-                  image_recolor_opa: COVER
-
-              - label:
-                  text: "Lamp"
-                  text_font: font_medium
-                  text_color: 0xF2F4F8
-                  x: 112
-                  y: 30
-
-              - label:
-                  id: lbl_lamp_state
-                  text: "UNKNOWN"
-                  text_font: font_medium
-                  text_color: 0xAAB4C5
-                  x: 112
-                  y: 78
-
-              - label:
-                  id: lbl_lamp_unavailable
-                  text: "UNAVAILABLE"
-                  text_font: font_small
-                  text_color: 0xF2A65A
-                  align: TOP_RIGHT
-                  x: -14
-                  y: 10
-
-        - button:
-            x: 420
-            y: 65
-            width: 360
-            height: 155
-            bg_color: 0x171F2C
-            bg_opa: 90%
-            border_color: 0x344154
-            border_width: 1
-            radius: 18
-
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.office_ceiling
-
-            widgets:
-              - image:
-                  src: icon_ceiling
-                  x: 22
-                  y: 42
-                  image_recolor: 0xF2C66D
-                  image_recolor_opa: COVER
-
-              - label:
-                  text: "Ceiling"
-                  text_font: font_medium
-                  text_color: 0xF2F4F8
-                  x: 112
-                  y: 30
-
-              - label:
-                  id: lbl_ceiling_state
-                  text: "UNKNOWN"
-                  text_font: font_medium
-                  text_color: 0xAAB4C5
-                  x: 112
-                  y: 78
-
-              - label:
-                  id: lbl_ceiling_unavailable
-                  text: "UNAVAILABLE"
-                  text_font: font_small
-                  text_color: 0xF2A65A
-                  align: TOP_RIGHT
-                  x: -14
-                  y: 10
-
-        - button:
-            x: 20
-            y: 230
-            width: 360
-            height: 155
-            bg_color: 0x171F2C
-            bg_opa: 90%
-            border_color: 0x344154
-            border_width: 1
-            radius: 18
-
-            on_click:
-              - homeassistant.action:
-                  action: light.toggle
-                  data:
-                    entity_id: light.office_cupboard_light
-
-            widgets:
-              - image:
-                  src: icon_cupboard
-                  x: 22
-                  y: 42
-                  image_recolor: 0xF2C66D
-                  image_recolor_opa: COVER
-
-              - label:
-                  text: "Cupboard"
-                  text_font: font_medium
-                  text_color: 0xF2F4F8
-                  x: 112
-                  y: 30
-
-              - label:
-                  id: lbl_cupboard_state
-                  text: "UNKNOWN"
-                  text_font: font_medium
-                  text_color: 0xAAB4C5
-                  x: 112
-                  y: 78
-
-              - label:
-                  id: lbl_cupboard_unavailable
-                  text: "UNAVAILABLE"
-                  text_font: font_small
-                  text_color: 0xF2A65A
-                  align: TOP_RIGHT
-                  x: -14
-                  y: 10
-
-        - button:
-            x: 420
-            y: 230
-            width: 360
-            height: 155
-            bg_color: 0x171F2C
-            bg_opa: 90%
-            border_color: 0x344154
-            border_width: 1
-            radius: 18
-
-            on_click:
-              - if:
-                  condition:
-                    lambda: |-
-                      return id(door_raw).state == "locked";
-                  then:
-                    - homeassistant.action:
-                        action: lock.unlock
-                        data:
-                          entity_id: lock.office_office_door
-                  else:
-                    - homeassistant.action:
-                        action: lock.lock
-                        data:
-                          entity_id: lock.office_office_door
-
-            widgets:
-              - image:
-                  src: icon_door
-                  x: 22
-                  y: 42
-                  image_recolor: 0xF2C66D
-                  image_recolor_opa: COVER
-
-              - label:
-                  text: "Door"
-                  text_font: font_medium
-                  text_color: 0xF2F4F8
-                  x: 112
-                  y: 30
-
-              - label:
-                  id: lbl_door_state
-                  text: "UNKNOWN"
-                  text_font: font_medium
-                  text_color: 0xAAB4C5
-                  x: 112
-                  y: 78
-
-              - label:
-                  id: lbl_door_unavailable
-                  text: "UNAVAILABLE"
-                  text_font: font_small
-                  text_color: 0xF2A65A
-                  align: TOP_RIGHT
-                  x: -14
-                  y: 10
-
+            id: lbl_lamp_state
+            text: UNKNOWN
+            text_font: font_medium
+            text_color: 0xAAB4C5
+            x: 112
+            y: 78
         - label:
-            id: lbl_temp
-            text: "Temperature: --.- C"
+            id: lbl_lamp_unavailable
+            text: UNAVAILABLE
             text_font: font_small
-            text_color: 0xB9C2D0
-            align: BOTTOM_LEFT
-            x: 24
-            y: -14
+            text_color: 0xF2A65A
+            align: TOP_RIGHT
+            x: -14
+            y: 10
+            hidden: true
+    - button:
+        x: 420
+        y: 65
+        width: 360
+        height: 155
+        bg_color: 0x171F2C
+        bg_opa: 90%
+        border_color: 0x344154
+        border_width: 1
+        radius: 18
+        on_click:
+        - homeassistant.action:
+            action: light.toggle
+            data:
+              entity_id: light.office_ceiling
+        widgets:
+        - image:
+            src: icon_ceiling_light
+            x: 22
+            y: 42
+            image_recolor: 0xF2C66D
+            image_recolor_opa: COVER
+        - label:
+            text: Ceiling
+            text_font: font_medium
+            text_color: 0xF2F4F8
+            x: 112
+            y: 30
+        - label:
+            id: lbl_ceiling_state
+            text: UNKNOWN
+            text_font: font_medium
+            text_color: 0xAAB4C5
+            x: 112
+            y: 78
+        - label:
+            id: lbl_ceiling_unavailable
+            text: UNAVAILABLE
+            text_font: font_small
+            text_color: 0xF2A65A
+            align: TOP_RIGHT
+            x: -14
+            y: 10
+            hidden: true
+    - button:
+        x: 20
+        y: 230
+        width: 360
+        height: 155
+        bg_color: 0x171F2C
+        bg_opa: 90%
+        border_color: 0x344154
+        border_width: 1
+        radius: 18
+        on_click:
+        - homeassistant.action:
+            action: light.toggle
+            data:
+              entity_id: light.office_cupboard_light
+        widgets:
+        - image:
+            src: icon_lightbulb_group_outline
+            x: 22
+            y: 42
+            image_recolor: 0xF2C66D
+            image_recolor_opa: COVER
+        - label:
+            text: Cupboard
+            text_font: font_medium
+            text_color: 0xF2F4F8
+            x: 112
+            y: 30
+        - label:
+            id: lbl_cupboard_state
+            text: UNKNOWN
+            text_font: font_medium
+            text_color: 0xAAB4C5
+            x: 112
+            y: 78
+        - label:
+            id: lbl_cupboard_unavailable
+            text: UNAVAILABLE
+            text_font: font_small
+            text_color: 0xF2A65A
+            align: TOP_RIGHT
+            x: -14
+            y: 10
+            hidden: true
+    - button:
+        x: 420
+        y: 230
+        width: 360
+        height: 155
+        bg_color: 0x171F2C
+        bg_opa: 90%
+        border_color: 0x344154
+        border_width: 1
+        radius: 18
+        on_click:
+        - if:
+            condition:
+              lambda: return id(ha_door_state).state == "locked";
+            then:
+            - homeassistant.action:
+                action: lock.unlock
+                data:
+                  entity_id: lock.office_office_door
+            else:
+            - homeassistant.action:
+                action: lock.lock
+                data:
+                  entity_id: lock.office_office_door
+        widgets:
+        - image:
+            src: icon_door
+            x: 22
+            y: 42
+            image_recolor: 0xF2C66D
+            image_recolor_opa: COVER
+        - label:
+            text: Door
+            text_font: font_medium
+            text_color: 0xF2F4F8
+            x: 112
+            y: 30
+        - label:
+            id: lbl_door_state
+            text: UNKNOWN
+            text_font: font_medium
+            text_color: 0xAAB4C5
+            x: 112
+            y: 78
+        - label:
+            id: lbl_door_unavailable
+            text: UNAVAILABLE
+            text_font: font_small
+            text_color: 0xF2A65A
+            align: TOP_RIGHT
+            x: -14
+            y: 10
+            hidden: true
+    - label:
+        id: lbl_temperature_office
+        text: 'Temperature: --.- C'
+        text_font: font_small
+        text_color: 0xB9C2D0
+        align: BOTTOM_LEFT
+        x: 24
+        y: -14
+  - id: landing
+    bg_color: 0x111827
+    bg_opa: COVER
+    widgets:
+    - label:
+        id: page_title_landing
+        text: Landing
+        text_font: font_medium
+        text_color: 0xF2F4F8
+        align: TOP_LEFT
+        x: 24
+        y: 10
+    - button:
+        x: 20
+        y: 65
+        width: 360
+        height: 155
+        bg_color: 0x171F2C
+        bg_opa: 90%
+        border_color: 0x344154
+        border_width: 1
+        radius: 18
+        on_click:
+        - homeassistant.action:
+            action: light.toggle
+            data:
+              entity_id: light.landing_light
+        widgets:
+        - image:
+            src: icon_lightbulb
+            x: 22
+            y: 42
+            image_recolor: 0xF2C66D
+            image_recolor_opa: COVER
+        - label:
+            text: Landing Light
+            text_font: font_medium
+            text_color: 0xF2F4F8
+            x: 112
+            y: 30
+        - label:
+            id: lbl_landing_light_state
+            text: UNKNOWN
+            text_font: font_medium
+            text_color: 0xAAB4C5
+            x: 112
+            y: 78
+        - label:
+            id: lbl_landing_light_unavailable
+            text: UNAVAILABLE
+            text_font: font_small
+            text_color: 0xF2A65A
+            align: TOP_RIGHT
+            x: -14
+            y: 10
+            hidden: true
+    - button:
+        x: 420
+        y: 65
+        width: 360
+        height: 155
+        bg_color: 0x171F2C
+        bg_opa: 90%
+        border_color: 0x344154
+        border_width: 1
+        radius: 18
+        on_click:
+        - homeassistant.action:
+            action: automation.toggle
+            data:
+              entity_id: automation.lighting_landing
+        widgets:
+        - image:
+            src: icon_robot
+            x: 22
+            y: 42
+            image_recolor: 0xF2C66D
+            image_recolor_opa: COVER
+        - label:
+            text: Landing Lighting
+            text_font: font_medium
+            text_color: 0xF2F4F8
+            x: 112
+            y: 30
+        - label:
+            id: lbl_landing_lighting_state
+            text: UNKNOWN
+            text_font: font_medium
+            text_color: 0xAAB4C5
+            x: 112
+            y: 78
+        - label:
+            id: lbl_landing_lighting_unavailable
+            text: UNAVAILABLE
+            text_font: font_small
+            text_color: 0xF2A65A
+            align: TOP_RIGHT
+            x: -14
+            y: 10
+            hidden: true

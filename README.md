@@ -48,9 +48,25 @@ ESPHome configuration for the Waveshare ESP32-S3-Touch-LCD-5 (800 × 480), with 
 The remote-package example assumes this project has been published to the `main` branch.
 The initial build downloads the Roboto font and Material Design icons, so the build environment needs internet access.
 
+## Dashboard configuration
+
+The static page and entity definitions are in [`config.yaml`](./config.yaml). The ESPHome YAML included by the remote package is generated from that file. After changing the page titles, controls, or entity IDs, regenerate the package files with:
+
+```sh
+python3 scripts/generate_dashboard.py
+```
+
+The generator requires PyYAML (included when ESPHome is installed). To verify that generated files match the configuration without modifying them, run:
+
+```sh
+python3 scripts/generate_dashboard.py --check
+```
+
+Pages support up to four controls each in the current two-column layout. Light and automation controls toggle their Home Assistant entities; lock controls lock or unlock based on their current state. Swipe left and right to move between pages.
+
 ## Current Home Assistant entities
 
-This first version uses these fixed entity IDs:
+The initial `config.yaml` uses these fixed entity IDs:
 
 | Purpose | Entity ID |
 | --- | --- |
@@ -59,8 +75,10 @@ This first version uses these fixed entity IDs:
 | Ceiling light | `light.office_ceiling` |
 | Cupboard light | `light.office_cupboard_light` |
 | Door lock | `lock.office_office_door` |
+| Landing light | `light.landing_light` |
+| Landing lighting automation | `automation.lighting_landing` |
 
-These entities must exist in Home Assistant for the controls to work. Configurable entity IDs are planned for a future iteration.
+These entities must exist in Home Assistant for the controls to work. Entity IDs can be changed in `config.yaml`; automatic configuration through a Home Assistant blueprint is planned for a future iteration.
 
 ## Notes
 
