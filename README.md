@@ -25,14 +25,14 @@ ESPHome configuration for the Waveshare ESP32-S3-Touch-LCD-5 (800 × 480), with 
 
    ```yaml
    substitutions:
-     device_name: "bedroom-nspanel"
-     friendly_name: "Bedroom NSPanel"
+     device_name: "example-devpanel"
+     friendly_name: "Example DevPanel"
      wifi_ssid: !secret iot_wifi_ssid
      wifi_password: !secret iot_wifi_password
 
    api:
      encryption:
-       key: !secret bedroom_nspanel_api_key
+       key: !secret example_devpanel_api_key
 
    packages:
      remote_package:

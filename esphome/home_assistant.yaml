@@ -1,6 +1,9 @@
 time:
   - platform: homeassistant
     id: homeassistant_time
+    on_time_sync:
+      then:
+        - script.execute: update_clock
 
 sensor:
   - platform: homeassistant
@@ -133,13 +136,22 @@ text_sensor:
                         text: "UNLOCKED"
                         text_color: 0xF87171
 
+script:
+  - id: update_clock
+    then:
+      - if:
+          condition:
+            lambda: return id(homeassistant_time).now().is_valid();
+          then:
+            - lvgl.label.update:
+                id: lbl_time
+                text:
+                  format: "%02d:%02d"
+                  args:
+                    - id(homeassistant_time).now().hour
+                    - id(homeassistant_time).now().minute
+
 interval:
   - interval: 30s
     then:
-      - lvgl.label.update:
-          id: lbl_time
-          text:
-            format: "%02d:%02d"
-            args:
-              - id(homeassistant_time).now().hour
-              - id(homeassistant_time).now().minute
+      - script.execute: update_clock
