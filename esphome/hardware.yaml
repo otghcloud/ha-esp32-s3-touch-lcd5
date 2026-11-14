@@ -27,42 +27,47 @@ touchscreen:
         - lambda: id(dashboard).end_touch();
 
 display:
-  - platform: rpi_dpi_rgb
+  - platform: mipi_rgb
+    model: RPI
     id: lcd
+    update_interval: never
+    auto_clear_enabled: false
+    byte_order: big_endian
 
     dimensions:
       width: 800
       height: 480
 
+    # Preserve the legacy driver's BGR data-bit mapping.
     data_pins:
-      red:
-        - GPIO1
-        - GPIO2
-        - GPIO42
-        - GPIO41
-        - GPIO40
-
-      green:
-        - GPIO39
-        - GPIO0
-        - GPIO45
-        - GPIO48
-        - GPIO47
-        - GPIO21
-
-      blue:
-        - GPIO14
-        - GPIO38
-        - GPIO18
-        - GPIO17
-        - GPIO10
+      - GPIO48
+      - GPIO47
+      - GPIO21
+      - GPIO14
+      - GPIO38
+      - GPIO18
+      - GPIO17
+      - GPIO10
+      - GPIO1
+      - GPIO2
+      - GPIO42
+      - GPIO41
+      - GPIO40
+      - GPIO39
+      - GPIO0
+      - GPIO45
 
     de_pin: GPIO5
     pclk_pin: GPIO7
-    hsync_pin: GPIO46
-    vsync_pin: GPIO3
+    hsync_pin:
+      number: GPIO46
+      ignore_strapping_warning: true
+    vsync_pin:
+      number: GPIO3
+      ignore_strapping_warning: true
 
     pclk_frequency: 16MHz
+    pclk_inverted: true
 
     hsync_pulse_width: 4
     hsync_front_porch: 8

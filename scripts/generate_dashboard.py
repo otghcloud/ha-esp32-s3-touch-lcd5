@@ -123,7 +123,7 @@ def make_dashboard():
                     "glyphs": [chr(codepoint) for codepoint in
                                sorted({int(value, 16) for value in load_icons().values()})]}],
         "image": [{"platform": "file", "file": "../assets/background_dark.png",
-                   "id": "dashboard_background", "type": "RGB565"}],
+                   "id": "dashboard_background", "type": "RGB565", "resize": "800x480"}],
         "lvgl": {
             "bg_color": 0x111827, "bg_image_src": "dashboard_background",
             "pad_all": 0, "scrollable": False,

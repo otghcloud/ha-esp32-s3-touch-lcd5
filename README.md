@@ -110,7 +110,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 
 The generator also maintains the MDI lookup header from the pinned [`scripts/mdi-icons.json`](./scripts/mdi-icons.json) catalogue. Use `python3 scripts/generate_dashboard.py --update-icons` to refresh that catalogue from the pinned upstream stylesheet. Change `MDI_VERSION` and regenerate together when upgrading the font. MDI licensing is recorded in [`MDI-LICENSE`](./esphome/components/wallpanel/MDI-LICENSE). The one-bit icon font keeps the complete library within flash without loading every icon bitmap into RAM.
 
-The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks page navigation, dots, state labels, offline controls and rejection of invalid snapshots:
+The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks background rendering, page navigation, dots, state labels, offline controls and rejection of invalid snapshots:
 
 ```sh
 esphome compile scripts/runtime_tests/runtime.yaml
@@ -123,5 +123,7 @@ For local firmware development, set the `wallpanel_component_source` substitutio
 
 ## Notes
 
+- The display uses `mipi_rgb` with the original 800 × 480 timings and data-bit mapping. GPIO46/GPIO3 strapping warnings are explicitly acknowledged for the board's fixed sync connections; do not add external pull resistors to these pins.
+- The ESP-IDF configuration selects the `generic` flash driver reported by the target panel. If another hardware revision reports a different flash driver, override `esp32.framework.advanced.flash_chip` accordingly.
 - The fallback access point and captive portal are not enabled.
 - The public package does not currently implement `boot_sound` or `language` settings.

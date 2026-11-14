@@ -7500,6 +7500,7 @@ image:
   file: ../assets/background_dark.png
   id: dashboard_background
   type: RGB565
+  resize: 800x480
 lvgl:
   bg_color: 1120295
   bg_image_src: dashboard_background
