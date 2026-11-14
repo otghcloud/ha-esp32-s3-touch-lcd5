@@ -106,7 +106,7 @@ class BlueprintTests(unittest.TestCase):
             "sensor.landing": {"unit_of_measurement": "C"},
         })
         snapshot = self.snapshot()
-        self.assertEqual(len(snapshot["pages"]), 6)
+        self.assertEqual(len(snapshot["pages"]), 8)
         self.assertEqual(snapshot["pages"][0]["buttons"][0]["entity"], "")
         page = snapshot["pages"][1]
         self.assertEqual(page["title"], 'Landing "night"')
@@ -126,7 +126,7 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["entity"], "")
 
     def test_custom_titles_apply_to_every_button_slot(self):
-        for page in range(1, 7):
+        for page in range(1, 9):
             self.inputs[f"page_{page}_layout"] = "6x3"
             for button in range(1, 19):
                 key = f"page_{page}_button_{button}"
@@ -159,7 +159,7 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["name"], "x" * 80)
 
     def test_entity_icons_apply_to_every_slot_and_follow_attribute_changes(self):
-        for page in range(1, 7):
+        for page in range(1, 9):
             self.inputs[f"page_{page}_layout"] = "6x3"
             for button in range(1, 19):
                 entity = f"light.test_{page}_{button}"
@@ -215,7 +215,7 @@ class BlueprintTests(unittest.TestCase):
 
     def full_snapshot(self, title="Full control"):
         self.inputs["navigation_layout"] = "4x2"
-        for page in range(1, 7):
+        for page in range(1, 9):
             self.inputs[f"page_{page}_layout"] = "6x3"
             self.inputs[f"page_{page}_title"] = f"API page {page}"
             for button in range(1, 19):

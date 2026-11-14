@@ -59,7 +59,7 @@ async def check():
             entities, services = await client.list_entities_services()
             service = {item.name: item for item in services}
             probe = next(item for item in entities if isinstance(item, TextSensorInfo) and item.name == "Transport probe")
-            wake = next(item for item in entities if isinstance(item, SelectInfo) and "Page 6" in item.options)
+            wake = next(item for item in entities if isinstance(item, SelectInfo) and "Page 8" in item.options)
 
             def on_state(state):
                 if isinstance(state, TextSensorState) and state.key == probe.key and not state.missing_state:
@@ -109,15 +109,15 @@ async def check():
                 **last, "index": int(last["index"]), "total": int(last["total"]),
             })
             await wait_probe(lambda value: value["last_name"] == "X" * 80)
-            client.select_command(wake.key, "Page 6")
+            client.select_command(wake.key, "Page 8")
             await client.execute_service(service["test_wake"], {})
-            await wait_probe(lambda value: value["page6_visible"])
+            await wait_probe(lambda value: value["page8_visible"])
             await tap(720, 335)
-            await expect_entity(snapshot["pages"][5]["buttons"][17]["entity"])
+            await expect_entity(snapshot["pages"][7]["buttons"][17]["entity"])
             await tap(768, 456)
             await wait_probe(lambda value: value["menu_visible"])
             await tap(107, 142)
-            await wait_probe(lambda value: not value["menu_visible"] and not value["page6_visible"])
+            await wait_probe(lambda value: not value["menu_visible"] and not value["page8_visible"])
             assert actions.empty(), "Menu navigation invoked an entity action"
             await tap(720, 335)
             await expect_entity(snapshot["pages"][0]["buttons"][17]["entity"])
@@ -151,7 +151,7 @@ async def check():
                 warm = await wait_probe(lambda value: value["tick"] > warm_tick + 100)
             assert warm["heap_bytes"] - warm_heap < 16384, "Repeated transfers grow retained heap"
             size = len(json.dumps(unicode_snapshot).encode())
-            print(f"Native API passed: 108 controls, {size} bytes, {len(unicode_chunks)} chunks.")
+            print(f"Native API passed: 144 controls, {size} bytes, {len(unicode_chunks)} chunks.")
             print(f"128 KiB host stack; retained host heap {warm['heap_bytes']} bytes "
                   f"(change after repeated transfers: {warm['heap_bytes'] - warm_heap:+d}).")
             succeeded = True

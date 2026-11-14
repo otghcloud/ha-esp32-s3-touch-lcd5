@@ -15,7 +15,7 @@
 
 namespace wallpanel {
 
-inline constexpr size_t MAX_PAGES = 6;
+inline constexpr size_t MAX_PAGES = 8;
 inline constexpr size_t MAX_BUTTONS = 18;
 inline constexpr size_t MAX_PAYLOAD_BYTES = 262144;
 inline constexpr size_t CHUNK_BYTES = 4096;

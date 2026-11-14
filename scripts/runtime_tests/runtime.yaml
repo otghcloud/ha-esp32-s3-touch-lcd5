@@ -25,7 +25,7 @@ esphome:
             return count;
           };
           require(count_objects(count_objects, lv_screen_active()) +
-                  count_objects(count_objects, lv_layer_top()) < 180,
+                  count_objects(count_objects, lv_layer_top()) < 220,
                   "page models share one control tree rather than duplicating LVGL tiles");
           wallpanel::DisplayIdle idle;
           require(!idle.expired(100000), "default display timeout is disabled");
@@ -480,7 +480,7 @@ esphome:
                 page["title"] = "Modern page " + std::to_string(p + 1);
                 page["temperature"] = "Temperature: 21.5 C";
                 page["layout"] = layout;
-                page["icon"] = p == 5 ? "mdi:door-open" : "";
+                page["icon"] = p == 7 ? "mdi:door-open" : "";
                 auto buttons = page["buttons"].to<JsonArray>();
                 for (size_t b = 0; b < capacity; b++) {
                   auto button = buttons.add<JsonObject>();
@@ -535,7 +535,7 @@ esphome:
             require(hidden(id(button_0_0_state)) == (capacity == 18), "only 6x3 hides state text");
             require(lv_color_eq(lv_obj_get_style_text_color(id(button_0_0_icon), LV_PART_MAIN), lv_color_hex(0xFFD166)),
                     "active entity icon is amber in every layout");
-            require(within(id(dot_0_5), 324, 432, 743, 479), "six dots fit reserved footer region");
+            require(within(id(dot_0_7), 324, 432, 743, 479), "eight dots fit reserved footer region");
           }
           id(dashboard).receive(modern("6x3", 8));
           lv_obj_update_layout(id(page_0));
@@ -551,29 +551,29 @@ esphome:
                   lv_obj_get_x(id(button_0_7)) == 507, "sparse high slots compact without changing identity");
           id(dashboard).receive(modern("6x3"));
           tap(id(dashboard_menu));
-          require(!hidden(id(navigation_5)) && icon_is(id(navigation_5_icon), "mdi:door-open") &&
-                  icon_is(id(navigation_0_icon), "mdi:view-dashboard"), "six-page menu includes custom and fallback icons");
-          require(within(id(navigation_5_icon), 410, 230, 584, 384) &&
-                  within(id(navigation_5_title), 460, 230, 584, 384), "menu icon and title fit side by side");
-          tap(id(navigation_5));
-          require(!hidden(id(page_5)) && std::string(lv_label_get_text(id(button_0_17_name))) == "Control 18",
-                  "menu reaches page six and its eighteenth control");
+          require(!hidden(id(navigation_7)) && icon_is(id(navigation_7_icon), "mdi:door-open") &&
+                  icon_is(id(navigation_0_icon), "mdi:view-dashboard"), "eight-page menu includes custom and fallback icons");
+          require(within(id(navigation_7_icon), 605, 230, 779, 384) &&
+                  within(id(navigation_7_title), 655, 230, 779, 384), "menu icon and title fit side by side");
+          tap(id(navigation_7));
+          require(!hidden(id(page_7)) && std::string(lv_label_get_text(id(button_0_17_name))) == "Control 18",
+                  "menu reaches page eight and its eighteenth control");
           choose_wake_page("Last used page");
           tap(id(dashboard_menu));
           id(dashboard).wake();
-          require(!hidden(id(page_5)) && hidden(id(navigation)), "last-used wake supports page six");
-          choose_wake_page("Page 6");
+          require(!hidden(id(page_7)) && hidden(id(navigation)), "last-used wake supports page eight");
+          choose_wake_page("Page 8");
           id(dashboard).receive(modern("2x2"));
           id(dashboard).wake();
-          require(!hidden(id(page_5)), "explicit wake supports page six");
+          require(!hidden(id(page_7)), "explicit wake supports page eight");
           id(dashboard).receive(transform(modern("6x3"), [](JsonObject root) {
             root["navigation_layout"] = "6x3";
           }));
           tap(id(dashboard_menu));
           lv_obj_update_layout(id(navigation));
-          require(lv_obj_get_x(id(navigation_5)) == 661 && lv_obj_get_y(id(navigation_5)) == 65,
-                  "independent dense menu fits all six pages in one row");
-          id(dashboard).begin_touch(1, 720, 110);
+          require(lv_obj_get_x(id(navigation_6)) == 277 && lv_obj_get_y(id(navigation_7)) == 175,
+                  "independent dense menu centres its incomplete row");
+          id(dashboard).begin_touch(1, 464, 225);
           id(dashboard).receive(modern("6x3"));
           require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(navigation)),
                   "menu layout changes invalidate stale targets");
@@ -655,9 +655,9 @@ esphome:
               if (invalid == 0) root["navigation_layout"] = "2x2";
               if (invalid == 1) root["pages"][0]["layout"] = "3x3";
               if (invalid == 2) root["pages"][0]["buttons"].as<JsonArray>().remove(17);
-              if (invalid == 3) root["pages"].as<JsonArray>().remove(5);
+              if (invalid == 3 || invalid == 5) root["pages"].as<JsonArray>().remove(7);
               if (invalid == 4) root["pages"][0]["icon"] = 123;
-              if (invalid >= 5) root["pages"].as<JsonArray>().add(root["pages"][0]);
+              if (invalid == 5) root["pages"].as<JsonArray>().remove(6);
               if (invalid == 6) root["pages"].as<JsonArray>().add(root["pages"][0]);
               root["pages"][0]["title"] = "Invalid update";
             }));
@@ -667,11 +667,11 @@ esphome:
           id(dashboard).receive(std::string(wallpanel::MAX_PAYLOAD_BYTES + 1, 'x'));
           require(std::string(lv_label_get_text(id(title_0))) == "Modern page 1", "oversized snapshot preserves UI");
           id(dashboard).receive(transform(modern("6x3"), [](JsonObject root) {
-            root["pages"][5]["icon"] = "mdi:does-not-exist";
+            root["pages"][7]["icon"] = "mdi:does-not-exist";
           }));
-          require(icon_is(id(navigation_5_icon), "mdi:view-dashboard"), "unsupported page icon uses fallback");
+          require(icon_is(id(navigation_7_icon), "mdi:view-dashboard"), "unsupported page icon uses fallback");
           id(dashboard).receive(snapshot(0));
-          require(hidden(id(page_5)) && hidden(id(navigation_5)), "legacy snapshots clear additional page slots");
+          require(hidden(id(page_7)) && hidden(id(navigation_7)), "legacy snapshots clear additional page slots");
           const std::string body = modern("6x3");
           const int total = (body.size() + wallpanel::CHUNK_BYTES - 1) / wallpanel::CHUNK_BYTES;
           id(dashboard).receive_chunk("bad", 0, total, "~" + body.substr(0, wallpanel::CHUNK_BYTES));
@@ -687,7 +687,7 @@ esphome:
                 "~" + body.substr(index * wallpanel::CHUNK_BYTES, wallpanel::CHUNK_BYTES));
           require(std::string(lv_label_get_text(id(title_0))) == "Modern page 1" &&
                   std::string(lv_label_get_text(id(button_0_17_name))) == "Control 18",
-                  "complete ordered chunks apply all 108 controls together");
+                  "complete ordered chunks apply all 144 controls together");
           id(dashboard).receive(snapshot(0));
           ESP_LOGI("runtime_test", "All runtime dashboard assertions passed");
           if (std::getenv("WALLPANEL_API_TEST") == nullptr)
@@ -724,7 +724,7 @@ text_sensor:
         root["last_name"] = std::string(lv_label_get_text(label));
         lv_label_set_long_mode(label, mode);
         lv_obj_update_layout(label);
-        root["page6_visible"] = lv_obj_is_visible(id(page_5));
+        root["page8_visible"] = lv_obj_is_visible(id(page_7));
         root["menu_visible"] = lv_obj_is_visible(id(navigation));
         root["heap_bytes"] = id(test_lcd).allocated_bytes();
         root["tick"] = esphome::millis();

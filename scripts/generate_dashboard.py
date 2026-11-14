@@ -16,7 +16,7 @@ ICON_DATA = ROOT / "scripts" / "mdi-icons.json"
 ICON_HEADER = ROOT / "esphome" / "components" / "wallpanel" / "mdi_icons.h"
 MDI_VERSION = "7.4.47"
 MDI_SOURCE = f"https://cdn.jsdelivr.net/npm/@mdi/font@{MDI_VERSION}"
-MAX_PAGES = 6
+MAX_PAGES = 8
 MAX_BUTTONS = 18
 
 

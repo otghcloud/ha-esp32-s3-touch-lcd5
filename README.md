@@ -66,16 +66,16 @@ Pages and entities are configured at runtime by the [Home Assistant blueprint](.
    The import URL works after these changes are published to `main`. Before publication, copy `wallpanel_blueprint.yaml` to `/config/blueprints/automation/otghcloud/wallpanel_blueprint.yaml` and reload automations.
 
 4. Create an automation from the blueprint and select your panel device.
-5. Expand **Button page 01** through **Button page 06**. Each provides a layout, page icon/title, optional temperature sensor and up to eighteen entity selectors with optional **Title** overrides. Choose **2x2**, **4x2** or **6x3** for 4, 8 or 18 controls respectively. Leave all active button slots empty to hide a page.
+5. Expand **Button page 01** through **Button page 08**. Each provides a layout, page icon/title, optional temperature sensor and up to eighteen entity selectors with optional **Title** overrides. Choose **2x2**, **4x2** or **6x3** for 4, 8 or 18 controls respectively. Leave all active button slots empty to hide a page.
 6. Save and enable the automation. Run its actions once for an immediate update; future entity changes and reconnects update automatically. Keep only one configuration automation enabled per panel.
 
 The **Dashboard endpoint** diagnostic sensor must remain enabled. It lets the blueprint discover the correct ESPHome action even if you rename the device's friendly name or HA entities.
 
 Buttons use HA friendly names unless their **Title** field is filled in. Blank or whitespace-only titles retain the default name; titles without an entity do not create a button. Labels use at most 80 characters. Lights and switches toggle, automation buttons enable/disable (not trigger), and locks unlock when locked or lock when unlocked, without confirmation.
 
-**Upgrade order:** install the updated firmware **first**, then re-import the updated blueprint and reload automations. Inputs for pages 1-6 are preserved and new layouts default to 2x2. The new firmware still accepts the old four-page blueprint; older firmware cannot consume the new six-page protocol.
+**Upgrade order:** install the updated firmware **first**, then re-import the updated blueprint and reload automations. Existing input IDs are preserved and new layouts default to 2x2. The new firmware still accepts the old four-page blueprint; older firmware cannot consume the new eight-page protocol.
 
-The maximum is now **six pages / 108 controls**. When moving from the eight-page build, update both firmware and blueprint: eight-page snapshots are rejected, not silently truncated. Back up any page 7/8 settings and move needed controls into pages 1-6 before replacing the blueprint. Pages 7/8 are no longer available.
+The maximum is **eight pages / 144 controls**, using the shared-widget renderer. When moving from the temporary six-page build, update both firmware and blueprint: version-2 snapshots now require eight page slots, and six-page snapshots are rejected without replacing the UI. Existing page 1-6 inputs and saved wake choices retain their meaning; new page 7/8 inputs default to empty.
 
 ### Home Assistant icons
 
@@ -125,7 +125,7 @@ Touching a dark screen turns the backlight on. That entire first gesture is wake
 
 Turning the backlight off does not stop the dashboard or Home Assistant connection. A timeout of 0 still permits manual switch-off, with touch-to-wake available.
 
-The saved **Wake-up page** dropdown defaults to **Last used page**, or can select **Page 1** through **Page 6** (the blueprint's fixed page slots). Existing saved choices for pages 1-6 retain their meaning. It applies whenever the backlight turns on, whether by touch, Home Assistant or reboot. Waking closes navigation before applying the preference; **Last used page** means the last button page, not the navigation screen. An empty selected page falls back to the first populated page. If no pages have arrived yet, the preference is applied when Home Assistant sends them. Changing the dropdown does not immediately navigate, and normal touches while the backlight is on do not change pages.
+The saved **Wake-up page** dropdown defaults to **Last used page**, or can select **Page 1** through **Page 8** (the blueprint's fixed page slots). Existing saved choices retain their meaning. It applies whenever the backlight turns on, whether by touch, Home Assistant or reboot. Waking closes navigation before applying the preference; **Last used page** means the last button page, not the navigation screen. An empty selected page falls back to the first populated page. If no pages have arrived yet, the preference is applied when Home Assistant sends them. Changing the dropdown does not immediately navigate, and normal touches while the backlight is on do not change pages.
 
 The **Restart** button in **Configuration** reboots the panel. The timeout and wake-up page settings are retained; the dashboard waits for Home Assistant to resend its configuration as usual.
 
@@ -144,7 +144,7 @@ Brightness adjustment is not supported by this connection: [ESPHome's CH422G dri
 
 ### Development
 
-The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores six page models with eighteen button slots each, but uses one shared pool of eighteen LVGL tiles for the selected page. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. This reduces the generated startup tree from 621 objects with six duplicated control trees to 172. LVGL's boot-time resolution/theme refresh traverses this smaller tree; watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
+The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores eight page models with eighteen button slots each, but uses one shared pool of eighteen LVGL tiles for the selected page. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. This reduces the generated startup tree from 841 objects with eight duplicated control trees to 212. LVGL's boot-time resolution/theme refresh traverses this smaller tree; watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
 
 ```sh
 python3 scripts/generate_dashboard.py
@@ -162,13 +162,13 @@ scripts/runtime_tests/.esphome/build/dynamic-host/.pioenvs/dynamic-host/program
 python3 scripts/runtime_tests/check_native_api.py
 ```
 
-The connected native API check also requires `aioesphomeapi` (included with ESPHome). It starts/stops its own local host process, requires port 16053 to be unused, and tests blueprint-generated 108-control snapshots, Unicode, partial-transfer atomicity and real entity actions through all three layouts. It runs with a 128 KiB host stack and checks bounded retained heap after repeated transfers.
+The connected native API check also requires `aioesphomeapi` (included with ESPHome). It starts/stops its own local host process, requires port 16053 to be unused, and tests blueprint-generated 144-control snapshots, Unicode, partial-transfer atomicity and real entity actions through all three layouts. It runs with a 128 KiB host stack and checks bounded retained heap after repeated transfers.
 
-The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). Version 2 uses six page slots with per-page layout/icon metadata and exactly 4, 8 or 18 button slots. The runtime validates the entire snapshot before changing the UI; unsupported entities and malformed payloads are logged and rejected without replacing the previous configuration. Legacy version-1 four-page snapshots remain supported by `esphome.<device_name>_set_dashboard`.
+The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). Version 2 uses eight page slots with per-page layout/icon metadata and exactly 4, 8 or 18 button slots. The runtime validates the entire snapshot before changing the UI; unsupported entities and malformed payloads are logged and rejected without replacing the previous configuration. Legacy version-1 four-page snapshots remain supported by `esphome.<device_name>_set_dashboard`.
 
 The new blueprint appends `_chunk` to the discovered endpoint and sends ordered `set_dashboard_chunk` calls with a transfer ID, zero-based index, total and string payload. Each payload has a `~` text prefix followed by at most 4096 bytes of ASCII JSON; the complete snapshot is capped at 256 KiB/64 chunks. Incomplete transfers expire after 30 seconds of inactivity. Only a complete, validated snapshot replaces the UI. Chunking avoids ESPHome's 32 KiB native API message limit without modifying ESPHome internals.
 
-Automated validation includes a 125,849-byte Unicode snapshot across 31 native API chunks. The shared-widget startup regression reduces measured host LVGL refresh requests from 4,498 to 1,173. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom or confirm the startup fix on hardware: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility and touch responsiveness on the panel, particularly with all 108 controls configured.
+Automated validation includes a 167,781-byte Unicode snapshot across 41 native API chunks. The eight-page shared-widget startup regression records 1,433 host LVGL refresh requests, below the unchanged 1,500-request limit used for the six-page build. The six-page shared-widget firmware and layouts have been confirmed on the panel; the restored eight-page build still needs device confirmation. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility and touch responsiveness, particularly with all 144 controls configured.
 
 For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
 
