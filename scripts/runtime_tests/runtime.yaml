@@ -40,6 +40,21 @@ esphome:
           gesture.update(2, 450, 150);
           require(gesture.finish() == TouchAction::NONE, "multi-touch cannot activate controls");
           require(!hidden(id(dashboard_waiting)), "waiting on reboot");
+          auto check_background = [&]() {
+            id(test_lcd).sample_pixel = esphome::Color(255, 0, 0);
+            lv_obj_invalidate(lv_screen_active());
+            lv_refr_now(nullptr);
+            auto actual = id(test_lcd).sample_pixel;
+            auto expected = id(dashboard_background)->get_pixel(5, 400);
+            require(actual.r == expected.r && actual.g == expected.g && actual.b == expected.b,
+                    "background image rendered at expected position");
+          };
+          check_background();
+          for (auto *page : {id(page_0), id(page_1), id(page_2), id(page_3)}) {
+            lv_obj_remove_flag(page, LV_OBJ_FLAG_HIDDEN);
+            check_background();
+            lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN);
+          }
           auto snapshot = [](int mode) {
             return esphome::json::build_json([mode](JsonObject root) {
               root["version"] = 1;

@@ -85,6 +85,8 @@ Swipe left/right anywhere on the screen, including over buttons. Navigation wrap
 
 After reboot the panel shows **Waiting for Home Assistant** until it receives configuration. During a disconnection it retains its layout and displays unavailable indicators with disabled controls. No configuration is saved to flash. The blueprint sends current configuration/states on selected entity changes, reconnect events and every 30 seconds; the panel also disables controls if updates stop for 65 seconds.
 
+The static 800 × 480 background in [`assets/background_dark.png`](./assets/background_dark.png) is embedded in the firmware and displayed on every page, including the waiting screen.
+
 ### Example configuration
 
 | Blueprint input | Office (page 01) | Landing (page 02) |
@@ -121,6 +123,5 @@ For local firmware development, set the `wallpanel_component_source` substitutio
 
 ## Notes
 
-- The dashboard currently uses a solid dark background; the background image is omitted while its rendering issue is investigated.
 - The fallback access point and captive portal are not enabled.
 - The public package does not currently implement `boot_sound` or `language` settings.

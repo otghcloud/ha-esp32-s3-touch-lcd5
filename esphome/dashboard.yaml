@@ -7495,8 +7495,14 @@ font:
   - "\U000F1D15"
   - "\U000F1D16"
   - "\U000F1D17"
+image:
+- platform: file
+  file: ../assets/background_dark.png
+  id: dashboard_background
+  type: RGB565
 lvgl:
   bg_color: 1120295
+  bg_image_src: dashboard_background
   pad_all: 0
   scrollable: false
   top_layer:
@@ -7527,8 +7533,7 @@ lvgl:
       y: 0
       pad_all: 0
       border_width: 0
-      bg_color: 1120295
-      bg_opa: COVER
+      bg_opa: TRANSP
       scrollable: false
       hidden: true
       widgets:
@@ -7803,8 +7808,7 @@ lvgl:
       y: 0
       pad_all: 0
       border_width: 0
-      bg_color: 1120295
-      bg_opa: COVER
+      bg_opa: TRANSP
       scrollable: false
       hidden: true
       widgets:
@@ -8079,8 +8083,7 @@ lvgl:
       y: 0
       pad_all: 0
       border_width: 0
-      bg_color: 1120295
-      bg_opa: COVER
+      bg_opa: TRANSP
       scrollable: false
       hidden: true
       widgets:
@@ -8355,8 +8358,7 @@ lvgl:
       y: 0
       pad_all: 0
       border_width: 0
-      bg_color: 1120295
-      bg_opa: COVER
+      bg_opa: TRANSP
       scrollable: false
       hidden: true
       widgets:

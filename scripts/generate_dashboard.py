@@ -99,7 +99,7 @@ def make_dashboard():
             }})
         widgets.append({"obj": {
             "id": f"page_{p}", "width": 800, "height": 480, "x": 0, "y": 0,
-            "pad_all": 0, "border_width": 0, "bg_color": 0x111827, "bg_opa": "COVER",
+            "pad_all": 0, "border_width": 0, "bg_opa": "TRANSP",
             "scrollable": False, "hidden": True, "widgets": children,
         }})
         dots = ", ".join(f"id(dot_{p}_{d})" for d in range(4))
@@ -122,8 +122,11 @@ def make_dashboard():
                     "id": "font_icons", "size": 72, "bpp": 1, "glyphsets": [],
                     "glyphs": [chr(codepoint) for codepoint in
                                sorted({int(value, 16) for value in load_icons().values()})]}],
+        "image": [{"platform": "file", "file": "../assets/background_dark.png",
+                   "id": "dashboard_background", "type": "RGB565"}],
         "lvgl": {
-            "bg_color": 0x111827, "pad_all": 0, "scrollable": False,
+            "bg_color": 0x111827, "bg_image_src": "dashboard_background",
+            "pad_all": 0, "scrollable": False,
             "top_layer": {"widgets": [
                 label("lbl_time", "--:--", "font_large", align="TOP_RIGHT", x=-24, y=4),
                 label("dashboard_connection", "HOME ASSISTANT UNAVAILABLE", "font_small",
