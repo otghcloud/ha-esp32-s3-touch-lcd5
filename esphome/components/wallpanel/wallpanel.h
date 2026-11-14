@@ -201,16 +201,12 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       configured_ = true;
       last_update_ = esphome::millis();
       online_ = true;
-      if (!pages_[current_].enabled) {
-        current_ = 0;
-        for (size_t p = 0; p < pages_.size(); p++) {
-          if (pages_[p].enabled) {
-            current_ = p;
-            break;
-          }
-        }
+      if (wake_pending_) {
+        wake();
+      } else {
+        ensure_current_page();
+        render();
       }
-      render();
       return true;
     });
   }
@@ -239,6 +235,27 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         return;
       }
     }
+  }
+
+  void set_wake_page(size_t page) {
+    if (page > pages_.size()) {
+      ESP_LOGE("dashboard", "Invalid wake-up page %u", unsigned(page));
+      return;
+    }
+    wake_page_ = page;
+  }
+
+  void wake() {
+    if (!ready_ || !configured_) {
+      wake_pending_ = true;
+      return;
+    }
+    wake_pending_ = std::none_of(pages_.begin(), pages_.end(),
+                                 [](const PageData &page) { return page.enabled; });
+    if (wake_page_ != 0)
+      current_ = wake_page_ - 1;
+    ensure_current_page();
+    render();
   }
 
   void begin_touch(int id, int x, int y) {
@@ -286,6 +303,18 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
  private:
+  void ensure_current_page() {
+    if (pages_[current_].enabled)
+      return;
+    current_ = 0;
+    for (size_t p = 0; p < pages_.size(); p++) {
+      if (pages_[p].enabled) {
+        current_ = p;
+        break;
+      }
+    }
+  }
+
   int hit_button(size_t page, int x, int y) const {
     if (!pages_[page].enabled)
       return -1;
@@ -422,7 +451,9 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   lv_obj_t *waiting_{nullptr};
   lv_obj_t *connection_{nullptr};
   size_t current_{0};
+  size_t wake_page_{0};
   uint32_t last_update_{0};
+  bool wake_pending_{false};
   bool ready_{false};
   bool configured_{false};
   bool online_{false};

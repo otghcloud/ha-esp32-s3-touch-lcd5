@@ -20,6 +20,11 @@ logger:
 ota:
   - platform: esphome
 
+button:
+  - platform: restart
+    name: Restart
+    entity_category: config
+
 wifi:
   ssid: ${wifi_ssid}
   password: ${wifi_password}

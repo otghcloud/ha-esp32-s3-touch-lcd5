@@ -109,7 +109,32 @@ esphome:
               }
             });
           };
+          auto choose_wake_page = [](const char *option) {
+            auto call = id(wake_up_page).make_call();
+            call.set_option(option);
+            call.perform();
+          };
+          choose_wake_page("Page 3");
+          id(dashboard).wake();
+          require(!hidden(id(dashboard_waiting)), "waking before HA configuration retains waiting screen");
           id(dashboard).receive(snapshot(0));
+          require(!hidden(id(page_2)), "pending wake selects preferred page when HA configuration arrives");
+          choose_wake_page("Last used page");
+          id(dashboard).wake();
+          require(!hidden(id(page_2)), "last used wake-up page retains current page");
+          choose_wake_page("Page 1");
+          require(!hidden(id(page_2)), "changing preference does not navigate while awake");
+          id(dashboard).wake();
+          require(!hidden(id(page_0)), "wake selects first page");
+          choose_wake_page("Page 3");
+          id(dashboard).receive(snapshot(0));
+          require(!hidden(id(page_0)), "HA updates do not reapply wake-up preference while awake");
+          id(dashboard).wake();
+          require(!hidden(id(page_2)), "wake selects third page");
+          choose_wake_page("Page 4");
+          id(dashboard).wake();
+          require(!hidden(id(page_0)), "empty wake-up page falls back to first populated page");
+          choose_wake_page("Last used page");
           require(!hidden(id(page_0)) && hidden(id(page_2)), "first nonempty page shown");
           require(hidden(id(page_1)) && hidden(id(page_3)), "empty pages hidden");
           require(!hidden(id(dot_0_0)) && !hidden(id(dot_0_1)) && hidden(id(dot_0_2)), "two visible page dots");
@@ -223,6 +248,11 @@ esphome:
           id(dashboard).navigate(1);
           id(dashboard).navigate(-1);
           require(!hidden(id(dashboard_waiting)) && hidden(id(page_2)), "all pages cleared");
+          choose_wake_page("Page 3");
+          id(dashboard).wake();
+          require(!hidden(id(dashboard_waiting)), "wake with no pages retains waiting screen");
+          id(dashboard).receive(snapshot(0));
+          require(!hidden(id(page_2)), "wake with no pages waits for populated configuration");
           ESP_LOGI("runtime_test", "All runtime dashboard assertions passed");
           std::exit(0);
 

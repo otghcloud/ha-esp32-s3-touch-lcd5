@@ -9,6 +9,25 @@ external_components:
 wallpanel:
   id: dashboard
 
+select:
+  - platform: template
+    id: wake_up_page
+    name: Wake-up page
+    icon: mdi:page-first
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_option: Last used page
+    options:
+      - Last used page
+      - Page 1
+      - Page 2
+      - Page 3
+      - Page 4
+    on_value:
+      then:
+        - lambda: id(dashboard).set_wake_page(i);
+
 api:
   homeassistant_services: true
   actions:

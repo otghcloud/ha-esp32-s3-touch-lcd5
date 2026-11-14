@@ -40,7 +40,9 @@ switch:
     restore_mode: ALWAYS_ON
     on_turn_on:
       then:
-        - lambda: id(display_idle).activity(millis());
+        - lambda: |-
+            id(display_idle).activity(millis());
+            id(dashboard).wake();
     on_turn_off:
       then:
         - lambda: id(display_idle).cancel_touch();

@@ -97,6 +97,10 @@ Touching a dark screen turns the backlight on. That entire first gesture is wake
 
 Turning the backlight off does not stop the dashboard or Home Assistant connection. A timeout of 0 still permits manual switch-off, with touch-to-wake available.
 
+The saved **Wake-up page** dropdown defaults to **Last used page**, or can select **Page 1** through **Page 4** (the blueprint's fixed page slots). It applies whenever the backlight turns on, whether by touch, Home Assistant or reboot. An empty selected page falls back to the first populated page. If no pages have arrived yet, the preference is applied when Home Assistant sends them. Changing the dropdown does not immediately navigate, and normal touches while the backlight is on do not change pages.
+
+The **Restart** button in **Configuration** reboots the panel. The timeout and wake-up page settings are retained; the dashboard waits for Home Assistant to resend its configuration as usual.
+
 Brightness adjustment is not supported by this connection: [ESPHome's CH422G driver](https://esphome.io/components/ch422g/) does not support PWM. A true brightness slider would require a hardware-supported dimming connection; no simulated slider is exposed.
 
 ### Example configuration
