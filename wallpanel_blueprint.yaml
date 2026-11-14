@@ -2065,16 +2065,16 @@ actions:
                     page_order=ns.order, pages=ns.pages) }}
           transfer: "{{ now().isoformat() }}"
       - repeat:
-          count: "{{ ((((dashboard_snapshot | to_json) | length) + 4095) // 4096) if (dashboard_snapshot | to_json) | length <= 262144 else 0 }}"
+          count: "{{ ((((dashboard_snapshot | to_json(ensure_ascii=True)) | length) + 4095) // 4096) if (dashboard_snapshot | to_json(ensure_ascii=True)) | length <= 262144 else 0 }}"
           sequence:
             - action: "{{ endpoint ~ '_chunk' }}"
               data:
                 transfer: "{{ transfer }}"
                 index: "{{ repeat.index - 1 }}"
-                total: "{{ (((dashboard_snapshot | to_json) | length) + 4095) // 4096 }}"
+                total: "{{ (((dashboard_snapshot | to_json(ensure_ascii=True)) | length) + 4095) // 4096 }}"
                 # The prefix prevents HA from interpreting a complete JSON fragment as a native object.
-                payload: "~{{ (dashboard_snapshot | to_json)[(repeat.index - 1) * 4096 : repeat.index * 4096] }}"
-      - if: "{{ (dashboard_snapshot | to_json) | length > 262144 }}"
+                payload: "~{{ (dashboard_snapshot | to_json(ensure_ascii=True))[(repeat.index - 1) * 4096 : repeat.index * 4096] }}"
+      - if: "{{ (dashboard_snapshot | to_json(ensure_ascii=True)) | length > 262144 }}"
         then:
           - action: system_log.write
             data:

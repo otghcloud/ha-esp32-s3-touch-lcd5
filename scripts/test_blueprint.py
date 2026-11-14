@@ -55,7 +55,8 @@ class BlueprintTests(unittest.TestCase):
         self.attributes = {}
         self.device_entities = ["sensor.renamed_dashboard_endpoint"]
         self.env = Environment(undefined=StrictUndefined)
-        self.env.filters["to_json"] = json.dumps
+        # HA preserves Unicode unless ensure_ascii is explicitly requested.
+        self.env.filters["to_json"] = lambda value, ensure_ascii=False: json.dumps(value, ensure_ascii=ensure_ascii)
         # HA rejects nonnumeric input when no int-filter default is supplied.
         self.env.filters["int"] = int
         self.env.globals.update(
@@ -414,6 +415,7 @@ class BlueprintTests(unittest.TestCase):
             self.assertEqual(int(chunk["index"]), index)
             self.assertEqual(int(chunk["total"]), len(chunks))
             self.assertTrue(chunk["payload"].startswith("~"))
+            self.assertTrue(chunk["payload"].isascii())
             self.assertLessEqual(len(chunk["payload"].encode()), 4097)
         # A small snapshot is also framed as text, not a native HA dictionary.
         self.setUp()
