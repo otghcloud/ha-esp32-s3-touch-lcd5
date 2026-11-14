@@ -64,6 +64,8 @@ python3 scripts/generate_dashboard.py --check
 
 Pages support up to four controls each in the current two-column layout. Light and automation controls toggle their Home Assistant entities; lock controls lock or unlock based on their current state. Swipe left and right to move between pages.
 
+When multiple pages are configured, bottom-centred dots indicate the current page with a filled circle and the other pages with outlined circles. The dots are omitted for a single page.
+
 ## Current Home Assistant entities
 
 The initial `config.yaml` uses these fixed entity IDs:
@@ -77,6 +79,7 @@ The initial `config.yaml` uses these fixed entity IDs:
 | Door lock | `lock.office_office_door` |
 | Landing light | `light.landing_light` |
 | Landing lighting automation | `automation.lighting_landing` |
+| Landing temperature | `sensor.landing_nspanel_temperature` |
 
 These entities must exist in Home Assistant for the controls to work. Entity IDs can be changed in `config.yaml`; automatic configuration through a Home Assistant blueprint is planned for a future iteration.
 

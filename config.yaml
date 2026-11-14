@@ -28,6 +28,9 @@ pages:
 
   - id: landing
     title: Landing
+    temperature:
+      entity_id: sensor.landing_nspanel_temperature
+      label: "Temperature: %.1f C"
     controls:
       - id: landing_light
         label: Landing Light

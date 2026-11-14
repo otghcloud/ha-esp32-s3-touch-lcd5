@@ -258,6 +258,44 @@ lvgl:
         align: BOTTOM_LEFT
         x: 24
         y: -14
+    - obj:
+        id: page_dots_office
+        align: BOTTOM_MID
+        y: -14
+        width: 32
+        height: 12
+        pad_all: 0
+        border_width: 0
+        bg_opa: TRANSP
+        clickable: false
+        scrollable: false
+        widgets:
+        - obj:
+            x: 0
+            y: 0
+            width: 12
+            height: 12
+            radius: 6
+            pad_all: 0
+            border_width: 2
+            border_color: 0xB9C2D0
+            bg_color: 0xB9C2D0
+            bg_opa: COVER
+            clickable: false
+            scrollable: false
+        - obj:
+            x: 20
+            y: 0
+            width: 12
+            height: 12
+            radius: 6
+            pad_all: 0
+            border_width: 2
+            border_color: 0xB9C2D0
+            bg_color: 0xB9C2D0
+            bg_opa: TRANSP
+            clickable: false
+            scrollable: false
   - id: landing
     bg_color: 0x111827
     bg_opa: COVER
@@ -358,3 +396,49 @@ lvgl:
             x: -14
             y: 10
             hidden: true
+    - label:
+        id: lbl_temperature_landing
+        text: 'Temperature: --.- C'
+        text_font: font_small
+        text_color: 0xB9C2D0
+        align: BOTTOM_LEFT
+        x: 24
+        y: -14
+    - obj:
+        id: page_dots_landing
+        align: BOTTOM_MID
+        y: -14
+        width: 32
+        height: 12
+        pad_all: 0
+        border_width: 0
+        bg_opa: TRANSP
+        clickable: false
+        scrollable: false
+        widgets:
+        - obj:
+            x: 0
+            y: 0
+            width: 12
+            height: 12
+            radius: 6
+            pad_all: 0
+            border_width: 2
+            border_color: 0xB9C2D0
+            bg_color: 0xB9C2D0
+            bg_opa: TRANSP
+            clickable: false
+            scrollable: false
+        - obj:
+            x: 20
+            y: 0
+            width: 12
+            height: 12
+            radius: 6
+            pad_all: 0
+            border_width: 2
+            border_color: 0xB9C2D0
+            bg_color: 0xB9C2D0
+            bg_opa: COVER
+            clickable: false
+            scrollable: false

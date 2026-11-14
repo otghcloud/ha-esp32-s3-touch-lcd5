@@ -261,7 +261,7 @@ def make_dashboard(pages: list[dict[str, Any]]) -> dict[str, Any]:
     ]
 
     page_configs = []
-    for page in pages:
+    for page_index, page in enumerate(pages):
         widgets: list[dict[str, Any]] = [
             {
                 "label": {
@@ -290,6 +290,44 @@ def make_dashboard(pages: list[dict[str, Any]]) -> dict[str, Any]:
                         "align": "BOTTOM_LEFT",
                         "x": 24,
                         "y": -14,
+                    }
+                }
+            )
+        if len(pages) > 1:
+            widgets.append(
+                {
+                    "obj": {
+                        "id": f"page_dots_{page['id']}",
+                        "align": "BOTTOM_MID",
+                        "y": -14,
+                        "width": (len(pages) - 1) * 20 + 12,
+                        "height": 12,
+                        "pad_all": 0,
+                        "border_width": 0,
+                        "bg_opa": "TRANSP",
+                        "clickable": False,
+                        "scrollable": False,
+                        "widgets": [
+                            {
+                                "obj": {
+                                    "x": dot_index * 20,
+                                    "y": 0,
+                                    "width": 12,
+                                    "height": 12,
+                                    "radius": 6,
+                                    "pad_all": 0,
+                                    "border_width": 2,
+                                    "border_color": color(0xB9C2D0),
+                                    "bg_color": color(0xB9C2D0),
+                                    "bg_opa": (
+                                        "COVER" if dot_index == page_index else "TRANSP"
+                                    ),
+                                    "clickable": False,
+                                    "scrollable": False,
+                                }
+                            }
+                            for dot_index in range(len(pages))
+                        ],
                     }
                 }
             )

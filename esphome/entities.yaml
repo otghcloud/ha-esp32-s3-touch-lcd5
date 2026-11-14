@@ -11,6 +11,17 @@ sensor:
           format: 'Temperature: %.1f C'
           args:
           - x
+- platform: homeassistant
+  id: ha_temperature_landing
+  entity_id: sensor.landing_nspanel_temperature
+  on_value:
+    then:
+    - lvgl.label.update:
+        id: lbl_temperature_landing
+        text:
+          format: 'Temperature: %.1f C'
+          args:
+          - x
 text_sensor:
 - platform: homeassistant
   id: ha_lamp_state
