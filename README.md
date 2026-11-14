@@ -128,6 +128,8 @@ Enable **Homepage > Enable Homepage** in the blueprint to add a placeholder view
 
 Homepage participates in the menu, swipes and page dots. It comes first unless a **Homepage** row in **Navigation > Page order and titles** places it elsewhere. Existing automations can add that row; its optional title changes the header/menu label, not the placeholder text. Disabling Homepage retains its ordering input and safely returns to another available page.
 
+If an earlier blueprint reports `int got invalid input 'home'`, update the installed blueprint and reload automations. The title lookup must compare page-slot strings, not convert the Homepage slot to a number. This blueprint-only fix needs no firmware rebuild or changes to your automation inputs.
+
 Tap the footer cog for **Settings**. **Restart** immediately reboots the panel, without confirmation; **Sleep** immediately turns the backlight off. These are local actions and work without Home Assistant, including before any pages arrive. Settings has no page dots, is excluded from swipes/order/wake choices, and never replaces the last content page. The menu icon opens Navigation from Settings; touching a sleeping panel wakes only, as below.
 
 ### Display backlight

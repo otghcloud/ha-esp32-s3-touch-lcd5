@@ -1907,7 +1907,7 @@ actions:
               {% endif %}
               {% set title_input = namespace(value=titles[p]) %}
               {% for item in page_order %}
-                {% if (item.page | int) == p + 1 and item.title is defined %}
+                {% if item.page == ((p + 1) | string) and item.title is defined %}
                   {% set title_input.value = item.title %}
                 {% endif %}
               {% endfor %}

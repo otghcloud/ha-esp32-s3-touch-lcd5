@@ -56,6 +56,8 @@ class BlueprintTests(unittest.TestCase):
         self.device_entities = ["sensor.renamed_dashboard_endpoint"]
         self.env = Environment(undefined=StrictUndefined)
         self.env.filters["to_json"] = json.dumps
+        # HA rejects nonnumeric input when no int-filter default is supplied.
+        self.env.filters["int"] = int
         self.env.globals.update(
             states=lambda entity: self.states.get(entity, "unknown"),
             state_attr=lambda entity, attribute: self.attributes.get(entity, {}).get(attribute),
@@ -264,11 +266,14 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.snapshot()["homepage"],
                          {"enabled": False, "position": 0, "title": "Homepage"})
         self.inputs.update(homepage_enabled=True, page_order=[
-            {"page": "3"}, {"page": "1"}, {"page": "home", "title": " Welcome "},
+            {"page": "3", "title": "Landing"}, {"page": "1", "title": "Office"},
+            {"page": "home", "title": " Welcome "},
         ])
         snapshot = self.snapshot()
         self.assertEqual(snapshot["page_order"], [2, 0, 1, 3, 4, 5, 6, 7])
         self.assertEqual(snapshot["homepage"], {"enabled": True, "position": 2, "title": "Welcome"})
+        self.assertEqual(snapshot["pages"][0]["title"], "Office")
+        self.assertEqual(snapshot["pages"][2]["title"], "Landing")
         self.inputs["page_order"] = [{"page": "2"}]
         self.assertEqual(self.snapshot()["homepage"]["position"], 0)
         self.inputs["page_order"] = [{"page": "home"}, {"page": "home"}]
