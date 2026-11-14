@@ -15,7 +15,7 @@
 
 namespace wallpanel {
 
-inline constexpr size_t MAX_PAGES = 8;
+inline constexpr size_t MAX_PAGES = 6;
 inline constexpr size_t MAX_BUTTONS = 18;
 inline constexpr size_t MAX_PAYLOAD_BYTES = 262144;
 inline constexpr size_t CHUNK_BYTES = 4096;
@@ -205,7 +205,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       const int version = root["version"].is<int>() ? root["version"].as<int>() : 0;
       if ((version != 1 && version != 2) || !root["pages"].is<JsonArray>() ||
           root["pages"].size() != (version == 1 ? 4 : MAX_PAGES)) {
-        ESP_LOGE("dashboard", "Expected version 1 with four pages or version 2 with eight pages");
+        ESP_LOGE("dashboard", "Expected version 1 with four pages or version 2 with %u pages",
+                 unsigned(MAX_PAGES));
         return false;
       }
       Layout navigation_layout = Layout::TWO_BY_TWO;
