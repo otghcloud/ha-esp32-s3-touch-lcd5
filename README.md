@@ -91,7 +91,11 @@ The static 800 × 480 background in [`assets/background_dark.png`](./assets/back
 
 After installing the updated firmware, the device's **Configuration** section in Home Assistant includes a **Display backlight** switch. It controls the board's active-high CH422G EXIO2 backlight enable and turns on after every reboot. No blueprint update is needed.
 
-Turning it off only disables the backlight: the dashboard, touch controls and Home Assistant connection remain active. Touching the screen does not turn the backlight back on; use the Home Assistant switch or an automation.
+The **Display timeout** setting in the same section turns the backlight off after inactivity. Enter seconds from **0 to 86400** (24 hours); **0** disables automatic switch-off. The default is 0, and Home Assistant's numeric field does not store a blank value. The setting is saved across reboots. Changing it or turning the backlight on restarts the countdown; timeouts are checked once per second.
+
+Touching a dark screen turns the backlight on. That entire first gesture is wake-only: it cannot activate a button or change pages, even with multiple fingers. Release, then touch again to operate the dashboard. The timer pauses while touching and restarts on release. Manually switching the backlight off also cancels any in-progress control gesture.
+
+Turning the backlight off does not stop the dashboard or Home Assistant connection. A timeout of 0 still permits manual switch-off, with touch-to-wake available.
 
 Brightness adjustment is not supported by this connection: [ESPHome's CH422G driver](https://esphome.io/components/ch422g/) does not support PWM. A true brightness slider would require a hardware-supported dimming connection; no simulated slider is exposed.
 
@@ -118,7 +122,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 
 The generator also maintains the MDI lookup header from the pinned [`scripts/mdi-icons.json`](./scripts/mdi-icons.json) catalogue. Use `python3 scripts/generate_dashboard.py --update-icons` to refresh that catalogue from the pinned upstream stylesheet. Change `MDI_VERSION` and regenerate together when upgrading the font. MDI licensing is recorded in [`MDI-LICENSE`](./esphome/components/wallpanel/MDI-LICENSE). The one-bit icon font keeps the complete library within flash without loading every icon bitmap into RAM.
 
-The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks background rendering, page navigation, dots, state labels, offline controls and rejection of invalid snapshots:
+The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks display idle/wake handling, background rendering, page navigation, dots, state labels, offline controls and rejection of invalid snapshots:
 
 ```sh
 esphome compile scripts/runtime_tests/runtime.yaml

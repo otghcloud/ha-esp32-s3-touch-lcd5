@@ -45,6 +45,45 @@ struct PageData {
 
 enum class TouchAction { NONE, TAP, NEXT, PREVIOUS };
 
+class DisplayIdle {
+ public:
+  void set_timeout(uint32_t seconds, uint32_t now) {
+    timeout_ms_ = seconds * 1000;
+    activity(now);
+  }
+
+  void activity(uint32_t now) { last_activity_ = now; }
+
+  bool begin_touch(bool backlight_on, uint32_t now) {
+    if (!touch_active_)
+      wake_only_ = !backlight_on;
+    touch_active_ = true;
+    activity(now);
+    return accepts_touch();
+  }
+
+  bool accepts_touch() const { return touch_active_ && !wake_only_; }
+
+  bool end_touch(uint32_t now) {
+    const bool accepted = accepts_touch();
+    touch_active_ = false;
+    activity(now);
+    return accepted;
+  }
+
+  void cancel_touch() { wake_only_ = true; }
+
+  bool expired(uint32_t now) const {
+    return timeout_ms_ != 0 && !touch_active_ && uint32_t(now - last_activity_) >= timeout_ms_;
+  }
+
+ private:
+  uint32_t timeout_ms_{0};
+  uint32_t last_activity_{0};
+  bool touch_active_{false};
+  bool wake_only_{false};
+};
+
 class TouchGesture {
  public:
   void begin(int id, int x, int y) {

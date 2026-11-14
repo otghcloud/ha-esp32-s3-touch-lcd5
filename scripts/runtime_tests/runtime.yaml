@@ -14,6 +14,34 @@ esphome:
             }
           };
           auto hidden = [](lv_obj_t *obj) { return lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN); };
+          wallpanel::DisplayIdle idle;
+          require(!idle.expired(100000), "default display timeout is disabled");
+          idle.set_timeout(2, 100);
+          require(!idle.expired(2099) && idle.expired(2100), "display timeout boundary in seconds");
+          idle.activity(2100);
+          require(!idle.expired(4099) && idle.expired(4100), "manual backlight on restarts timeout");
+          require(!idle.begin_touch(false, 4200), "dark-screen touch is wake-only");
+          require(!idle.begin_touch(true, 4201) && !idle.accepts_touch(),
+                  "additional fingers cannot turn a wake gesture into an action");
+          require(!idle.expired(10000), "held wake touch prevents timeout");
+          require(!idle.end_touch(10000), "wake release cannot activate a button or swipe");
+          require(!idle.expired(11999) && idle.expired(12000), "timeout starts on wake release");
+          require(idle.begin_touch(true, 12100) && idle.accepts_touch(), "second touch operates normally");
+          require(!idle.expired(20000), "held normal touch prevents timeout");
+          require(idle.end_touch(20000), "normal release is forwarded");
+          require(!idle.end_touch(20001), "duplicate release cannot activate controls");
+          idle.begin_touch(true, 21000);
+          idle.cancel_touch();
+          require(!idle.accepts_touch() && !idle.end_touch(21100), "manual off cancels an active gesture");
+          idle.set_timeout(1, UINT32_MAX - 500);
+          require(!idle.expired(498) && idle.expired(499), "display timeout handles millis rollover");
+          idle.set_timeout(10, 0);
+          idle.set_timeout(1, 20000);
+          require(!idle.expired(20999) && idle.expired(21000), "setting timeout restarts countdown");
+          idle.set_timeout(86400, 0);
+          require(!idle.expired(86399999) && idle.expired(86400000), "maximum display timeout is 24 hours");
+          idle.set_timeout(0, 0);
+          require(!idle.expired(UINT32_MAX), "zero disables automatic backlight off");
           wallpanel::TouchGesture gesture;
           using TouchAction = wallpanel::TouchAction;
           gesture.begin(1, 300, 150);

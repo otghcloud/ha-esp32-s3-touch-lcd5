@@ -7,6 +7,30 @@ i2c:
 ch422g:
   - id: io_expander
 
+globals:
+  - id: display_idle
+    type: wallpanel::DisplayIdle
+    restore_value: false
+
+number:
+  - platform: template
+    id: display_timeout
+    name: Display timeout
+    icon: mdi:timer-outline
+    entity_category: config
+    unit_of_measurement: s
+    mode: BOX
+    min_value: 0
+    max_value: 86400
+    step: 1
+    initial_value: 0
+    restore_value: true
+    optimistic: true
+    update_interval: never
+    on_value:
+      then:
+        - lambda: id(display_idle).set_timeout(static_cast<uint32_t>(x), millis());
+
 switch:
   - platform: gpio
     id: display_backlight
@@ -14,11 +38,24 @@ switch:
     icon: mdi:monitor
     entity_category: config
     restore_mode: ALWAYS_ON
+    on_turn_on:
+      then:
+        - lambda: id(display_idle).activity(millis());
+    on_turn_off:
+      then:
+        - lambda: id(display_idle).cancel_touch();
     pin:
       ch422g: io_expander
       number: 2
       mode: OUTPUT
       inverted: false
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: |-
+          if (id(display_backlight).state && id(display_idle).expired(millis()))
+            id(display_backlight).turn_off();
 
 touchscreen:
   - platform: gt911
@@ -31,6 +68,10 @@ touchscreen:
     on_touch:
       then:
         - lambda: |-
+            const bool accept = id(display_idle).begin_touch(id(display_backlight).state, millis());
+            id(display_backlight).turn_on();
+            if (!accept)
+              return;
             id(dashboard).begin_touch(touch.id, touch.x, touch.y);
             for (const auto &point : touches) {
               if (point.state != 0)
@@ -39,13 +80,17 @@ touchscreen:
     on_update:
       then:
         - lambda: |-
+            if (!id(display_idle).accepts_touch())
+              return;
             for (const auto &point : touches) {
               if (point.state != 0)
                 id(dashboard).update_touch(point.id, point.x, point.y);
             }
     on_release:
       then:
-        - lambda: id(dashboard).end_touch();
+        - lambda: |-
+            if (id(display_idle).end_touch(millis()))
+              id(dashboard).end_touch();
 
 display:
   - platform: mipi_rgb
