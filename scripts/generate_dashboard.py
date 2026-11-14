@@ -9,6 +9,9 @@ from urllib.request import urlopen
 
 import yaml
 
+from dashboard_pages import buttons, homepage, navigation, screensaver, settings
+from dashboard_pages.shared import MAX_PAGES, chrome, dots, label
+
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "esphome" / "dashboard.yaml"
@@ -16,8 +19,6 @@ ICON_DATA = ROOT / "scripts" / "mdi-icons.json"
 ICON_HEADER = ROOT / "esphome" / "components" / "wallpanel" / "mdi_icons.h"
 MDI_VERSION = "7.4.47"
 MDI_SOURCE = f"https://cdn.jsdelivr.net/npm/@mdi/font@{MDI_VERSION}"
-MAX_PAGES = 8
-MAX_BUTTONS = 18
 
 
 def load_icons():
@@ -54,138 +55,36 @@ def render_icons():
     ])
 
 
-def label(widget_id, text, font, **properties):
-    return {"label": {"id": widget_id, "text": text, "text_font": font,
-                      "text_color": 0xF2F4F8, **properties}}
-
-
 def make_dashboard():
-    widgets = [{"obj": {
-        "id": name, "x": 0, "y": y, "width": 800, "height": height,
-        "bg_color": color, "bg_opa": "COVER", "radius": 0,
-        "pad_all": 0, "border_width": 0, "clickable": False, "scrollable": False,
-    }} for name, y, height, color in (
-        ("dashboard_header", 0, 56, 0x000000), ("dashboard_footer", 432, 48, 0x999999)
-    )]
-    bindings = []
-    for p in range(MAX_PAGES):
-        children = [
-            label(f"title_{p}", "", "font_medium", x=24, y=14, width=560, height=32, long_mode="DOT"),
-            label(f"temperature_{p}", "", "font_small", align="BOTTOM_LEFT", x=24, y=-14,
-                  width=300, height=20, long_mode="DOT", text_color=0x111111),
-        ]
-        for d in range(MAX_PAGES):
-            children.append({"obj": {
-                "id": f"dot_{p}_{d}", "x": 364 + d * 20, "align": "BOTTOM_LEFT",
-                "y": -18, "width": 12, "height": 12, "radius": 6,
-                "pad_all": 0, "border_width": 2, "border_color": 0x111111,
-                "bg_color": 0x111111, "bg_opa": "TRANSP",
-                "clickable": False, "scrollable": False,
-            }})
-        widgets.append({"obj": {
-            "id": f"page_{p}", "width": 800, "height": 480, "x": 0, "y": 0,
-            "pad_all": 0, "border_width": 0, "bg_opa": "TRANSP",
-            "scrollable": False, "hidden": True, "widgets": children,
-        }})
-        dots = ", ".join(f"id(dot_{p}_{d})" for d in range(MAX_PAGES))
-        bindings.append(
-            f"id(dashboard).bind_page({p}, "
-            + "{"
-            + f"id(page_{p}), id(title_{p}), id(temperature_{p}), "
-            + "{" + dots + "}});"
-        )
-    button_widgets = []
-    button_bindings = []
-    # Keep the original tile IDs while sharing their widgets across all page models.
-    for b in range(MAX_BUTTONS):
-        prefix = f"button_0_{b}"
-        button_widgets.append({"button": {
-            "id": prefix, "x": 20 if b % 2 == 0 else 420,
-            "y": 65 if b < 2 else 230, "width": 360, "height": 155,
-            "bg_color": 0x171F2C, "bg_opa": "90%", "border_color": 0x344154,
-            "border_width": 1, "radius": 18, "scrollable": False,
-            "widgets": [
-                label(f"{prefix}_icon", "\U000F0335", "font_icons",
-                      x=22, y=42, width=72, height=72, text_align="CENTER",
-                      text_color=0xF2C66D),
-                label(f"{prefix}_name", "", "font_medium", x=112, y=30,
-                      width=220, height=32, long_mode="DOT"),
-                label(f"{prefix}_state", "UNKNOWN", "font_medium", x=112, y=78,
-                      text_color=0xAAB4C5),
-                label(f"{prefix}_unavailable", "UNAVAILABLE", "font_small",
-                      align="TOP_RIGHT", x=-14, y=10, text_color=0xF2A65A),
-            ],
-        }})
-        button_bindings.append(
-            "{" + ", ".join(f"id({prefix}{suffix})" for suffix in
-                             ("", "_name", "_state", "_unavailable", "_icon")) + "}"
-        )
-    widgets.append({"obj": {
-        "id": "dashboard_tiles", "width": 800, "height": 480, "x": 0, "y": 0,
-        "pad_all": 0, "border_width": 0, "bg_opa": "TRANSP",
-        "clickable": False, "scrollable": False, "hidden": True, "widgets": button_widgets,
-    }})
-    bindings.append(
-        "id(dashboard).bind_buttons(id(dashboard_tiles), {{"
-        + ", ".join(button_bindings) + "}});"
-    )
-    navigation_buttons = [{"button": {
-        "id": f"navigation_{p}", "x": 20 if p % 2 == 0 else 420,
-        "y": 65 if p < 2 else 230, "width": 360, "height": 155,
-        "bg_color": 0x171F2C, "bg_opa": "90%", "border_color": 0x344154,
-        "border_width": 1, "radius": 18, "scrollable": False,
-        "widgets": [
-            label(f"navigation_{p}_icon", "\U000F056E", "font_icons",
-                  x=22, y=42, width=72, height=72, text_align="CENTER"),
-            label(f"navigation_{p}_title", "", "font_medium", align="CENTER",
-                  width=316, height=32, long_mode="DOT", text_align="CENTER"),
-        ],
-    }} for p in range(MAX_PAGES)]
-    widgets.append({"obj": {
-        "id": "navigation", "x": 0, "y": 0, "width": 800, "height": 480,
-        "pad_all": 0, "border_width": 0, "bg_opa": "TRANSP",
-        "scrollable": False, "hidden": True,
-        "widgets": [
-            label("navigation_title", "Pages", "font_medium",
-                  x=24, y=14, width=560, height=32, long_mode="DOT"),
-            *navigation_buttons,
-        ],
-    }})
-    bindings.append(
-        "id(dashboard).bind_navigation({id(navigation), id(dashboard_menu), {"
-        + ", ".join(f"id(navigation_{p})" for p in range(MAX_PAGES)) + "}, {"
-        + ", ".join(f"id(navigation_{p}_title)" for p in range(MAX_PAGES)) + "}, {"
-        + ", ".join(f"id(navigation_{p}_icon)" for p in range(MAX_PAGES)) + "}});"
-    )
-    widgets.append(label("dashboard_waiting", "Waiting for Home Assistant", "font_medium",
-                         align="CENTER"))
-    bindings.append(
+    page_widgets, bindings = buttons.build()
+    menu, menu_binding = navigation.build()
+    widgets = chrome() + page_widgets + [menu, homepage.build(), settings.build()] + dots()
+    widgets.append(label("dashboard_waiting", "Waiting for Home Assistant", "font_medium", align="CENTER"))
+    bindings += [
+        menu_binding,
+        "id(dashboard).bind_dots({"
+        + ", ".join(f"id(dashboard_dot_{d})" for d in range(MAX_PAGES + 1)) + "});",
         "id(dashboard).bind_fonts(id(font_icons)->get_lv_font(), id(font_dense_icons)->get_lv_font(), "
-        "id(font_medium)->get_lv_font(), id(font_small)->get_lv_font());"
-    )
-    bindings.append(
-        "id(dashboard).bind_screensaver(id(dashboard_screensaver));"
-    )
-    bindings.append(
-        "id(dashboard).initialize(id(dashboard_waiting), id(dashboard_connection));"
-    )
+        "id(font_medium)->get_lv_font(), id(font_small)->get_lv_font());",
+        "id(dashboard).bind_screensaver(id(dashboard_screensaver));",
+        "id(dashboard).bind_homepage(id(homepage), id(homepage_title));",
+        "id(dashboard).bind_settings(id(settings), id(dashboard_settings));",
+        "id(dashboard).initialize(id(dashboard_waiting), id(dashboard_connection));",
+    ]
     return {
-        "esphome": {"on_boot": {"priority": -100, "then": [{"lambda": "\n".join(bindings)}]}},
+        "esphome": {"on_boot": [{"priority": -100, "then": [{"lambda": "\n".join(bindings)}]}]},
         "font": [{"file": "gfonts://Roboto", "id": name, "size": size}
                  for name, size in (("font_large", 38), ("font_medium", 24), ("font_small", 16))]
                 + [{"file": "gfonts://Roboto", "id": "font_screensaver", "size": 104,
-                    "glyphsets": [], "glyphs": list("0123456789:-")}]
+                    "glyphsets": [], "glyphs": list("0123456789:- APM")}]
                 + [{"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
-                    "id": "font_icons", "size": 72, "bpp": 1, "glyphsets": [],
+                    "id": name, "size": size, "bpp": 1, "glyphsets": [],
                     "glyphs": [chr(codepoint) for codepoint in
-                               sorted({int(value, 16) for value in load_icons().values()})]},
-                   {"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
-                    "id": "font_dense_icons", "size": 36, "bpp": 1, "glyphsets": [],
-                    "glyphs": [chr(codepoint) for codepoint in
-                               sorted({int(value, 16) for value in load_icons().values()})]},
-                   {"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
+                               sorted({int(value, 16) for value in load_icons().values()})]}
+                   for name, size in (("font_icons", 72), ("font_dense_icons", 36))]
+                + [{"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
                     "id": "font_ui_icons", "size": 32, "bpp": 1, "glyphsets": [],
-                    "glyphs": [chr(int(load_icons()["menu"], 16))]}],
+                    "glyphs": [chr(int(load_icons()[name], 16)) for name in ("menu", "cog")]}],
         "image": [{"platform": "file", "file": "../assets/background_dark.png",
                    "id": "dashboard_background", "type": "RGB565", "resize": "800x480"}],
         "lvgl": {
@@ -205,17 +104,16 @@ def make_dashboard():
                               "font_ui_icons", align="CENTER", text_color=0x111111),
                     ],
                 }},
-                {"obj": {
-                    "id": "dashboard_screensaver", "x": 0, "y": 0, "width": 800, "height": 480,
-                    "bg_color": 0x111827, "bg_opa": "COVER", "bg_image_src": "dashboard_background",
-                    "radius": 0, "border_width": 0, "pad_all": 0, "scrollable": False, "hidden": True,
+                {"button": {
+                    "id": "dashboard_settings", "x": 692, "y": 434, "width": 48, "height": 44,
+                    "bg_opa": "TRANSP", "border_width": 0, "shadow_width": 0,
+                    "radius": 0, "pad_all": 0, "scrollable": False,
                     "widgets": [
-                        label("screensaver_clock", "--:--", "font_screensaver",
-                              x=20, y=145, width=760, height=128, text_align="CENTER"),
-                        label("screensaver_date", "Waiting for time", "font_large",
-                              x=20, y=285, width=760, height=50, text_align="CENTER", long_mode="DOT"),
+                        label("dashboard_settings_icon", chr(int(load_icons()["cog"], 16)),
+                              "font_ui_icons", align="CENTER", text_color=0x111111),
                     ],
                 }},
+                screensaver.build(),
             ]},
             "widgets": widgets,
         },

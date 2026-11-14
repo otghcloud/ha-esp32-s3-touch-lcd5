@@ -76,11 +76,11 @@ class BlueprintTests(unittest.TestCase):
         return result
 
     def snapshot(self):
-        source = self.blueprint["actions"][0]["default"][1]["variables"]["dashboard_snapshot"]
+        source = self.blueprint["actions"][-1]["default"][1]["variables"]["dashboard_snapshot"]
         return ast.literal_eval(self.env.from_string(source).render(**self.variables()).strip())
 
     def chunks(self, snapshot):
-        repeat = self.blueprint["actions"][0]["default"][2]["repeat"]
+        repeat = self.blueprint["actions"][-1]["default"][2]["repeat"]
         variables = {"dashboard_snapshot": snapshot, "transfer": "test-transfer"}
         count = int(self.env.from_string(repeat["count"]).render(**variables))
         data = repeat["sequence"][0]["data"]
@@ -234,7 +234,7 @@ class BlueprintTests(unittest.TestCase):
         for page in range(1, 6):
             self.inputs[f"page_{page}_button_1"] = f"light.page_{page}"
         variables = self.variables()
-        guard = self.blueprint["actions"][0]["choose"][1]
+        guard = self.blueprint["actions"][-1]["choose"][1]
         self.assertEqual(self.env.from_string(guard["conditions"]).render(**variables), "True")
         self.assertEqual(guard["sequence"][0]["data"]["level"], "error")
         for layout in ("4x2", "6x3"):
@@ -242,7 +242,7 @@ class BlueprintTests(unittest.TestCase):
             self.assertEqual(self.variables()["configuration_error"], "")
         self.inputs.update(navigation_layout="2x2", page_5_button_1=[], page_5_button_18="light.ignored")
         self.assertEqual(self.variables()["configuration_error"], "")
-        warning = self.blueprint["actions"][0]["default"][0]
+        warning = self.blueprint["actions"][-1]["default"][0]
         self.assertEqual(self.env.from_string(warning["if"]).render(**self.variables()), "True")
         message = self.env.from_string(warning["then"][0]["data"]["message"]).render(**self.variables())
         self.assertIn("Page 5 button 18", message)
@@ -259,6 +259,73 @@ class BlueprintTests(unittest.TestCase):
                 self.states[self.inputs[key]] = "on"
                 self.attributes[self.inputs[key]] = {"icon": "mdi:ceiling-light"}
         return self.snapshot()
+
+    def test_homepage_order_titles_and_menu_capacity(self):
+        self.assertEqual(self.snapshot()["homepage"],
+                         {"enabled": False, "position": 0, "title": "Homepage"})
+        self.inputs.update(homepage_enabled=True, page_order=[
+            {"page": "3"}, {"page": "1"}, {"page": "home", "title": " Welcome "},
+        ])
+        snapshot = self.snapshot()
+        self.assertEqual(snapshot["page_order"], [2, 0, 1, 3, 4, 5, 6, 7])
+        self.assertEqual(snapshot["homepage"], {"enabled": True, "position": 2, "title": "Welcome"})
+        self.inputs["page_order"] = [{"page": "2"}]
+        self.assertEqual(self.snapshot()["homepage"]["position"], 0)
+        self.inputs["page_order"] = [{"page": "home"}, {"page": "home"}]
+        self.assertTrue(self.variables()["configuration_error"])
+        self.inputs["page_order"] = []
+        for page in range(1, 9):
+            self.inputs[f"page_{page}_button_1"] = f"light.page_{page}"
+        self.inputs["navigation_layout"] = "4x2"
+        self.assertIn("6x3", self.variables()["configuration_error"])
+        self.inputs["navigation_layout"] = "6x3"
+        self.assertEqual(self.variables()["configuration_error"], "")
+        self.inputs["homepage_enabled"] = False
+        self.inputs["navigation_layout"] = "4x2"
+        self.assertEqual(self.variables()["configuration_error"], "")
+
+    def test_localization_presets_and_wake_hold(self):
+        self.assertEqual(self.snapshot()["localization"], {"time": "24h", "date": "long"})
+        self.inputs.update(time_format="12h", date_format="iso",
+                           wake_sensors=["binary_sensor.motion", "binary_sensor.presence"])
+        self.assertEqual(self.snapshot()["localization"], {"time": "12h", "date": "iso"})
+        self.assertIn("binary_sensor.motion", self.variables()["watched_entities"])
+        for motion, presence, expected in (
+                ("off", "off", False), ("on", "off", True), ("off", "on", True),
+                ("unknown", "unavailable", False)):
+            self.states.update({"binary_sensor.motion": motion, "binary_sensor.presence": presence})
+            self.assertIs(self.snapshot()["wake_hold"], expected)
+        self.inputs["date_format"] = "%x"
+        self.assertTrue(self.variables()["configuration_error"])
+
+    def test_wake_requires_real_off_to_on_event_not_attributes_or_refresh(self):
+        self.inputs["wake_sensors"] = ["binary_sensor.motion"]
+        template = self.env.from_string(self.variables()["fresh_wake"])
+        self.assertEqual(template.render(), "False")
+        for before, after, entity, trigger_id, expected in (
+                ("off", "on", "binary_sensor.motion", "state", True),
+                ("on", "on", "binary_sensor.motion", "state", False),
+                ("unknown", "on", "binary_sensor.motion", "state", False),
+                ("unavailable", "on", "binary_sensor.motion", "state", False),
+                (None, "on", "binary_sensor.motion", "state", False),
+                ("on", None, "binary_sensor.motion", "state", False),
+                ("off", "on", "binary_sensor.other", "state", False),
+                ("off", "on", "binary_sensor.motion", "refresh", False)):
+            data = SimpleNamespace(entity_id=entity,
+                                   old_state=None if before is None else SimpleNamespace(state=before),
+                                   new_state=None if after is None else SimpleNamespace(state=after))
+            trigger = SimpleNamespace(id=trigger_id, event=SimpleNamespace(data=data))
+            self.assertEqual(template.render(trigger=trigger, **self.variables()).strip(), str(expected))
+        action = self.blueprint["actions"][0]
+        for fresh, endpoint, error, expected in (
+                (True, "esphome.office_set_dashboard", "", "True"),
+                (False, "esphome.office_set_dashboard", "", "False"),
+                (True, "", "", "False"),
+                (True, "esphome.office_set_dashboard", "Invalid configuration", "False")):
+            self.assertEqual(self.env.from_string(action["if"]).render(
+                fresh_wake=fresh, endpoint=endpoint, configuration_error=error), expected)
+        self.assertEqual(self.env.from_string(action["then"][0]["action"]).render(
+            endpoint="esphome.office_set_dashboard"), "esphome.office_wake_display")
 
     def test_full_unicode_snapshot_round_trips_through_bounded_blueprint_chunks(self):
         snapshot = self.full_snapshot("\U0001f600" * 80)

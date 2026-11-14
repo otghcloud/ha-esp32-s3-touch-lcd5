@@ -3,6 +3,21 @@ i2c:
   scl: GPIO9
   scan: true
 
+esphome:
+  on_boot:
+    - priority: -200
+      then:
+        - lambda: |-
+            id(dashboard).bind_power(
+              []() {
+                id(display_idle).activity(millis());
+                id(display_backlight).turn_on();
+                if (id(dashboard).screensaver_active())
+                  id(dashboard).wake();
+              },
+              []() { id(display_backlight).turn_off(); },
+              []() { id(display_idle).activity(millis()); });
+
 # Enabling the output bank also requires driving the EXIO1/EXIO3 reset lines.
 ch422g:
   - id: io_expander
@@ -61,10 +76,12 @@ switch:
       then:
         - lambda: |-
             id(display_idle).activity(millis());
-            id(dashboard).wake();
+            id(dashboard).backlight_on();
     on_turn_off:
       then:
-        - lambda: id(display_idle).cancel_touch();
+        - lambda: |-
+            id(display_idle).cancel_touch();
+            id(dashboard).backlight_off();
     pin:
       ch422g: io_expander
       number: 2
@@ -75,9 +92,9 @@ interval:
   - interval: 1s
     then:
       - lambda: |-
-          if (id(display_backlight).state) {
+          if (id(display_backlight).state && !id(dashboard).sensor_hold()) {
             if (id(display_idle).expired(millis()))
-              id(display_backlight).turn_off();
+              id(dashboard).sleep(true);
             else
               id(dashboard).check_screensaver(id(display_idle), millis());
           }
@@ -95,6 +112,7 @@ touchscreen:
         - lambda: |-
             const bool saver = id(dashboard).screensaver_active();
             const bool accept = id(display_idle).begin_touch(id(display_backlight).state && !saver, millis());
+            id(dashboard).touch_activity();
             id(display_backlight).turn_on();
             if (id(dashboard).screensaver_active())
               id(dashboard).wake();

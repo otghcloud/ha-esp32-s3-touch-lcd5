@@ -27,7 +27,7 @@ blueprint:
       input:
         navigation_layout:
           name: Menu layout (columns x rows)
-          description: More than four populated pages require 4x2 or 6x3.
+          description: Count Homepage too. More than four entries require 4x2 or 6x3; nine require 6x3.
           default: 2x2
           selector: &layout_selector
             select:
@@ -39,7 +39,10 @@ blueprint:
             named rows display the title above the fixed page slot.
             Existing titles are not copied automatically from the legacy fields below.
             Unlisted pages follow in slot order; empty pages are always skipped.
+            Add a Homepage row to reposition it; without one it comes first when enabled.
           default:
+            - page: home
+              title: Homepage
             - page: "1"
             - page: "2"
             - page: "3"
@@ -64,6 +67,7 @@ blueprint:
                   selector:
                     select:
                       options:
+                        - {label: Homepage, value: home}
                         - {label: Page 1, value: "1"}
                         - {label: Page 2, value: "2"}
                         - {label: Page 3, value: "3"}
@@ -72,6 +76,59 @@ blueprint:
                         - {label: Page 6, value: "6"}
                         - {label: Page 7, value: "7"}
                         - {label: Page 8, value: "8"}
+    homepage_settings:
+      name: Homepage
+      icon: mdi:home
+      collapsed: true
+      input:
+        homepage_enabled:
+          name: Enable Homepage
+          description: Adds a placeholder Homepage in addition to the eight button pages.
+          default: false
+          selector:
+            boolean:
+    localization_settings:
+      name: Date and time
+      icon: mdi:calendar-clock
+      collapsed: true
+      input:
+        time_format:
+          name: Time format
+          default: 24h
+          selector:
+            select:
+              options:
+                - {label: "24 hour (18:30)", value: 24h}
+                - {label: "12 hour (06:30 PM)", value: 12h}
+        date_format:
+          name: Date format
+          description: Weekday and month names are English.
+          default: long
+          selector:
+            select:
+              options:
+                - {label: "Weekday, day month year", value: long}
+                - {label: "Weekday, DD/MM", value: weekday_short}
+                - {label: "DD/MM/YYYY", value: dmy}
+                - {label: "MM/DD/YYYY", value: mdy}
+                - {label: "YYYY-MM-DD", value: iso}
+                - {label: "Day abbreviated-month year", value: abbreviated}
+    wake_settings:
+      name: Wake sensors
+      icon: mdi:motion-sensor
+      collapsed: true
+      input:
+        wake_sensors:
+          name: Wake-up sensors
+          description: >-
+            Wake on OFF to ON and stay awake while any selected sensor is ON.
+            Manual Sleep or backlight off takes priority until a fresh activation or touch.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: binary_sensor
     screensaver_settings:
       name: Screensaver
       icon: mdi:monitor-screenshot
@@ -1616,6 +1673,17 @@ max_exceeded: silent
 variables:
   panel_device: !input panel_device
   screensaver_enabled: !input screensaver_enabled
+  homepage_enabled: !input homepage_enabled
+  time_format: !input time_format
+  date_format: !input date_format
+  wake_sensors: !input wake_sensors
+  fresh_wake: >-
+    {{ trigger is defined and trigger.id == 'state'
+       and trigger.event.data.entity_id in wake_sensors
+       and trigger.event.data.old_state is not none
+       and trigger.event.data.new_state is not none
+       and trigger.event.data.old_state.state == 'off'
+       and trigger.event.data.new_state.state == 'on' }}
   page_order: !input page_order
   titles:
     - !input page_1_title
@@ -1682,7 +1750,7 @@ variables:
     {% endfor %}
     {{ ns.value }}
   watched_entities: >-
-    {% set ns = namespace(entities=[]) %}
+    {% set ns = namespace(entities=wake_sensors | list) %}
     {% for entity in temperatures %}
       {% if entity is string and entity %}
         {% set ns.entities = ns.entities + [entity] %}
@@ -1709,13 +1777,13 @@ variables:
     {% endfor %}
     {{ ns.slots }}
   configuration_error: >-
-    {% set ns = namespace(pages=0, seen=[], error='') %}
+    {% set ns = namespace(pages=1 if homepage_enabled else 0, seen=[], error='') %}
     {% if page_order is not sequence or page_order is string or page_order is mapping %}
       {% set ns.error = 'Page order must be a list of page rows.' %}
     {% else %}
       {% for item in page_order %}
-        {% if item is not mapping or item.get('page') not in ['1', '2', '3', '4', '5', '6', '7', '8'] %}
-          {% set ns.error = 'Every page order row must select a page slot from 1 to 8.' %}
+        {% if item is not mapping or item.get('page') not in ['home', '1', '2', '3', '4', '5', '6', '7', '8'] %}
+          {% set ns.error = 'Every page order row must select Homepage or a page slot from 1 to 8.' %}
         {% elif item.page in ns.seen %}
           {% set ns.error = 'Page order cannot contain the same page slot more than once.' %}
         {% elif 'title' in item and item.title is not string %}
@@ -1737,7 +1805,10 @@ variables:
         {% set ns.pages = ns.pages + 1 %}
       {% endif %}
     {% endfor %}
-    {{ ns.error or ('More than four populated pages require a 4x2 or 6x3 navigation layout.' if ns.pages > 4 and navigation_layout == '2x2' else '') }}
+    {{ ns.error
+       or ('Invalid date/time preset.' if time_format not in ['24h', '12h'] or date_format not in ['long', 'weekday_short', 'dmy', 'mdy', 'iso', 'abbreviated'] else '')
+       or ('Nine populated pages including Homepage require a 6x3 navigation layout.' if ns.pages > 8 and navigation_layout != '6x3' else '')
+       or ('More than four populated pages require a 4x2 or 6x3 navigation layout.' if ns.pages > 4 and navigation_layout == '2x2' else '') }}
 
 triggers:
   - trigger: homeassistant
@@ -1764,6 +1835,9 @@ conditions:
               or trigger.event.data.entity_id in device_entities(panel_device))) }}
 
 actions:
+  - if: "{{ fresh_wake and endpoint != '' and configuration_error == '' }}"
+    then:
+      - action: "{{ endpoint[:-14] ~ '_wake_display' }}"
   - choose:
       - conditions: "{{ endpoint == '' }}"
         sequence:
@@ -1790,9 +1864,14 @@ actions:
                 {{ ignored_slots | join(', ') }}. These inputs remain saved.
       - variables:
           dashboard_snapshot: >-
-            {% set ns = namespace(pages=[], order=[]) %}
+            {% set ns = namespace(pages=[], order=[], home_position=0, home_title='Homepage', hold=false) %}
             {% for item in page_order %}
-              {% set ns.order = ns.order + [(item.page | int) - 1] %}
+              {% if item.page == 'home' %}
+                {% set ns.home_position = ns.order | length %}
+                {% set ns.home_title = ((item.get('title', '') | trim)[:80]) or 'Homepage' %}
+              {% else %}
+                {% set ns.order = ns.order + [(item.page | int) - 1] %}
+              {% endif %}
             {% endfor %}
             {% for p in range(8) %}
               {% if p not in ns.order %}
@@ -1835,7 +1914,15 @@ actions:
               {% set title = (title_input.value | trim)[:80] or ('Page ' ~ (p + 1)) %}
               {% set ns.pages = ns.pages + [dict(title=title, icon=page_icons[p], layout=layouts[p], temperature=text[:80], buttons=row.buttons)] %}
             {% endfor %}
-            {{ dict(version=2, navigation_layout=navigation_layout, screensaver_enabled=screensaver_enabled, page_order=ns.order, pages=ns.pages) }}
+            {% for entity in wake_sensors %}
+              {% if states(entity) == 'on' %}
+                {% set ns.hold = true %}
+              {% endif %}
+            {% endfor %}
+            {{ dict(version=2, navigation_layout=navigation_layout, screensaver_enabled=screensaver_enabled,
+                    homepage=dict(enabled=homepage_enabled, position=ns.home_position, title=ns.home_title),
+                    localization=dict(time=time_format, date=date_format), wake_hold=ns.hold,
+                    page_order=ns.order, pages=ns.pages) }}
           transfer: "{{ now().isoformat() }}"
       - repeat:
           count: "{{ (((dashboard_snapshot | to_json) | length) + 4095) // 4096 }}"

@@ -4,6 +4,10 @@ esphome:
   project:
     name: "OTGH Cloud.HA Panel LCD5"
     version: "dev"
+  on_boot:
+    - priority: -200
+      then:
+        - lambda: id(dashboard).bind_restart([]() { id(panel_restart).press(); });
 
 esp32:
   variant: esp32s3
@@ -25,6 +29,7 @@ ota:
 
 button:
   - platform: restart
+    id: panel_restart
     name: Restart
     entity_category: config
 

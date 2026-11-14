@@ -76,7 +76,7 @@ Buttons use HA friendly names unless their **Title** field is filled in. Blank o
 
 **Upgrade order:** install the updated firmware **first**, then re-import the updated blueprint and reload automations. Existing input IDs are preserved and new layouts default to 2x2. The new firmware still accepts the old four-page blueprint; older firmware cannot consume the new eight-page protocol.
 
-The maximum is **eight pages / 144 controls**, using the shared-widget renderer. When moving from the temporary six-page build, update both firmware and blueprint: version-2 snapshots now require eight page slots, and six-page snapshots are rejected without replacing the UI. Existing page 1-6 inputs and saved wake choices retain their meaning; new page 7/8 inputs default to empty.
+The maximum is **eight button pages / 144 controls**, plus an optional Homepage, using the shared-widget renderer. When moving from the temporary six-page build, update both firmware and blueprint: version-2 snapshots now require eight page slots, and six-page snapshots are rejected without replacing the UI. Existing page 1-6 inputs and saved wake choices retain their meaning; new page 7/8 inputs default to empty.
 
 ### Home Assistant icons
 
@@ -92,7 +92,7 @@ The full icon library requires the board's 16 MB flash layout; existing installa
 
 ### Layout and page navigation
 
-Each button page has a 56-pixel black header with its title on the left and the clock on the right. A 48-pixel grey (`#999999`) footer contains the optional page temperature, centred page dots and a bottom-right menu icon. Long titles and temperature values are truncated to avoid overlapping neighbouring controls. Blank or whitespace-only page titles display as **Page N**, using the blueprint slot number.
+Each button page has a 56-pixel black header with its title on the left and the clock on the right. A 48-pixel grey (`#999999`) footer contains the optional page temperature, centred page dots, a Settings cog and a bottom-right menu icon. Long titles and temperature values are truncated to avoid overlapping neighbouring controls. Blank or whitespace-only page titles display as **Page N**, using the blueprint slot number.
 
 Each button page independently selects its grid:
 
@@ -108,7 +108,7 @@ Use **Navigation > Page order and titles** to reorder pages with Home Assistant'
 
 **Existing title migration:** Home Assistant cannot dynamically populate a row label from another blueprint input. Existing **Legacy page title** inputs keep their IDs and continue supplying panel titles when a row has no title field. Copy an existing name once into its row to display it in the draggable list; after that, edit the row title rather than maintaining both fields. Explicitly clearing a row title uses **Page N** on the panel. Install firmware first, then re-import the updated blueprint and reload automations; older blueprints retain numeric page order.
 
-Tap the menu icon to open **Pages**, then tap a page button to select it. Only populated pages appear, in the configured order (numeric slot order by default), using the independent **Navigation > Menu layout** setting. Page buttons show their configured icons and titles; duplicate titles still select separate slots. More than four populated pages require a **4x2** or **6x3** menu. An invalid menu configuration logs an error and retains the previous dashboard (or waiting screen), rather than hiding pages or adding scrolling/pagination. Tap the menu icon again to return without changing the current page. Navigation hides page-specific temperatures and dots, and ignores swipes.
+Tap the menu icon to open **Navigation**, then tap a page button to select it. Only populated pages appear, in the configured order (numeric slot order by default), using the independent **Navigation > Menu layout** setting. Page buttons show their configured icons and titles; duplicate titles still select separate slots. More than four populated pages require a **4x2** or **6x3** menu; all eight button pages plus Homepage require **6x3**. An invalid menu configuration logs an error and retains the previous dashboard (or waiting screen), rather than hiding pages or adding scrolling/pagination. Tap the menu icon again to return without changing the current page. Navigation hides page-specific temperatures and dots, and ignores swipes.
 
 Swipe left/right anywhere on a button page, including over buttons. Navigation wraps at both ends and skips empty pages. A horizontal movement of at least 100 pixels changes page when you lift your finger. Buttons activate only on release after a tap with no movement beyond 20 pixels; drags and multi-touch gestures do not activate controls. Bottom-centred dots highlight the current page; they are hidden for a single page. Temperature values use the sensor's unit of measurement.
 
@@ -118,7 +118,17 @@ Page navigation remains available offline using the last known configuration. Re
 
 The static 800 × 480 background in [`assets/background_dark.png`](./assets/background_dark.png) is embedded in the firmware and visible behind the content area of every view, including waiting and navigation.
 
+The latest darker artwork has been verified byte-for-byte against the generated RGB565 image in both a local candidate build and a separately resolved published `main` package. Tiles remain 90% opaque, so compare exposed areas between tiles or the screensaver rather than tile centres. If a device still looks unchanged, allow both the package and external-component 300-second refresh windows to expire, confirm repository updates in the validation log, use **Clean Build Files**, then rebuild and install. Compare the installed firmware's reported compilation time with the new build. These checks do not establish which firmware is currently on your device; no artwork or tile opacity has been changed.
+
 Changing layouts, page icons or controls after the firmware/blueprint upgrade does not require recompilation.
+
+### Homepage and Settings
+
+Enable **Homepage > Enable Homepage** in the blueprint to add a placeholder view with centred **Homepage** text and the shared background/header/footer. It is off by default, is additional to the eight button pages, and works even when no button pages are configured.
+
+Homepage participates in the menu, swipes and page dots. It comes first unless a **Homepage** row in **Navigation > Page order and titles** places it elsewhere. Existing automations can add that row; its optional title changes the header/menu label, not the placeholder text. Disabling Homepage retains its ordering input and safely returns to another available page.
+
+Tap the footer cog for **Settings**. **Restart** immediately reboots the panel, without confirmation; **Sleep** immediately turns the backlight off. These are local actions and work without Home Assistant, including before any pages arrive. Settings has no page dots, is excluded from swipes/order/wake choices, and never replaces the last content page. The menu icon opens Navigation from Settings; touching a sleeping panel wakes only, as below.
 
 ### Display backlight
 
@@ -130,7 +140,7 @@ Touching a dark screen turns the backlight on. That entire first gesture is wake
 
 Turning the backlight off does not stop the dashboard or Home Assistant connection. A timeout of 0 still permits manual switch-off, with touch-to-wake available.
 
-The saved **Wake-up page** dropdown defaults to **Last used page**, or can select **Page 1** through **Page 8** (the blueprint's fixed page slots), or **Navigation / menu**. Existing saved choices retain their meaning. It applies whenever the backlight turns on, whether by touch, Home Assistant or reboot, and when dismissing the screensaver. **Navigation / menu** opens the page-selection menu; other choices close it. **Last used page** means the last button page, not the navigation screen. An empty selected page falls back to the first populated page in the configured display order. If no pages have arrived yet, the panel retains its waiting screen and applies the preference when Home Assistant sends populated pages. Changing the dropdown does not immediately navigate, and normal touches while the backlight is on do not change pages. Install the updated firmware to add the menu option; no blueprint update is needed for that option alone.
+The saved **Wake-up page** dropdown defaults to **Last used page**, or can select **Page 1** through **Page 8** (the blueprint's fixed page slots), **Navigation / menu**, or **Homepage**. New options are appended, preserving saved indices. It applies whenever the backlight turns on, whether by touch, Home Assistant or reboot, and when dismissing the screensaver. **Navigation / menu** opens the page-selection menu; other choices close it. **Last used page** means the last button page or Homepage, never Navigation or Settings. An empty/disabled selected page falls back to the first available content page in display order. If no pages have arrived yet, the panel retains its waiting screen and applies the preference when Home Assistant sends populated pages. Changing the dropdown does not immediately navigate, and normal touches while the backlight is on do not change pages. Install the updated firmware to add the Homepage option; enable Homepage through the updated blueprint to use it.
 
 The **Restart** button in **Configuration** reboots the panel. The timeout and wake-up page settings are retained; the dashboard waits for Home Assistant to resend its configuration as usual.
 
@@ -140,11 +150,19 @@ Brightness adjustment is not supported by this connection: [ESPHome's CH422G dri
 
 Install the updated firmware, re-import the updated blueprint and reload automations. Expand **Screensaver** in the blueprint and turn on **Enable screensaver** (off by default), then save/run the automation.
 
-The device's Home Assistant **Configuration** section now includes **Screensaver time**, saved across reboots. Enter **0 to 86400 seconds**; the default is **60**, and **0** disables the screensaver. After inactivity, a full-screen view covers all page/header/footer/menu content with the shared background, a large centred 24-hour clock and the smaller date below it, for example **18:35** / **Saturday, 14 November 2026**. It uses the same Home Assistant-synchronized time as the header; before synchronization it shows **--:--** and **Waiting for time**.
+The device's Home Assistant **Configuration** section now includes **Screensaver time**, saved across reboots. Enter **0 to 86400 seconds**; the default is **60**, and **0** disables the screensaver. After inactivity, a full-screen view covers all page/header/footer/menu content with the shared background, a large centred clock and the smaller date below it, by default **18:35** / **Saturday, 14 November 2026**. It uses the same Home Assistant-synchronized time as the header; before synchronization it shows **--:--** and **Waiting for time**.
 
 The first complete touch gesture dismisses the screensaver without activating controls, applies the saved **Wake-up page**, and restarts inactivity. Release before operating controls. Changing **Screensaver time** also dismisses the screensaver and restarts inactivity. Periodic Home Assistant updates and disconnections do not dismiss it.
 
 **Display timeout** remains independent: showing the screensaver does not restart the backlight countdown. For example, set **Screensaver time** to **60** and **Display timeout** to **300** for the clock after one minute and backlight-off after five minutes. A shorter or equal display timeout switches the backlight off first; a display timeout of **0** leaves it on for the screensaver. Both timers pause while touching and restart on release. Existing blueprints without the screensaver toggle keep it disabled.
+
+### Date/time formats and wake sensors
+
+The blueprint's **Date and time** section offers 24-hour or 12-hour AM/PM time, plus long date, weekday with DD/MM, DD/MM/YYYY, MM/DD/YYYY, ISO YYYY-MM-DD or abbreviated-month dates. Defaults are unchanged. Header and screensaver update together; the header uses a smaller font for AM/PM to avoid overlap. Names remain English; custom formats, temperature conversion and timezone selection are not included.
+
+Under **Wake sensors > Wake-up sensors**, select any number of binary sensors. A genuine **OFF → ON** transition wakes the backlight/screensaver and uses the saved wake route; an already-awake panel does not jump pages. While any selected sensor is ON, both automatic backlight-off and screensaver entry are suspended. When the last turns OFF, both inactivity deadlines restart. Unknown/unavailable values are not ON, and attribute-only changes do not count as activations.
+
+Manual **Sleep** or HA backlight-off takes priority over an existing ON sensor. Periodic snapshots cannot undo it; a fresh OFF → ON transition or touch releases that override. A reconnect snapshot can restore an active hold and wake an automatically timed-out panel, but cannot undo manual Sleep. Connection loss or 65 seconds without valid snapshots releases the hold, so the display cannot remain held awake by stale sensor state. Install firmware first, then re-import the blueprint and reload automations.
 
 ### Example configuration
 
@@ -159,7 +177,7 @@ The first complete touch gesture dismisses the screensaver without activating co
 
 ### Development
 
-The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores eight page models with eighteen button slots each, but uses one shared pool of eighteen LVGL tiles for the selected page. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. This reduces the generated startup tree from 841 objects with eight duplicated control trees to 215, including the three screensaver widgets. LVGL's boot-time resolution/theme refresh traverses this smaller tree; watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
+The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores eight page models with eighteen button slots each, but shares one eighteen-tile LVGL pool between entity pages, Navigation and Settings, plus one nine-dot strip. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. The tree remains below the unchanged 220-object limit (versus 841 with duplicated controls), with 964 measured startup refresh requests below the unchanged 1500-request limit. Watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
 
 ```sh
 python3 scripts/generate_dashboard.py
@@ -169,6 +187,8 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 
 The generator also maintains the MDI lookup header from the pinned [`scripts/mdi-icons.json`](./scripts/mdi-icons.json) catalogue. Use `python3 scripts/generate_dashboard.py --update-icons` to refresh that catalogue from the pinned upstream stylesheet. Change `MDI_VERSION` and regenerate together when upgrading the font. MDI licensing is recorded in [`MDI-LICENSE`](./esphome/components/wallpanel/MDI-LICENSE). The one-bit icon font keeps the complete library within flash without loading every icon bitmap into RAM.
 
+Page builders live in [`scripts/dashboard_pages/`](./scripts/dashboard_pages/); runtime models, interaction, shared geometry and page-specific renderers live in [`esphome/components/wallpanel/`](./esphome/components/wallpanel/). The coordinator retains atomic snapshot validation, transport and explicit view routing. Screensaver is an overlay, not a content route; entity slot identity remains independent of visual ordering. Keep package `on_boot` automations as lists so page initialization and local hardware/clock bindings compose rather than override each other.
+
 The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks startup widget/refresh-work bounds, independent per-page appearance retention, display idle/wake handling, screensaver timing/rollover/date formatting/wake-only gestures, rendered background/header/footer pixels, layout bounds, menu and swipe navigation, live page changes, dots, state labels, offline controls and rejection of invalid snapshots:
 
 ```sh
@@ -177,9 +197,11 @@ scripts/runtime_tests/.esphome/build/dynamic-host/.pioenvs/dynamic-host/program
 python3 scripts/runtime_tests/check_native_api.py
 ```
 
-The connected native API check also requires `aioesphomeapi` (included with ESPHome). It starts/stops its own local host process, requires port 16053 to be unused, and tests blueprint-generated 144-control snapshots, Unicode, partial-transfer atomicity and real entity actions through all three layouts. It runs with a 128 KiB host stack and checks bounded retained heap after repeated transfers.
+The connected native API check also requires `aioesphomeapi` (included with ESPHome). It starts/stops its own local host process, requires port 16053 to be unused, and tests blueprint-generated 144-control snapshots, Unicode, partial-transfer atomicity, real entity actions through all three layouts, Homepage, local Settings actions, clock format changes, sensor wake/manual precedence and hold expiry. Host Restart/backlight actions are test callbacks, not real restarts or hardware output. It runs with a 128 KiB host stack and checks bounded retained heap after repeated transfers.
 
 The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). Version 2 uses eight page slots with per-page layout/icon metadata and exactly 4, 8 or 18 button slots. The optional root `page_order` is a permutation of zero-based slot indices 0-7, separate from the unchanged `pages` array; omission retains legacy numeric ordering. The blueprint expands partial user orders to a complete permutation. The runtime validates the entire snapshot before changing the UI; unsupported entities and malformed payloads are logged and rejected without replacing the previous configuration. Legacy version-1 four-page snapshots remain supported by `esphome.<device_name>_set_dashboard`.
+
+Optional snapshot fields are `homepage: {enabled, position, title}` (insertion position 0-8 among ordered entity slots), `localization: {time, date}` (allowlisted preset IDs), and boolean `wake_hold`. Omission disables Homepage/hold and restores the default formats. The separate `esphome.<device_name>_wake_display` action represents a fresh sensor activation; the blueprint sends it before the snapshot transfer so a later attribute/periodic update cannot cancel it mid-transfer. Local manual-sleep precedence is not stored in HA snapshots.
 
 The new blueprint appends `_chunk` to the discovered endpoint and sends ordered `set_dashboard_chunk` calls with a transfer ID, zero-based index, total and string payload. Each payload has a `~` text prefix followed by at most 4096 bytes of ASCII JSON; the complete snapshot is capped at 256 KiB/64 chunks. Incomplete transfers expire after 30 seconds of inactivity. Only a complete, validated snapshot replaces the UI. Chunking avoids ESPHome's 32 KiB native API message limit without modifying ESPHome internals.
 

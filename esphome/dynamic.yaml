@@ -29,6 +29,7 @@ select:
       - Page 7
       - Page 8
       - Navigation / menu
+      - Homepage
     on_value:
       then:
         - lambda: id(dashboard).set_wake_page(i);
@@ -36,6 +37,9 @@ select:
 api:
   homeassistant_services: true
   actions:
+    - action: wake_display
+      then:
+        - lambda: id(dashboard).sensor_wake();
     - action: set_dashboard
       variables:
         payload: string

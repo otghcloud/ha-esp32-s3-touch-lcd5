@@ -159,9 +159,43 @@ async def check():
             await wait_probe(lambda value: value["menu_visible"])
             unicode_snapshot = fixture.full_snapshot("\U0001f600" * 80)
             unicode_chunks = await send(unicode_snapshot, "unicode")
-            await wait_probe(lambda value: value["last_name"] == "\U0001f600" * 80 and value["menu_visible"])
+            await wait_probe(lambda value: value["menu_visible"])
+            await tap(107, 142)
+            await wait_probe(lambda value: value["last_name"] == "\U0001f600" * 80 and not value["menu_visible"])
+            home_snapshot = json.loads(json.dumps(snapshot))
+            home_snapshot.update(
+                navigation_layout="6x3", homepage={"enabled": True, "position": 0, "title": "Welcome"},
+                localization={"time": "12h", "date": "iso"}, wake_hold=True,
+            )
+            await send(home_snapshot, "home-hold")
+            await wait_probe(lambda value: value["sensor_hold"] and value["compact_clock"])
+            client.select_command(wake.key, "Homepage")
+            await client.execute_service(service["test_wake"], {})
+            await wait_probe(lambda value: value["homepage_visible"])
+            await tap(716, 456)
+            settings = await wait_probe(lambda value: value["settings_visible"])
+            await tap(200, 142)
+            await wait_probe(lambda value: value["restarts"] == settings["restarts"] + 1)
+            await tap(600, 142)
+            asleep = await wait_probe(lambda value: not value["backlight"] and not value["sensor_hold"])
+            await send(home_snapshot, "manual-sleep-refresh")
+            still_asleep = await wait_probe(lambda value: value["tick"] > asleep["tick"] + 250)
+            assert not still_asleep["backlight"], "Periodic sensor refresh defeated manual Sleep"
+            await client.execute_service(service["wake_display"], {})
+            await wait_probe(lambda value: value["backlight"] and value["sensor_hold"] and value["homepage_visible"])
+            client.select_command(wake.key, "Page 1")
+            await client.execute_service(service["test_wake"], {})
+            await wait_probe(lambda value: not value["homepage_visible"] and not value["settings_visible"])
+            client.select_command(wake.key, "Homepage")
+            await client.execute_service(service["wake_display"], {})
+            previous = await wait_probe()
+            still_awake = await wait_probe(lambda value: value["tick"] > previous["tick"] + 250)
+            assert not still_awake["homepage_visible"], "Already-awake activation jumped to the saved wake page"
+            assert actions.empty(), "Local Settings/wake actions invoked a Home Assistant entity service"
+            await client.execute_service(service["test_expire"], {})
+            await wait_probe(lambda value: not value["sensor_hold"])
             await send(snapshot, "restore")
-            warm = await wait_probe(lambda value: value["last_name"] == "X" * 80)
+            warm = await wait_probe(lambda value: value["last_name"] == "X" * 80 and not value["compact_clock"])
             warm_heap = warm["heap_bytes"]
             for index in range(10):
                 await send(snapshot, f"repeat-{index}")
@@ -169,7 +203,8 @@ async def check():
                 warm = await wait_probe(lambda value: value["tick"] > warm_tick + 100)
             assert warm["heap_bytes"] - warm_heap < 16384, "Repeated transfers grow retained heap"
             size = len(json.dumps(unicode_snapshot).encode())
-            print(f"Native API passed: 144 controls, {size} bytes, {len(unicode_chunks)} chunks.")
+            print(f"Native API passed: 144 controls, Homepage, Settings, sensor wake/hold, "
+                  f"{size} bytes, {len(unicode_chunks)} chunks.")
             print(f"128 KiB host stack; retained host heap {warm['heap_bytes']} bytes "
                   f"(change after repeated transfers: {warm['heap_bytes'] - warm_heap:+d}).")
             succeeded = True
