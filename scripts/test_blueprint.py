@@ -132,6 +132,33 @@ class BlueprintTests(unittest.TestCase):
         self.inputs["screensaver_enabled"] = False
         self.assertIs(self.snapshot()["screensaver_enabled"], False)
 
+    def test_named_page_order_preserves_slots_and_legacy_titles(self):
+        self.inputs.update(page_1_title="Old office", page_3_title="Old landing",
+                           page_1_button_1="light.office", page_3_button_1="switch.landing")
+        self.assertEqual(self.snapshot()["page_order"], list(range(8)))
+        self.inputs["page_order"] = [{"page": "3", "title": " Landing "}, {"page": "1"}]
+        snapshot = self.snapshot()
+        self.assertEqual(snapshot["page_order"], [2, 0, 1, 3, 4, 5, 6, 7])
+        self.assertEqual(snapshot["pages"][2]["title"], "Landing")
+        self.assertEqual(snapshot["pages"][0]["title"], "Old office")
+        self.assertEqual(snapshot["pages"][0]["buttons"][0]["entity"], "light.office")
+        self.assertEqual(snapshot["pages"][2]["buttons"][0]["entity"], "switch.landing")
+        self.inputs["page_order"][1]["title"] = "  "
+        self.assertEqual(self.snapshot()["pages"][0]["title"], "Page 1")
+        self.inputs["page_order"][0]["title"] = "\U0001f600" * 100
+        self.assertEqual(self.snapshot()["pages"][2]["title"], "\U0001f600" * 80)
+        self.inputs["page_order"] = []
+        self.assertEqual(self.snapshot()["page_order"], list(range(8)))
+        self.assertEqual(self.snapshot()["pages"][2]["title"], "Old landing")
+
+    def test_invalid_page_order_logs_configuration_error(self):
+        for value in (None, "3,1", {"page": "1"}, [None], [{}], [{"page": "9"}],
+                      [{"page": 1}], [{"page": "1"}, {"page": "1"}],
+                      [{"page": "2", "title": None}], [{"page": "2", "title": 123}]):
+            with self.subTest(value=value):
+                self.inputs["page_order"] = value
+                self.assertTrue(self.variables()["configuration_error"])
+
     def test_custom_titles_apply_to_every_button_slot(self):
         for page in range(1, 9):
             self.inputs[f"page_{page}_layout"] = "6x3"

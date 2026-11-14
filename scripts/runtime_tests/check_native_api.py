@@ -137,6 +137,24 @@ async def check():
             await tap(689, 307)
             await expect_entity(mixed["pages"][1]["buttons"][7]["entity"])
 
+            fixture.inputs["page_order"] = [{"page": "8", "title": "Upstairs"}, {"page": "1", "title": "Office"}]
+            reordered = fixture.snapshot()
+            previous = await wait_probe()
+            await send(reordered, "reordered")
+            await wait_probe(lambda value: value["tick"] > previous["tick"] + 250)
+            await tap(768, 456)
+            await wait_probe(lambda value: value["menu_visible"])
+            await tap(107, 142)
+            await wait_probe(lambda value: value["page8_visible"] and not value["menu_visible"])
+            await tap(720, 335)
+            await expect_entity(reordered["pages"][7]["buttons"][17]["entity"])
+            client.select_command(wake.key, "Page 1")
+            await client.execute_service(service["test_wake"], {})
+            await wait_probe(lambda value: not value["page8_visible"])
+            await tap(720, 335)
+            await expect_entity(reordered["pages"][0]["buttons"][17]["entity"])
+            fixture.inputs["page_order"] = []
+
             await tap(768, 456)
             await wait_probe(lambda value: value["menu_visible"])
             unicode_snapshot = fixture.full_snapshot("\U0001f600" * 80)

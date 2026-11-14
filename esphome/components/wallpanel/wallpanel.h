@@ -192,6 +192,11 @@ class TouchGesture {
 
 class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevice {
  public:
+  Dashboard() {
+    for (size_t p = 0; p < MAX_PAGES; p++)
+      page_order_[p] = p;
+  }
+
   void bind_page(size_t index, const PageWidgets &widgets) { widgets_[index] = widgets; }
   void bind_buttons(lv_obj_t *container, const std::array<ButtonWidgets, MAX_BUTTONS> &buttons) {
     buttons_container_ = container;
@@ -243,6 +248,25 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         return false;
       }
       const bool screensaver_enabled = root["screensaver_enabled"] | false;
+      const auto order = root["page_order"];
+      if (!order.isNull() && (!order.is<JsonArray>() || order.size() != MAX_PAGES)) {
+        ESP_LOGE("dashboard", "Page order must list all eight page slots; configuration unchanged");
+        return false;
+      }
+      std::array<size_t, MAX_PAGES> next_order{};
+      std::array<bool, MAX_PAGES> seen{};
+      for (size_t rank = 0; rank < MAX_PAGES; rank++) {
+        next_order[rank] = rank;
+        if (order.isNull())
+          continue;
+        if (!order[rank].is<int>() || order[rank].as<int>() < 0 ||
+            order[rank].as<int>() >= int(MAX_PAGES) || seen[order[rank].as<int>()]) {
+          ESP_LOGE("dashboard", "Invalid or duplicate page order slot; configuration unchanged");
+          return false;
+        }
+        next_order[rank] = order[rank].as<int>();
+        seen[next_order[rank]] = true;
+      }
       // The expanded replacement snapshot must not consume the ESP32 task stack.
       auto storage = std::unique_ptr<std::array<PageData, MAX_PAGES>>(
           new (std::nothrow) std::array<PageData, MAX_PAGES>{});
@@ -295,7 +319,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
                  unsigned(page_count));
         return false;
       }
-      bool layout_changed = navigation_layout != navigation_layout_ || screensaver_enabled != screensaver_enabled_;
+      bool layout_changed = navigation_layout != navigation_layout_ || screensaver_enabled != screensaver_enabled_ ||
+                            next_order != page_order_;
       for (size_t p = 0; p < MAX_PAGES; p++) {
         layout_changed |= next[p].enabled != pages_[p].enabled || next[p].title != pages_[p].title ||
                           next[p].icon != pages_[p].icon || next[p].layout != pages_[p].layout;
@@ -328,6 +353,9 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       if (layout_changed)
         layout_revision_++;
       pages_ = std::move(next);
+      page_order_ = next_order;
+      if (!configured_)
+        current_ = page_order_.front();
       navigation_layout_ = navigation_layout;
       const bool dismiss_screensaver = screensaver_active_ && !screensaver_enabled;
       screensaver_enabled_ = screensaver_enabled;
@@ -401,9 +429,10 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   void navigate(int direction) {
     if (!ready_ || screensaver_active_)
       return;
-    int p = int(current_);
+    int rank = std::find(page_order_.begin(), page_order_.end(), current_) - page_order_.begin();
     for (size_t step = 0; step < pages_.size(); step++) {
-      p = (p + direction + int(pages_.size())) % int(pages_.size());
+      rank = (rank + direction + int(pages_.size())) % int(pages_.size());
+      const auto p = page_order_[rank];
       if (pages_[p].enabled) {
         select_page(p);
         return;
@@ -559,7 +588,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     if (pages_[current_].enabled)
       return;
     current_ = 0;
-    for (size_t p = 0; p < pages_.size(); p++) {
+    for (const auto p : page_order_) {
       if (pages_[p].enabled) {
         current_ = p;
         break;
@@ -701,7 +730,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     else
       lv_obj_add_state(navigation_.menu, LV_STATE_DISABLED);
     size_t navigation_rank = 0;
-    for (size_t p = 0; p < pages_.size(); p++) {
+    for (const auto p : page_order_) {
       visible(navigation_.buttons[p], pages_[p].enabled);
       lv_label_set_text(navigation_.titles[p], page_title(p).c_str());
       lv_label_set_text(navigation_.icons[p],
@@ -721,7 +750,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     lv_label_set_text(waiting_, configured_ ? "No button pages configured" : "Waiting for Home Assistant");
     visible(connection_, configured_ && !online_ && page_count > 0);
     size_t page_rank = 0;
-    for (size_t p = 0; p < MAX_PAGES; p++) {
+    for (const auto p : page_order_) {
       auto &widgets = widgets_[p];
       const auto &page = pages_[p];
       visible(widgets.container, !navigation_open_ && page.enabled && p == current_);
@@ -780,6 +809,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   std::array<PageWidgets, MAX_PAGES> widgets_{};
+  std::array<size_t, MAX_PAGES> page_order_{};
   lv_obj_t *screensaver_{nullptr};
   uint32_t screensaver_seconds_{60};
   bool screensaver_enabled_{false};
