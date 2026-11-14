@@ -129,6 +129,8 @@ Changing layouts, page icons or controls after the firmware/blueprint upgrade do
 
 Install the firmware first, re-import the updated blueprint and reload automations. Short taps still toggle. **Hold a light's icon for 600 ms** to open its details; moving more than 20 pixels or adding another finger cancels the hold. Opening details consumes that entire gesture, so release before using a control. Holding the title/body does not open details.
 
+The small icons in 4x2/6x3 layouts have a padded hold region targeting at least 72 pixels per axis, clipped by the tile and excluding its title. A tile's pressed/hover appearance alone does not mean the separate icon hold is armed. If a hold does not open details, DEBUG logs now distinguish **Light hold armed**, **outside icon area**, cancellation by movement/additional touch/layout changes, release before opening, and **Opening light details**. A first gesture after sleep/screensaver remains wake-only and logs **Touch reserved for wake**: release before operating controls. Bulb capability metadata controls which editors appear, not whether an available light can open its detail page. This hold-target fix requires updated firmware; no blueprint input changes are needed.
+
 The left three quarters contain Power and the supported brightness, temperature and colour controls. Select a mode at the right of that area. The HS wheel changes hue/saturation; colour-capable RGB/XY lights use Home Assistant's conversion. Temperature appears only when the light advertises colour-temperature support and a valid Kelvin range. Missing bounds show **Temperature range unavailable**; missing readings remain **Unknown**. On/off-only lights show Power without invented sliders. Older snapshots or lights without capability information still offer Power with an explanatory status.
 
 Drag to preview locally; **one command is sent on release**, not continuously. Brightness zero calls `light.turn_off`; other brightness, temperature and colour edits call `light.turn_on`, including when the light is off. Incoming state updates do not overwrite an active drag. The view waits for reported confirmation, then returns to authoritative state; an unconfirmed change shows a warning after five seconds. Offline/unavailable controls cannot send commands. Capability changes, entity removal, manual backlight-off, wake/screensaver transitions and OTA cancel edits safely.
@@ -205,6 +207,27 @@ Manual **Sleep** or HA backlight-off takes priority over an existing ON sensor. 
 | Button 3 | `light.office_cupboard_light` | Leave empty |
 | Button 4 | `lock.office_office_door` | Leave empty |
 
+### Activity and diagnostic logging
+
+The dashboard automation runs on watched entity changes, panel-ready/reconnect events and a 30-second heartbeat. Its **Triggered / Scheduled / Via Light / Manual event received** Activity entries are execution history, not errors. The heartbeat is still required by the 65-second stale-configuration check; do not remove it or simply increase its interval without changing that protocol.
+
+To hide only the transport automation from HA Activity, add this to your Home Assistant configuration, merging with any existing `logbook` section, then check configuration and restart HA:
+
+```yaml
+logbook:
+  exclude:
+    entities:
+      - automation.office_devpanel_test
+```
+
+Replace the example with the automation's actual entity ID from Settings or Developer Tools; its friendly name is not necessarily its entity ID. This is HA's [Activity filter](https://www.home-assistant.io/integrations/logbook/#configure-filter), not a blueprint option. It does not disable the automation, its traces, or genuine light/door activity, and does not change Recorder retention. No HA configuration is modified by this repository.
+
+**Dashboard endpoint** is a constant diagnostic address used to discover the panel's native API action; it is not a heartbeat. Firmware publishes it once at boot and ESPHome retains that state for HA subscribers, including reconnects. Ready events and dashboard heartbeats remain separate.
+
+Unchanged snapshots still refresh the freshness deadline and sensor-hold policy, but no longer reapply all LVGL styles/labels or redraw the clock. Changed configuration/state, reconnection, localization and pending-command confirmation continue updating the UI.
+
+ESPHome **took a long time for an operation** warnings mean a component blocked the cooperative loop, potentially delaying touch/network handling. The reported **max** is the current warning threshold, not a watchdog timeout. Full redraws, glyph rendering and display transfers can be expensive on this RGB/PSRAM panel; these logs alone do not identify their precise cause. Skipping unchanged-heartbeat redraws removes avoidable work, not the warning mechanism. Persistent 600 ms operations during ordinary interaction still warrant physical profiling; watchdogs and warning thresholds are not relaxed.
+
 ### Development
 
 The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores eight page models with eighteen button slots each, but shares one eighteen-tile LVGL pool between entity pages, Navigation, Settings and light details, plus one nine-dot strip and a single detail editor. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. The tree has 155 actual screen/top-layer objects, below the unchanged 220-object limit (versus 841 with duplicated controls), with 1016 measured startup refresh requests below the unchanged 1500-request limit. Watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
@@ -239,7 +262,7 @@ The new blueprint appends `_chunk` to the discovered endpoint and sends ordered 
 
 If the panel remains on **Waiting for Home Assistant** with **Invalid dashboard chunk** followed by **Out-of-order, expired or oversized dashboard transfer**, update/re-import the blueprint, reload automations and run the dashboard automation once. The blueprint explicitly uses `to_json(ensure_ascii=True)`: HA otherwise preserves Unicode, so a 4096-character fragment containing degree signs, accents or emoji can exceed the firmware's 4096-byte JSON limit. Escaping preserves the original displayed text while keeping character and byte counts equal. This blueprint-only fix needs no firmware flash or larger transfer limits.
 
-Automated validation includes a 225,220-byte Unicode snapshot with light metadata across 55 native API chunks, within the unchanged 256 KiB cap. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. The Batch 3 production build uses 6,373,704 bytes flash (78.4%) and 124,636 bytes static RAM (36.5%). Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light controls and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
+Automated validation includes a 225,220-byte Unicode snapshot with light metadata across 55 native API chunks, within the unchanged 256 KiB cap. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. The Batch 3 production build with the padded hold-target and heartbeat-rendering follow-ups uses 6,375,108 bytes flash (78.4%) and 124,676 bytes static RAM (36.5%). Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light controls and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
 
 For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
 

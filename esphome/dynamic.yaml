@@ -9,6 +9,12 @@ external_components:
 wallpanel:
   id: dashboard
 
+esphome:
+  on_boot:
+    - priority: -200
+      then:
+        - lambda: id(dashboard_endpoint).update();
+
 select:
   - platform: template
     id: wake_up_page
@@ -69,7 +75,7 @@ text_sensor:
     name: Dashboard endpoint
     id: dashboard_endpoint
     entity_category: diagnostic
-    update_interval: 30s
+    update_interval: never
     lambda: |-
       std::string name = App.get_name();
       std::replace(name.begin(), name.end(), '-', '_');

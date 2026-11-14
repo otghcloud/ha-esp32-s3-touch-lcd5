@@ -308,6 +308,10 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       }
       for (auto &button : details.related)
         update_appearance(button, find_related(details_, button.entity));
+      const bool clock_changed = !configured_ || localization.twelve_hour != localization_.twelve_hour ||
+                                 localization.date != localization_.date;
+      const bool content_changed = layout_changed || !online_ || next != pages_ || details != details_;
+      const bool was_pending = detail_pending_;
       if (layout_changed) {
         layout_revision_++;
         detail_editing_ = detail_pending_ = false;
@@ -343,10 +347,11 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         ensure_current_page();
         if (view_ == View::BUTTONS || view_ == View::HOMEPAGE)
           view_ = content_view();
-        render();
+        if (content_changed || clock_changed || was_pending != detail_pending_)
+          render();
       }
       set_sensor_hold(wake_hold);
-      if (refresh_clock_)
+      if (refresh_clock_ && clock_changed)
         refresh_clock_();
       return true;
     });
@@ -475,7 +480,14 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     if (touch_target_.kind == TargetKind::ENTITY && touch_entity_.starts_with("light.")) {
       lv_area_t area;
       lv_obj_get_coords(buttons_[touch_target_.index].icon, &area);
-      hold_candidate_ = x >= area.x1 - 6 && x <= area.x2 + 6 && y >= area.y1 - 6 && y <= area.y2 + 6;
+      const auto pad_x = std::max<int32_t>(6, (72 - lv_area_get_width(&area) + 1) / 2);
+      const auto pad_y = std::max<int32_t>(6, (72 - lv_area_get_height(&area) + 1) / 2);
+      hold_candidate_ = x >= area.x1 - pad_x && x <= area.x2 + pad_x &&
+                        y >= area.y1 - pad_y && y <= area.y2 + pad_y &&
+                        !hit_widget(buttons_[touch_target_.index].name, x, y);
+      ESP_LOGD("dashboard", "Light hold %s for '%s': touch (%d,%d), icon (%d,%d)-(%d,%d)",
+               hold_candidate_ ? "armed" : "outside icon area", touch_entity_.c_str(), x, y,
+               int(area.x1), int(area.y1), int(area.x2), int(area.y2));
     }
     if (touch_target_.kind == TargetKind::RELATED) {
       const auto *light = find_light(details_, detail_entity_);
@@ -490,16 +502,27 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
 
   void update_touch(int id, int x, int y) {
     gesture_.update(id, x, y);
+    if (hold_candidate_ && !gesture_.stationary()) {
+      ESP_LOGD("dashboard", "Light hold cancelled: %s",
+               gesture_.valid() ? "movement exceeded 20px" : "additional touch or changed touch ID");
+      hold_candidate_ = false;
+    }
     if (detail_editing_ && gesture_.valid()) preview_detail(x, y);
   }
 
   void check_touch_hold(uint32_t now = esphome::millis()) {
-    if (!ready_ || updating_ || screensaver_active_ || !hold_candidate_ ||
-        view_ != View::BUTTONS || touch_revision_ != layout_revision_ || !gesture_.held(now)) return;
+    if (!ready_ || updating_ || screensaver_active_ || !hold_candidate_) return;
+    if (view_ != View::BUTTONS || touch_revision_ != layout_revision_) {
+      ESP_LOGD("dashboard", "Light hold cancelled: view or layout changed");
+      hold_candidate_ = false;
+      return;
+    }
+    if (!gesture_.held(now)) return;
     hold_candidate_ = false;
     const auto &button = pages_[current_].buttons[touch_target_.index];
     if (button.entity != touch_entity_) return;
     detail_entity_ = button.entity;
+    ESP_LOGD("dashboard", "Opening light details for '%s'", detail_entity_.c_str());
     detail_page_ = current_;
     detail_mode_ = initial_detail_mode(find_light(details_, detail_entity_));
     detail_editing_ = detail_pending_ = detail_error_ = false;
@@ -510,6 +533,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   TouchAction end_touch() {
+    if (hold_candidate_) ESP_LOGD("dashboard", "Light hold released before opening");
+    hold_candidate_ = false;
     const bool valid_edit = detail_editing_ && gesture_.valid();
     detail_editing_ = false;
     const auto action = gesture_.finish();

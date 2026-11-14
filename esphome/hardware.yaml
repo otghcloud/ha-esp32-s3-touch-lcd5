@@ -118,8 +118,10 @@ touchscreen:
             id(display_backlight).turn_on();
             if (id(dashboard).screensaver_active())
               id(dashboard).wake();
-            if (!accept)
+            if (!accept) {
+              ESP_LOGD("dashboard", "Touch reserved for wake; release before operating controls");
               return;
+            }
             id(dashboard).begin_touch(touch.id, touch.x, touch.y);
             for (const auto &point : touches) {
               if (point.state != 0)

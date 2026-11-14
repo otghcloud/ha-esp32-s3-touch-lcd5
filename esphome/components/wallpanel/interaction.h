@@ -71,7 +71,8 @@ class TouchGesture {
   int x() const { return x_; }
   int y() const { return y_; }
   bool valid() const { return active_ && !cancelled_; }
-  bool held(uint32_t now) const { return valid() && !moved_ && uint32_t(now - began_at_) >= 600; }
+  bool stationary() const { return valid() && !moved_; }
+  bool held(uint32_t now) const { return stationary() && uint32_t(now - began_at_) >= 600; }
  private:
   uint32_t began_at_{0};
   int id_{0}, start_x_{0}, start_y_{0}, x_{0}, y_{0};

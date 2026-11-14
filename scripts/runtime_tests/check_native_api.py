@@ -30,6 +30,7 @@ async def check():
     snapshot = fixture.full_snapshot("X" * 80)
     log = deque(maxlen=200)
     ready = asyncio.get_running_loop().create_future()
+    endpoint_seen = asyncio.get_running_loop().create_future()
     client = APIClient("127.0.0.1", 16053, expected_name="dynamic-host", client_info="Wallpanel tests")
     probes = asyncio.Queue()
     actions = asyncio.Queue()
@@ -60,9 +61,13 @@ async def check():
             entities, services = await client.list_entities_services()
             service = {item.name: item for item in services}
             probe = next(item for item in entities if isinstance(item, TextSensorInfo) and item.name == "Transport probe")
+            endpoint = next(item for item in entities if isinstance(item, TextSensorInfo) and item.name == "Dashboard endpoint")
             wake = next(item for item in entities if isinstance(item, SelectInfo) and "Page 8" in item.options)
 
             def on_state(state):
+                if isinstance(state, TextSensorState) and state.key == endpoint.key and not state.missing_state:
+                    if not endpoint_seen.done():
+                        endpoint_seen.set_result(state.state)
                 if isinstance(state, TextSensorState) and state.key == probe.key and not state.missing_state:
                     value = json.loads(state.state)
                     latest.update(value)
@@ -73,6 +78,8 @@ async def check():
                     actions.put_nowait(action)
 
             client.subscribe_home_assistant_states_and_services(on_state, on_action, lambda entity, attr: None)
+            assert await asyncio.wait_for(endpoint_seen, 5) == "esphome.dynamic_host_set_dashboard"
+            endpoint_started = asyncio.get_running_loop().time()
 
             async def wait_probe(predicate=lambda value: True):
                 async with asyncio.timeout(10):
@@ -224,7 +231,6 @@ async def check():
 
             async def hold(x, y):
                 await touch(0, x, y)
-                await touch(3)
                 await wait_probe(lambda value: value["detail_visible"])
                 await touch(2)
                 assert actions.empty(), "Opening details leaked a toggle or edit"
@@ -271,6 +277,12 @@ async def check():
             details.attributes["light.detail"]["brightness"] = 255
             await send(details.snapshot(), "detail-confirmed")
             await wait_probe(lambda value: value["detail_status"] == "ON")
+            await touch(0, 266, 130)
+            await touch(2)
+            await expect_action("light.turn_on", "light.detail", {"brightness_pct": 100})
+            await wait_probe(lambda value: value["detail_status"] == "Waiting for light...")
+            await send(details.snapshot(), "detail-identical-confirmation")
+            await wait_probe(lambda value: value["detail_status"] == "ON")
             await tap(505, 247)
             await wait_probe(lambda value: value["detail_value"] == "3000 K")
             await touch(0, 266, 250)
@@ -304,6 +316,17 @@ async def check():
             await tap(69, 456)
             await hold(478, 307)
             await wait_probe(lambda value: value["slider_visible"] and not value["wheel_visible"])
+            await tap(69, 456)
+            details.inputs["page_1_layout"] = "4x2"
+            previous = await wait_probe()
+            await send(details.snapshot(), "detail-dense-holds")
+            await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
+            for x in (107, 497, 692):
+                # Finger centres can sit just below the small icon, above its title.
+                await hold(x, 127)
+                await wait_probe(lambda value: value["slider_visible"])
+                if x != 692:
+                    await tap(69, 456)
             details.states["light.temp"] = "unavailable"
             await send(details.snapshot(), "detail-unavailable")
             await wait_probe(lambda value: value["detail_status"] == "Light unavailable")
@@ -315,7 +338,8 @@ async def check():
             details.inputs["page_1_button_4"] = []
             await send(details.snapshot(), "remove-detail-primary")
             await wait_probe(lambda value: not value["detail_visible"])
-            details.inputs.update(page_1_button_1="lock.test", reverse_active=["lock.test"])
+            details.inputs.update(page_1_button_1="lock.test", page_1_layout="2x2",
+                                  reverse_active=["lock.test"])
             for state, command in (("locked", "lock.unlock"), ("unlocked", "lock.lock")):
                 details.states["lock.test"] = state
                 previous = await wait_probe()
@@ -331,12 +355,16 @@ async def check():
                 warm_tick = warm["tick"]
                 warm = await wait_probe(lambda value: value["tick"] > warm_tick + 100)
             assert warm["heap_bytes"] - warm_heap < 16384, "Repeated transfers grow retained heap"
+            await asyncio.sleep(max(0, 31 - (asyncio.get_running_loop().time() - endpoint_started)))
+            endpoint_probe = await wait_probe(lambda value: value["tick"] >= baseline["tick"] + 31000)
+            assert endpoint_probe["endpoint_updates"] == 1, "Constant endpoint was republished after boot"
             size = len(json.dumps(unicode_snapshot).encode())
             print(f"Native API passed: 144 controls, light details and typed release-only commands, "
                   f"Homepage, Settings, sensor wake/hold, "
                   f"{size} bytes, {len(unicode_chunks)} chunks.")
             print(f"128 KiB host stack; retained host heap {warm['heap_bytes']} bytes "
                   f"(change after repeated transfers: {warm['heap_bytes'] - warm_heap:+d}).")
+            print("Dashboard endpoint published once at boot and remained cached beyond 30 seconds.")
             succeeded = True
         finally:
             if not succeeded:

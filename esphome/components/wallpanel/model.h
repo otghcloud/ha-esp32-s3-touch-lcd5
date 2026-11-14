@@ -48,6 +48,7 @@ struct ButtonData {
   const char *display_state{"UNKNOWN"};
   const char *display_icon{nullptr};
   uint32_t display_color{0xAAB4C5};
+  bool operator==(const ButtonData &) const = default;
 };
 struct LightData {
   std::string entity;
@@ -58,16 +59,19 @@ struct LightData {
   float hue{-1}, saturation{-1};
   std::array<std::string, 2> related{};
   std::array<std::string, 2> related_titles{};
+  bool operator==(const LightData &) const = default;
 };
 struct DetailData {
   std::vector<LightData> lights;
   std::vector<ButtonData> related;
+  bool operator==(const DetailData &) const = default;
 };
 struct PageData {
   std::string title, temperature, icon;
   Layout layout{Layout::TWO_BY_TWO};
   std::array<ButtonData, MAX_BUTTONS> buttons;
   bool enabled{false};
+  bool operator==(const PageData &) const = default;
 };
 struct Homepage {
   bool enabled{false};

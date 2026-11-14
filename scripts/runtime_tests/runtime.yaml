@@ -519,6 +519,18 @@ esphome:
               });
             });
           };
+          const auto unchanged_snapshot = modern("4x2");
+          receive(unchanged_snapshot);
+          lv_refr_now(nullptr);
+          const auto before_heartbeat = id(test_lcd).startup_refresh_requests;
+          receive(unchanged_snapshot);
+          require(id(test_lcd).startup_refresh_requests == before_heartbeat,
+                  "unchanged heartbeats refresh freshness without invalidating the UI");
+          receive(transform(unchanged_snapshot, [](JsonObject root) {
+            root["pages"][0]["buttons"][0]["name"] = "Changed control";
+          }));
+          require(id(test_lcd).startup_refresh_requests > before_heartbeat,
+                  "changed control data still invalidates the UI");
           const std::array<lv_obj_t *, 18> tiles = {
             id(button_0_0), id(button_0_1), id(button_0_2), id(button_0_3),
             id(button_0_4), id(button_0_5), id(button_0_6), id(button_0_7),
@@ -1055,6 +1067,30 @@ esphome:
           gesture.update(1, 200, 150);
           require(!gesture.held(1000), "leaving 20px slop permanently cancels hold");
           choose_wake_page("Page 1");
+          for (const char *layout : {"4x2", "6x3"}) {
+            receive(modern(layout, 4));
+            id(dashboard).wake();
+            lv_obj_update_layout(lv_screen_active());
+            lv_area_t icon;
+            lv_obj_get_coords(id(button_0_0_icon), &icon);
+            lv_obj_add_state(id(button_0_0), LV_STATE_PRESSED);
+            id(dashboard).begin_touch(1, (icon.x1 + icon.x2) / 2, icon.y2 + 10, 1000);
+            id(dashboard).check_touch_hold(1600);
+            require(!hidden(id(light_detail)),
+                    "pressed dense tile accepts the padded icon region, not only the glyph box");
+            require(id(dashboard).end_touch() == TouchAction::NONE,
+                    "padded icon hold consumes release without toggling");
+            lv_obj_remove_state(id(button_0_0), LV_STATE_PRESSED);
+            tap(id(button_0_1));
+            lv_area_t name;
+            lv_obj_get_coords(id(button_0_0_name), &name);
+            id(dashboard).begin_touch(1, (name.x1 + name.x2) / 2, name.y1 + 1, 2000);
+            id(dashboard).check_touch_hold(2600);
+            require(hidden(id(light_detail)), "expanded icon hold region excludes the title");
+            id(dashboard).update_touch(1, (name.x1 + name.x2) / 2 + 21, name.y1 + 1);
+            id(dashboard).end_touch();
+          }
+          choose_wake_page("Page 1");
           receive(snapshot(0));
           id(dashboard).wake();
           auto hold_icon = [&]() {
@@ -1212,6 +1248,9 @@ globals:
   - id: test_activity
     type: int
     initial_value: '0'
+  - id: test_endpoint_updates
+    type: int
+    initial_value: '0'
 logger:
 api:
   port: 16053
@@ -1242,6 +1281,10 @@ api:
             else if (phase == 2) id(dashboard).end_touch();
             else if (phase == 3) id(dashboard).check_touch_hold(millis() + 600);
 text_sensor:
+  - id: !extend dashboard_endpoint
+    on_value:
+      then:
+        - lambda: id(test_endpoint_updates)++;
   - platform: template
     name: Transport probe
     id: transport_probe
@@ -1270,6 +1313,7 @@ text_sensor:
         root["sensor_hold"] = id(dashboard).sensor_hold();
         root["backlight"] = id(test_backlight);
         root["restarts"] = id(test_restarts);
+        root["endpoint_updates"] = id(test_endpoint_updates);
         root["compact_clock"] =
             lv_obj_get_style_text_font(id(lbl_time), LV_PART_MAIN) == id(font_medium)->get_lv_font();
         root["heap_bytes"] = id(test_lcd).allocated_bytes();
