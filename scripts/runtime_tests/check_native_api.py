@@ -229,8 +229,10 @@ async def check():
             async def touch(phase, x=0, y=0):
                 await client.execute_service(service["test_touch"], {"phase": phase, "x": x, "y": y})
 
-            async def hold(x, y):
+            async def hold(x, y, drift=(0, 0)):
                 await touch(0, x, y)
+                if drift != (0, 0):
+                    await touch(1, x + drift[0], y + drift[1])
                 await wait_probe(lambda value: value["detail_visible"])
                 await touch(2)
                 assert actions.empty(), "Opening details leaked a toggle or edit"
@@ -323,7 +325,7 @@ async def check():
             await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
             for x in (107, 497, 692):
                 # Finger centres can sit just below the small icon, above its title.
-                await hold(x, 127)
+                await hold(x, 127, drift=(35, 25))
                 await wait_probe(lambda value: value["slider_visible"])
                 if x != 692:
                     await tap(69, 456)

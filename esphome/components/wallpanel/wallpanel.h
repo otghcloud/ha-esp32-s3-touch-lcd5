@@ -502,9 +502,11 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
 
   void update_touch(int id, int x, int y) {
     gesture_.update(id, x, y);
-    if (hold_candidate_ && !gesture_.stationary()) {
-      ESP_LOGD("dashboard", "Light hold cancelled: %s",
-               gesture_.valid() ? "movement exceeded 20px" : "additional touch or changed touch ID");
+    if (hold_candidate_ && !gesture_.hold_stationary()) {
+      if (gesture_.valid())
+        ESP_LOGD("dashboard", "Light hold cancelled: movement exceeded %dpx", TouchGesture::HOLD_SLOP_PX);
+      else
+        ESP_LOGD("dashboard", "Light hold cancelled: additional touch or changed touch ID");
       hold_candidate_ = false;
     }
     if (detail_editing_ && gesture_.valid()) preview_detail(x, y);

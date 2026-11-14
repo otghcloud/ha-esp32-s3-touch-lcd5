@@ -1,5 +1,5 @@
 blueprint:
-  name: HA ESP32-S3 Touch LCD 5 - Button pages
+  name: Waveshare Touch LCD HA-Panel
   description: >-
     Configure up to eight button pages without rebuilding firmware. Each page supports an icon,
     a title, an optional temperature sensor and 2x2, 4x2 or 6x3 layouts (4, 8 or 18 controls).

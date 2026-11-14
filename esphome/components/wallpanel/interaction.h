@@ -38,13 +38,14 @@ class DisplayIdle {
 
 class TouchGesture {
  public:
+  static constexpr int HOLD_SLOP_PX = 40;
   void begin(int id, int x, int y, uint32_t now = 0) {
     began_at_ = now;
     id_ = id;
     start_x_ = x_ = x;
     start_y_ = y_ = y;
     active_ = true;
-    cancelled_ = moved_ = false;
+    cancelled_ = moved_ = hold_moved_ = false;
   }
   void update(int id, int x, int y) {
     if (!active_)
@@ -55,7 +56,9 @@ class TouchGesture {
     }
     x_ = x;
     y_ = y;
-    moved_ |= std::abs(x_ - start_x_) > 20 || std::abs(y_ - start_y_) > 20;
+    const int dx = std::abs(x_ - start_x_), dy = std::abs(y_ - start_y_);
+    moved_ |= dx > 20 || dy > 20;
+    hold_moved_ |= dx > HOLD_SLOP_PX || dy > HOLD_SLOP_PX;
   }
   TouchAction finish() {
     if (!active_)
@@ -71,11 +74,11 @@ class TouchGesture {
   int x() const { return x_; }
   int y() const { return y_; }
   bool valid() const { return active_ && !cancelled_; }
-  bool stationary() const { return valid() && !moved_; }
-  bool held(uint32_t now) const { return stationary() && uint32_t(now - began_at_) >= 600; }
+  bool hold_stationary() const { return valid() && !hold_moved_; }
+  bool held(uint32_t now) const { return hold_stationary() && uint32_t(now - began_at_) >= 600; }
  private:
   uint32_t began_at_{0};
   int id_{0}, start_x_{0}, start_y_{0}, x_{0}, y_{0};
-  bool active_{false}, cancelled_{false}, moved_{false};
+  bool active_{false}, cancelled_{false}, moved_{false}, hold_moved_{false};
 };
 }  // namespace wallpanel

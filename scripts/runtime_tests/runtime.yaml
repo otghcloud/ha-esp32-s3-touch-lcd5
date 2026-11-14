@@ -1063,9 +1063,20 @@ esphome:
                   "Settings and Navigation have separate non-overlapping footer targets");
           gesture.begin(1, 200, 150, UINT32_MAX - 299);
           require(!gesture.held(299) && gesture.held(300), "600ms hold handles millis rollover");
-          gesture.update(1, 221, 150);
+          gesture.update(1, 240, 190);
+          require(gesture.held(300), "holds tolerate 40px drift on either axis");
+          require(gesture.finish() == TouchAction::NONE, "forgiving hold drift does not loosen short-tap tolerance");
+          gesture.begin(1, 200, 150, 1000);
+          gesture.update(1, 241, 150);
           gesture.update(1, 200, 150);
-          require(!gesture.held(1000), "leaving 20px slop permanently cancels hold");
+          require(!gesture.held(1600), "leaving 40px slop permanently cancels hold even after returning");
+          gesture.begin(1, 200, 150, 1000);
+          gesture.update(1, 200, 191);
+          require(!gesture.held(1600), "vertical drift over 40px also cancels hold");
+          gesture.begin(1, 200, 150, 1000);
+          gesture.update(1, 100, 150);
+          require(!gesture.held(1600) && gesture.finish() == TouchAction::NEXT,
+                  "a swipe cancels hold and retains the 100px navigation threshold");
           choose_wake_page("Page 1");
           for (const char *layout : {"4x2", "6x3"}) {
             receive(modern(layout, 4));
@@ -1075,9 +1086,12 @@ esphome:
             lv_obj_get_coords(id(button_0_0_icon), &icon);
             lv_obj_add_state(id(button_0_0), LV_STATE_PRESSED);
             id(dashboard).begin_touch(1, (icon.x1 + icon.x2) / 2, icon.y2 + 10, 1000);
+            id(dashboard).update_touch(1, (icon.x1 + icon.x2) / 2 + 35, icon.y2 + 35);
+            id(dashboard).check_touch_hold(1599);
+            require(hidden(id(light_detail)), "dense icon drift does not shorten the 600ms hold");
             id(dashboard).check_touch_hold(1600);
             require(!hidden(id(light_detail)),
-                    "pressed dense tile accepts the padded icon region, not only the glyph box");
+                    "pressed dense tile accepts the padded icon region and drift beyond 20px");
             require(id(dashboard).end_touch() == TouchAction::NONE,
                     "padded icon hold consumes release without toggling");
             lv_obj_remove_state(id(button_0_0), LV_STATE_PRESSED);

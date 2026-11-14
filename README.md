@@ -65,7 +65,7 @@ Pages and entities are configured at runtime by the [Home Assistant blueprint](.
 
    The import URL works after these changes are published to `main`. Before publication, copy `wallpanel_blueprint.yaml` to `/config/blueprints/automation/otghcloud/wallpanel_blueprint.yaml` and reload automations.
 
-4. Create an automation from the blueprint and select your panel device.
+4. Create an automation from **Waveshare Touch LCD HA-Panel** and select your panel device.
 5. Expand **Button page 01** through **Button page 08**. Each provides a layout, page icon, optional temperature sensor and up to eighteen entity selectors with optional **Title** overrides. Choose **2x2**, **4x2** or **6x3** for 4, 8 or 18 controls respectively. Leave all active button slots empty to hide a page.
 6. Under **Navigation > Page order and titles**, edit each row to set its page title, then drag the rows into the desired display order. Page slots still identify the corresponding numbered configuration sections.
 7. Save and enable the automation. Run its actions once for an immediate update; future entity changes and reconnects update automatically. Keep only one configuration automation enabled per panel.
@@ -127,7 +127,7 @@ Changing layouts, page icons or controls after the firmware/blueprint upgrade do
 
 ### Light details and related controls
 
-Install the firmware first, re-import the updated blueprint and reload automations. Short taps still toggle. **Hold a light's icon for 600 ms** to open its details; moving more than 20 pixels or adding another finger cancels the hold. Opening details consumes that entire gesture, so release before using a control. Holding the title/body does not open details.
+Install the firmware first, re-import the updated blueprint and reload automations. Short taps still toggle. **Hold a light's icon for 600 ms** to open its details; finger drift up to 40 pixels per axis is accepted. Exceeding that allowance at any point, adding another finger or changing touch ID cancels the hold. Short-tap tolerance remains 20 pixels and horizontal swipes still require 100 pixels. Opening details consumes that entire gesture, so release before using a control. Holding the title/body does not open details.
 
 The small icons in 4x2/6x3 layouts have a padded hold region targeting at least 72 pixels per axis, clipped by the tile and excluding its title. A tile's pressed/hover appearance alone does not mean the separate icon hold is armed. If a hold does not open details, DEBUG logs now distinguish **Light hold armed**, **outside icon area**, cancellation by movement/additional touch/layout changes, release before opening, and **Opening light details**. A first gesture after sleep/screensaver remains wake-only and logs **Touch reserved for wake**: release before operating controls. Bulb capability metadata controls which editors appear, not whether an available light can open its detail page. This hold-target fix requires updated firmware; no blueprint input changes are needed.
 
@@ -141,16 +141,18 @@ Back returns to the source content page. Details never enter page ordering, dots
 
 ### Firmware updates
 
-OTA uploads show a static **Updating firmware** overlay. The frame is flushed before flash writes and LVGL is paused without animation; touches, commands, clock redraws, wake/idle transitions and incoming dashboard transfers are blocked. A previously dark display stays dark. Successful uploads remain paused until the normal reboot. On abort/error, the prior view/backlight/manual-sleep policy is restored, inactivity deadlines restart and the panel requests fresh configuration rather than replaying partial transfers.
+OTA uploads **blank the backlight by default** and pause LVGL without animation; touches, commands, clock redraws, wake/idle transitions and incoming dashboard transfers are blocked. A previously dark display stays dark. Successful uploads remain blanked and paused until the normal reboot. On abort/error, the prior view/backlight/manual-sleep policy is restored, inactivity deadlines restart and the panel requests fresh configuration rather than replaying partial transfers.
 
-Pausing LVGL does **not** stop the RGB controller scanning its PSRAM framebuffer. Physical upload testing is still required: a static frame alone cannot guarantee that flash/PSRAM-related corruption is eliminated. If corruption persists, set this device-YAML substitution and rebuild:
+Pausing LVGL does **not** stop the RGB controller scanning its PSRAM framebuffer, and the static **Updating firmware** overlay alone still showed graphical corruption in physical testing. Blanking masks that corruption without changing display timings or watchdog settings. This behaviour takes effect for uploads after the updated firmware has been installed; the upload installing it still uses the previous firmware's OTA handling. Remove any existing `ota_blank_display: "false"` override to use the new default.
+
+To opt back into the static overlay instead of blanking, set this device-YAML substitution and rebuild:
 
 ```yaml
 substitutions:
-  ota_blank_display: "true"
+  ota_blank_display: "false"
 ```
 
-The fallback blanks the backlight for the upload and restores its previous state on abort/error. The default is `"false"`. Display timings and watchdog settings are unchanged.
+The default is `ota_blank_display: "true"`. With either setting, the backlight's previous state is restored on abort/error.
 
 ### Homepage and Settings
 
@@ -262,7 +264,7 @@ The new blueprint appends `_chunk` to the discovered endpoint and sends ordered 
 
 If the panel remains on **Waiting for Home Assistant** with **Invalid dashboard chunk** followed by **Out-of-order, expired or oversized dashboard transfer**, update/re-import the blueprint, reload automations and run the dashboard automation once. The blueprint explicitly uses `to_json(ensure_ascii=True)`: HA otherwise preserves Unicode, so a 4096-character fragment containing degree signs, accents or emoji can exceed the firmware's 4096-byte JSON limit. Escaping preserves the original displayed text while keeping character and byte counts equal. This blueprint-only fix needs no firmware flash or larger transfer limits.
 
-Automated validation includes a 225,220-byte Unicode snapshot with light metadata across 55 native API chunks, within the unchanged 256 KiB cap. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. The Batch 3 production build with the padded hold-target and heartbeat-rendering follow-ups uses 6,375,108 bytes flash (78.4%) and 124,676 bytes static RAM (36.5%). Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light controls and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
+Automated validation includes a 225,220-byte Unicode snapshot with light metadata across 55 native API chunks, within the unchanged 256 KiB cap. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. The Batch 3a production build with the hold-drift and default OTA-blanking changes uses 6,375,164 bytes flash (78.4%) and 124,676 bytes static RAM (36.5%). Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light controls and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
 
 For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
 

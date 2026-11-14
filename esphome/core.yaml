@@ -63,7 +63,7 @@ script:
               return "esphome." + name + "_set_dashboard";
 
 substitutions:
-  ota_blank_display: "false"
+  ota_blank_display: "true"
 
 globals:
   - id: ota_backlight_was_on
