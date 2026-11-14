@@ -1,0 +1,5 @@
+packages:
+  core: !include esphome/core.yaml
+  hardware: !include esphome/hardware.yaml
+  home_assistant: !include esphome/home_assistant.yaml
+  dashboard: !include esphome/dashboard.yaml

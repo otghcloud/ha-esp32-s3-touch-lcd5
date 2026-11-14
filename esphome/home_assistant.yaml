@@ -1,0 +1,145 @@
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+sensor:
+  - platform: homeassistant
+    id: office_temp
+    entity_id: sensor.office_nspanel_temperature
+
+    on_value:
+      then:
+        - lvgl.label.update:
+            id: lbl_temp
+            text:
+              format: "Temperature: %.1f C"
+              args:
+                - x
+
+text_sensor:
+  - platform: homeassistant
+    id: lamp_raw
+    entity_id: light.office_lamp
+
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: return x == "unknown" || x == "unavailable";
+            then:
+              - lvgl.widget.show:
+                  id: lbl_lamp_unavailable
+            else:
+              - lvgl.widget.hide:
+                  id: lbl_lamp_unavailable
+              - if:
+                  condition:
+                    lambda: return x == "on";
+                  then:
+                    - lvgl.label.update:
+                        id: lbl_lamp_state
+                        text: "ON"
+                        text_color: 0xFFD166
+                  else:
+                    - lvgl.label.update:
+                        id: lbl_lamp_state
+                        text: "OFF"
+                        text_color: 0xAAB4C5
+
+  - platform: homeassistant
+    id: ceiling_raw
+    entity_id: light.office_ceiling
+
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: return x == "unknown" || x == "unavailable";
+            then:
+              - lvgl.widget.show:
+                  id: lbl_ceiling_unavailable
+            else:
+              - lvgl.widget.hide:
+                  id: lbl_ceiling_unavailable
+              - if:
+                  condition:
+                    lambda: return x == "on";
+                  then:
+                    - lvgl.label.update:
+                        id: lbl_ceiling_state
+                        text: "ON"
+                        text_color: 0xFFD166
+                  else:
+                    - lvgl.label.update:
+                        id: lbl_ceiling_state
+                        text: "OFF"
+                        text_color: 0xAAB4C5
+
+  - platform: homeassistant
+    id: cupboard_raw
+    entity_id: light.office_cupboard_light
+
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: return x == "unknown" || x == "unavailable";
+            then:
+              - lvgl.widget.show:
+                  id: lbl_cupboard_unavailable
+            else:
+              - lvgl.widget.hide:
+                  id: lbl_cupboard_unavailable
+              - if:
+                  condition:
+                    lambda: return x == "on";
+                  then:
+                    - lvgl.label.update:
+                        id: lbl_cupboard_state
+                        text: "ON"
+                        text_color: 0xFFD166
+                  else:
+                    - lvgl.label.update:
+                        id: lbl_cupboard_state
+                        text: "OFF"
+                        text_color: 0xAAB4C5
+
+  - platform: homeassistant
+    id: door_raw
+    entity_id: lock.office_office_door
+
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: return x == "unknown" || x == "unavailable";
+            then:
+              - lvgl.widget.show:
+                  id: lbl_door_unavailable
+            else:
+              - lvgl.widget.hide:
+                  id: lbl_door_unavailable
+              - if:
+                  condition:
+                    lambda: return x == "locked";
+                  then:
+                    - lvgl.label.update:
+                        id: lbl_door_state
+                        text: "LOCKED"
+                        text_color: 0x68D391
+                  else:
+                    - lvgl.label.update:
+                        id: lbl_door_state
+                        text: "UNLOCKED"
+                        text_color: 0xF87171
+
+interval:
+  - interval: 30s
+    then:
+      - lvgl.label.update:
+          id: lbl_time
+          text:
+            format: "%02d:%02d"
+            args:
+              - id(homeassistant_time).now().hour
+              - id(homeassistant_time).now().minute

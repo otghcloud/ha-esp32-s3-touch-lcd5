@@ -1,0 +1,55 @@
+i2c:
+  sda: GPIO8
+  scl: GPIO9
+  scan: true
+
+touchscreen:
+  - platform: gt911
+    id: touch
+    interrupt_pin: GPIO4
+
+display:
+  - platform: rpi_dpi_rgb
+    id: lcd
+
+    dimensions:
+      width: 800
+      height: 480
+
+    data_pins:
+      red:
+        - GPIO1
+        - GPIO2
+        - GPIO42
+        - GPIO41
+        - GPIO40
+
+      green:
+        - GPIO39
+        - GPIO0
+        - GPIO45
+        - GPIO48
+        - GPIO47
+        - GPIO21
+
+      blue:
+        - GPIO14
+        - GPIO38
+        - GPIO18
+        - GPIO17
+        - GPIO10
+
+    de_pin: GPIO5
+    pclk_pin: GPIO7
+    hsync_pin: GPIO46
+    vsync_pin: GPIO3
+
+    pclk_frequency: 16MHz
+
+    hsync_pulse_width: 4
+    hsync_front_porch: 8
+    hsync_back_porch: 8
+
+    vsync_pulse_width: 4
+    vsync_front_porch: 8
+    vsync_back_porch: 8

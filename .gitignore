@@ -1,0 +1,6 @@
+/dev/
+/bin/
+**/secrets.yaml
+/.esphome/
+/.pioenvs/
+/build/
