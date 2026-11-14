@@ -327,7 +327,11 @@ actions:
                   {% set custom_title = button_titles[p][loop.index0] | trim %}
                   {% set name = (custom_title or state_attr(entity, 'friendly_name') or entity)[:80] %}
                   {% set state = states(entity)[:40] %}
-                  {% set row.buttons = row.buttons + [dict(entity=entity, name=name, state=state)] %}
+                  {% set icon = state_attr(entity, 'icon') or '' %}
+                  {% if not icon and state in ['on', 'off'] and entity.startswith('switch.') and state_attr(entity, 'device_class') == 'outlet' %}
+                    {% set icon = 'mdi:power-plug-off' if state == 'off' else 'mdi:power-plug' %}
+                  {% endif %}
+                  {% set row.buttons = row.buttons + [dict(entity=entity, name=name, state=state, icon=icon)] %}
                 {% else %}
                   {% set row.buttons = row.buttons + [dict(entity='', name='', state='')] %}
                 {% endif %}

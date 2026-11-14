@@ -9,6 +9,7 @@
 #include "esphome/components/lvgl/lvgl_esphome.h"
 #include "esphome/core/component.h"
 #include "esphome/core/log.h"
+#include "mdi_icons.h"
 
 namespace wallpanel {
 
@@ -32,6 +33,7 @@ struct ButtonData {
   std::string entity;
   std::string name;
   std::string state;
+  std::string icon;
 };
 
 struct PageData {
@@ -96,11 +98,9 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
  public:
   void bind_page(size_t index, const PageWidgets &widgets) { widgets_[index] = widgets; }
 
-  void initialize(lv_obj_t *waiting, lv_obj_t *connection,
-                  const std::array<const void *, 4> &icons) {
+  void initialize(lv_obj_t *waiting, lv_obj_t *connection) {
     waiting_ = waiting;
     connection_ = connection;
-    icons_ = icons;
     ready_ = true;
     render();
   }
@@ -135,10 +135,16 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
           if (button.isNull() || !read_string(button["entity"], data.entity, 128) ||
               !read_string(button["name"], data.name, 320) ||
               !read_string(button["state"], data.state, 40) ||
+              (!button["icon"].isNull() && !read_string(button["icon"], data.icon, 128)) ||
               (!data.entity.empty() && !valid_entity(data.entity))) {
             ESP_LOGE("dashboard", "Invalid button %u on page %u; configuration unchanged",
                      unsigned(b + 1), unsigned(p + 1));
             return false;
+          }
+          if (!data.icon.empty() && mdi_glyph(data.icon) == nullptr) {
+            ESP_LOGW("dashboard", "Unsupported icon '%s' for '%s'; using state-aware default",
+                     data.icon.c_str(), data.entity.c_str());
+            data.icon.clear();
           }
           next[p].enabled |= !data.entity.empty();
         }
@@ -148,6 +154,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
           if (next[p].buttons[b].entity != pages_[p].buttons[b].entity) {
             lv_label_set_text(widgets_[p].buttons[b].state, "UNKNOWN");
             lv_obj_set_style_text_color(widgets_[p].buttons[b].state, lv_color_hex(0xAAB4C5), 0);
+            lv_label_set_text(widgets_[p].buttons[b].icon, mdi_glyph(default_icon(next[p].buttons[b])));
           }
         }
       }
@@ -283,6 +290,21 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     return button.state == "on" || button.state == "off";
   }
 
+  static const char *default_icon(const ButtonData &button) {
+    const auto domain = button.entity.substr(0, button.entity.find('.'));
+    if (domain == "light")
+      return button.state == "off" ? "mdi:lightbulb-off" : "mdi:lightbulb";
+    if (domain == "switch")
+      return button.state == "off" ? "mdi:toggle-switch-variant-off" : "mdi:toggle-switch-variant";
+    if (domain == "automation")
+      return button.state == "off" ? "mdi:robot-off" : "mdi:robot";
+    if (button.state == "jammed")
+      return "mdi:lock-alert";
+    if (button.state == "locking" || button.state == "unlocking" || button.state == "opening")
+      return "mdi:lock-clock";
+    return button.state == "unlocked" || button.state == "open" ? "mdi:lock-open-variant" : "mdi:lock";
+  }
+
   static void visible(lv_obj_t *widget, bool show) {
     if (show)
       lv_obj_remove_flag(widget, LV_OBJ_FLAG_HIDDEN);
@@ -335,8 +357,12 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         else
           lv_obj_add_state(button.button, LV_STATE_DISABLED);
         const auto domain = data.entity.substr(0, data.entity.find('.'));
-        const size_t icon = domain == "light" ? 0 : domain == "switch" ? 1 : domain == "automation" ? 2 : 3;
-        lv_image_set_src(button.icon, icons_[icon]);
+        const auto icon = data.icon.empty() ? default_icon(data) : data.icon.c_str();
+        // Preserve the last icon when an entity becomes unavailable.
+        if (known_state(data) || !data.icon.empty() || data.state == "jammed" ||
+            data.state == "locking" || data.state == "unlocking" || data.state == "opening" ||
+            data.state == "open")
+          lv_label_set_text(button.icon, mdi_glyph(icon));
         if (known_state(data)) {
           const bool active = data.state == "on" || data.state == "locked";
           const char *label = domain == "lock" ? (active ? "LOCKED" : "UNLOCKED")
@@ -354,7 +380,6 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
 
   std::array<PageWidgets, 4> widgets_{};
   std::array<PageData, 4> pages_{};
-  std::array<const void *, 4> icons_{};
   lv_obj_t *waiting_{nullptr};
   lv_obj_t *connection_{nullptr};
   size_t current_{0};

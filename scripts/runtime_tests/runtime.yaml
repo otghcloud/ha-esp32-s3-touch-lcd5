@@ -57,6 +57,11 @@ esphome:
                   button["name"] = populated ? "Test Light" : "";
                   button["state"] = populated ? (mode == 1 ? "unavailable" : mode == 7 ? "locked"
                     : mode == 9 ? "unlocked" : mode == 8 ? "off" : "on") : "";
+                  if (mode >= 11 && populated)
+                    button["icon"] = mode == 11 ? "mdi:lightbulb-auto" : mode == 12 ? "mdi:door-open"
+                      : mode == 13 ? "mdi:does-not-exist" : mode == 14 ? "custom:icon" : "";
+                  if (mode == 15 && populated)
+                    button["icon"] = 123;
                 }
               }
             });
@@ -66,6 +71,23 @@ esphome:
           require(hidden(id(page_1)) && hidden(id(page_3)), "empty pages hidden");
           require(!hidden(id(dot_0_0)) && !hidden(id(dot_0_1)) && hidden(id(dot_0_2)), "two visible page dots");
           require(std::string(lv_label_get_text(id(button_0_0_state))) == "ON", "light state");
+          auto icon_is = [](lv_obj_t *widget, const char *name) {
+            const auto glyph = wallpanel::mdi_glyph(name);
+            return glyph != nullptr && std::string(lv_label_get_text(widget)) == glyph;
+          };
+          require(icon_is(id(button_0_0_icon), "mdi:lightbulb"), "legacy snapshot uses HA light default");
+          for (const auto &icon : wallpanel::MDI_ICONS) {
+            require(wallpanel::mdi_glyph(std::string("mdi:") + icon.name) == icon.glyph,
+                    "every MDI name is resolvable");
+          }
+          require(id(font_icons)->get_glyphs().size() == std::size(wallpanel::MDI_ICONS),
+                  "full MDI catalogue included in font");
+          for (const auto &glyph : id(font_icons)->get_glyphs()) {
+            lv_font_glyph_dsc_t descriptor{};
+            require(lv_font_get_glyph_dsc(lv_obj_get_style_text_font(id(button_0_0_icon), LV_PART_MAIN),
+                    &descriptor, glyph.code_point, 0),
+                    "every MDI glyph exists in the compiled font");
+          }
           require(!lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "available control enabled");
           id(dashboard).navigate(1);
           require(hidden(id(page_0)) && !hidden(id(page_2)), "swipe skips empty page");
@@ -88,6 +110,7 @@ esphome:
           id(dashboard).navigate(-1);
           id(dashboard).receive(snapshot(1));
           require(std::string(lv_label_get_text(id(button_0_0_state))) == "ON", "last known appearance retained");
+          require(icon_is(id(button_0_0_icon), "mdi:lightbulb"), "unavailable light retains its icon");
           require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "unavailable entity disabled");
           id(dashboard).receive(snapshot(0));
           id(dashboard).check_connection();
@@ -110,6 +133,48 @@ esphome:
           for (auto entry : {std::pair<int, const char *>{6, "ENABLED"}, {7, "LOCKED"}, {8, "OFF"}, {9, "UNLOCKED"}}) {
             id(dashboard).receive(snapshot(entry.first));
             require(std::string(lv_label_get_text(id(button_2_3_state))) == entry.second, "domain-specific state");
+          }
+          require(icon_is(id(button_2_3_icon), "mdi:lock-open-variant"), "unlocked HA default");
+          id(dashboard).receive(snapshot(7));
+          require(icon_is(id(button_2_3_icon), "mdi:lock"), "locked HA default");
+          id(dashboard).receive(snapshot(8));
+          require(icon_is(id(button_2_3_icon), "mdi:toggle-switch-variant-off"), "switch off default");
+          id(dashboard).receive(snapshot(11));
+          require(icon_is(id(button_2_3_icon), "mdi:lightbulb-auto"), "HA custom automation icon");
+          id(dashboard).receive(snapshot(12));
+          require(icon_is(id(button_2_3_icon), "mdi:door-open"), "HA custom door icon");
+          id(dashboard).receive(snapshot(15));
+          require(icon_is(id(button_2_3_icon), "mdi:door-open"), "invalid icon type rejects snapshot atomically");
+          for (int mode : {13, 14, 16}) {
+            id(dashboard).receive(snapshot(mode));
+            require(icon_is(id(button_2_3_icon), "mdi:lightbulb"), "unsupported or cleared icon uses default");
+          }
+          auto state_snapshot = [&](const char *entity, const char *state) {
+            return esphome::json::build_json([&](JsonObject root) {
+              esphome::json::parse_json(snapshot(0), [&](JsonObject source) {
+                root.set(source);
+                root["pages"][2]["buttons"][3]["entity"] = entity;
+                root["pages"][2]["buttons"][3]["state"] = state;
+                return true;
+              });
+            });
+          };
+          for (auto entry : {std::pair<const char *, const char *>{"off", "mdi:lightbulb-off"},
+                              {"on", "mdi:lightbulb"}}) {
+            id(dashboard).receive(state_snapshot("light.test", entry.first));
+            require(icon_is(id(button_2_3_icon), entry.second), "light icon follows on/off state");
+          }
+          id(dashboard).receive(state_snapshot("automation.test", "off"));
+          require(icon_is(id(button_2_3_icon), "mdi:robot-off"), "automation off default");
+          id(dashboard).receive(state_snapshot("automation.test", "unavailable"));
+          require(icon_is(id(button_2_3_icon), "mdi:robot-off"), "unavailable automation retains its icon");
+          id(dashboard).receive(state_snapshot("lock.test", "unavailable"));
+          require(icon_is(id(button_2_3_icon), "mdi:lock"), "changed unavailable entity resets prior icon");
+          for (auto entry : {std::pair<const char *, const char *>{"locking", "mdi:lock-clock"},
+                              {"jammed", "mdi:lock-alert"}, {"open", "mdi:lock-open-variant"}}) {
+            id(dashboard).receive(state_snapshot("lock.test", entry.first));
+            require(icon_is(id(button_2_3_icon), entry.second), "lock transition icon");
+            require(lv_obj_has_state(id(button_2_3), LV_STATE_DISABLED), "lock transition stays non-actionable");
           }
           id(dashboard).receive(snapshot(3));
           id(dashboard).navigate(1);

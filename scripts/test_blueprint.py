@@ -93,7 +93,7 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(page["title"], 'Landing "night"')
         self.assertEqual(page["temperature"], "Temperature: 21.2 C")
         self.assertEqual(page["buttons"][2], {
-            "entity": "automation.landing", "name": 'Lighting "auto" %', "state": "off",
+            "entity": "automation.landing", "name": 'Lighting "auto" %', "state": "off", "icon": "",
         })
 
     def test_changes_and_removals_replace_old_entities(self):
@@ -137,6 +137,31 @@ class BlueprintTests(unittest.TestCase):
         self.inputs["page_1_button_1"] = "light.office"
         self.inputs["page_1_button_1_title"] = "x" * 81
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["name"], "x" * 80)
+
+    def test_entity_icons_apply_to_every_slot_and_follow_attribute_changes(self):
+        for page in range(1, 5):
+            for button in range(1, 5):
+                entity = f"light.test_{page}_{button}"
+                self.inputs[f"page_{page}_button_{button}"] = entity
+                self.attributes[entity] = {"icon": "mdi:lightbulb-auto"}
+        for page in self.snapshot()["pages"]:
+            for button in page["buttons"]:
+                self.assertEqual(button["icon"], "mdi:lightbulb-auto")
+        self.attributes["light.test_1_1"]["icon"] = "mdi:ceiling-light"
+        self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["icon"], "mdi:ceiling-light")
+        del self.attributes["light.test_1_1"]["icon"]
+        self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["icon"], "")
+
+    def test_outlet_icons_follow_state_and_respect_custom_icon(self):
+        self.inputs["page_1_button_1"] = "switch.outlet"
+        self.attributes["switch.outlet"] = {"device_class": "outlet"}
+        for state, icon in (("on", "mdi:power-plug"), ("off", "mdi:power-plug-off")):
+            self.states["switch.outlet"] = state
+            self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["icon"], icon)
+        self.states["switch.outlet"] = "unavailable"
+        self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["icon"], "")
+        self.attributes["switch.outlet"]["icon"] = "mdi:desk-lamp"
+        self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["icon"], "mdi:desk-lamp")
 
     def test_temperature_unknown_and_optional_sensor(self):
         self.inputs["page_1_temperature"] = "sensor.temperature"
