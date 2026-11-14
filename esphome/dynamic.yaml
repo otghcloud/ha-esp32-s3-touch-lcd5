@@ -28,6 +28,7 @@ select:
       - Page 6
       - Page 7
       - Page 8
+      - Navigation / menu
     on_value:
       then:
         - lambda: id(dashboard).set_wake_page(i);

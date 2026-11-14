@@ -183,6 +183,14 @@ esphome:
           choose_wake_page("Page 4");
           id(dashboard).wake();
           require(!hidden(id(page_0)), "empty wake-up page falls back to first populated page");
+          choose_wake_page("Navigation / menu");
+          require(hidden(id(navigation)) && !hidden(id(page_0)), "changing to menu wake does not navigate immediately");
+          id(dashboard).wake();
+          require(!hidden(id(navigation)) && hidden(id(page_0)), "menu wake opens navigation instead of a button page");
+          id(dashboard).receive(snapshot(0));
+          require(!hidden(id(navigation)), "HA updates preserve the woken navigation view");
+          tap(id(navigation_0));
+          require(hidden(id(navigation)) && !hidden(id(page_0)), "a page can be selected after menu wake");
           choose_wake_page("Last used page");
           require(!hidden(id(page_0)) && hidden(id(page_2)), "first nonempty page shown");
           require(hidden(id(page_1)) && hidden(id(page_3)), "empty pages hidden");
@@ -756,6 +764,13 @@ esphome:
           saver_idle.end_touch(200000);
           id(dashboard).check_screensaver(saver_idle, 260000);
           require(!hidden(id(dashboard_screensaver)), "screensaver rearms after touch release");
+          choose_wake_page("Navigation / menu");
+          require(!saver_idle.begin_touch(false, 260001), "screensaver menu wake starts a wake-only gesture");
+          id(dashboard).wake();
+          require(!saver_idle.end_touch(260002) && hidden(id(dashboard_screensaver)) && !hidden(id(navigation)),
+                  "screensaver wake opens navigation without activating its page buttons");
+          id(dashboard).check_screensaver(saver_idle, 320002);
+          choose_wake_page("Page 3");
           id(dashboard).set_screensaver_time(0);
           id(dashboard).check_screensaver(saver_idle, 360000);
           require(hidden(id(dashboard_screensaver)), "zero timeout disables and dismisses the screensaver");
@@ -788,7 +803,14 @@ esphome:
           id(dashboard).receive(empty_saver);
           require(!hidden(id(dashboard_screensaver)),
                   "screensaver stays visible across updates even when no button pages are configured");
+          choose_wake_page("Navigation / menu");
+          id(dashboard).wake();
+          require(hidden(id(navigation)) && !hidden(id(dashboard_waiting)),
+                  "menu wake without populated pages retains the waiting screen");
           id(dashboard).receive(snapshot(0));
+          require(!hidden(id(navigation)), "pending menu wake opens navigation when pages arrive");
+          choose_wake_page("Last used page");
+          id(dashboard).wake();
           ESP_LOGI("runtime_test", "All runtime dashboard assertions passed");
           if (std::getenv("WALLPANEL_API_TEST") == nullptr)
             std::exit(0);

@@ -17,6 +17,7 @@
 namespace wallpanel {
 
 inline constexpr size_t MAX_PAGES = 8;
+inline constexpr size_t WAKE_NAVIGATION = MAX_PAGES + 1;
 inline constexpr size_t MAX_BUTTONS = 18;
 inline constexpr size_t MAX_PAYLOAD_BYTES = 262144;
 inline constexpr size_t CHUNK_BYTES = 4096;
@@ -411,7 +412,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   void set_wake_page(size_t page) {
-    if (page > pages_.size()) {
+    if (page > WAKE_NAVIGATION) {
       ESP_LOGE("dashboard", "Invalid wake-up page %u", unsigned(page));
       return;
     }
@@ -428,9 +429,10 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     }
     wake_pending_ = std::none_of(pages_.begin(), pages_.end(),
                                  [](const PageData &page) { return page.enabled; });
-    if (wake_page_ != 0)
+    if (wake_page_ != 0 && wake_page_ != WAKE_NAVIGATION)
       current_ = wake_page_ - 1;
     ensure_current_page();
+    navigation_open_ = wake_page_ == WAKE_NAVIGATION && !wake_pending_;
     render();
   }
 
