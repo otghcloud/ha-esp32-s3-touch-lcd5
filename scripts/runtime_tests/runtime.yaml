@@ -1113,6 +1113,51 @@ esphome:
             lv_obj_get_coords(id(button_0_0_icon), &area);
             id(dashboard).begin_touch(1, (area.x1 + area.x2) / 2, (area.y1 + area.y2) / 2, 1000);
           };
+          using namespace esphome::touchscreen;
+          auto touch_frame = [&](int8_t other_state) {
+            lv_area_t area;
+            lv_obj_get_coords(id(button_0_0_icon), &area);
+            const auto x = uint16_t((area.x1 + area.x2) / 2);
+            const auto y = uint16_t((area.y1 + area.y2) / 2);
+            return TouchPoints_t{
+              TouchPoint{.id = 1, .x = x, .y = y, .state = STATE_UPDATED},
+              TouchPoint{.id = 2, .x = x, .y = y, .state = other_state},
+            };
+          };
+          for (int8_t inactive : std::array<int8_t, 5>{STATE_RELEASED, STATE_RELEASING,
+                 STATE_PRESSED | STATE_RELEASING, STATE_UPDATED | STATE_RELEASING, STATE_CALIBRATE}) {
+            hold_icon();
+            id(dashboard).update_touches(touch_frame(inactive));
+            id(dashboard).check_touch_hold(1600);
+            require(!hidden(id(light_detail)), "inactive foreign contact cannot cancel a valid icon hold");
+            require(id(dashboard).end_touch() == TouchAction::NONE, "filtered frame hold consumes release");
+            tap(id(button_0_1));
+          }
+          for (int8_t active : {STATE_PRESSED, STATE_UPDATED}) {
+            hold_icon();
+            auto frame = touch_frame(active);
+            frame[1].x = 700;
+            frame[1].y = 400;
+            std::reverse(frame.begin(), frame.end());
+            id(dashboard).update_touches(frame);
+            id(dashboard).check_touch_hold(1600);
+            require(!hidden(id(light_detail)), "extra contacts cannot cancel or redirect the owner's hold");
+            require(id(dashboard).end_touch() == TouchAction::NONE, "opening release cannot toggle either contact");
+            tap(id(button_0_1));
+          }
+          for (int missing : std::array<int, 4>{-1, STATE_RELEASED,
+                                               STATE_PRESSED | STATE_RELEASING,
+                                               STATE_UPDATED | STATE_RELEASING}) {
+            hold_icon();
+            auto frame = touch_frame(STATE_UPDATED);
+            if (missing == -1) frame.erase(frame.begin());
+            else frame[0].state = int8_t(missing);
+            id(dashboard).update_touches(frame);
+            id(dashboard).update_touches(touch_frame(STATE_RELEASED));
+            id(dashboard).check_touch_hold(1600);
+            require(hidden(id(light_detail)), "losing the owner permanently cancels rather than handing off");
+            require(id(dashboard).end_touch() == TouchAction::NONE, "owner loss cannot turn into a tap");
+          }
           hold_icon();
           id(dashboard).check_touch_hold(1599);
           require(hidden(id(light_detail)), "599ms does not open light details");
@@ -1128,7 +1173,7 @@ esphome:
           hold_icon();
           id(dashboard).update_touch(2, 100, 150);
           id(dashboard).check_touch_hold(1600);
-          require(hidden(id(light_detail)), "second finger cancels icon hold");
+          require(hidden(id(light_detail)), "replacing the primary contact cancels icon hold");
           id(dashboard).end_touch();
           hold_icon();
           id(dashboard).backlight_off();
@@ -1294,6 +1339,15 @@ api:
             else if (phase == 1) id(dashboard).update_touch(1, x, y);
             else if (phase == 2) id(dashboard).end_touch();
             else if (phase == 3) id(dashboard).check_touch_hold(millis() + 600);
+            else if (phase == 4 || phase == 5) {
+              using namespace esphome::touchscreen;
+              TouchPoints_t frame{
+                TouchPoint{.id = 2, .x = uint16_t(x + 4), .y = uint16_t(y + 4), .state = STATE_PRESSED},
+              };
+              if (phase == 4)
+                frame.push_back(TouchPoint{.id = 1, .x = uint16_t(x), .y = uint16_t(y), .state = STATE_UPDATED});
+              id(dashboard).update_touches(frame);
+            }
 text_sensor:
   - id: !extend dashboard_endpoint
     on_value:
@@ -1341,7 +1395,10 @@ external_components:
   - source:
       type: local
       path: test_components
-    components: [test_display]
+    components: [test_display, test_touchscreen]
+test_touchscreen:
+  id: test_touch
+  update_interval: never
 test_display:
   id: test_lcd
   auto_clear_enabled: false

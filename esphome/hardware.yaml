@@ -123,19 +123,13 @@ touchscreen:
               return;
             }
             id(dashboard).begin_touch(touch.id, touch.x, touch.y);
-            for (const auto &point : touches) {
-              if (point.state != 0)
-                id(dashboard).update_touch(point.id, point.x, point.y);
-            }
+            id(dashboard).update_touches(touches);
     on_update:
       then:
         - lambda: |-
             if (!id(display_idle).accepts_touch())
               return;
-            for (const auto &point : touches) {
-              if (point.state != 0)
-                id(dashboard).update_touch(point.id, point.x, point.y);
-            }
+            id(dashboard).update_touches(touches);
     on_release:
       then:
         - lambda: |-

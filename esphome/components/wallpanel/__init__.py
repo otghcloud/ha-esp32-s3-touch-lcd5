@@ -3,7 +3,7 @@ import esphome.config_validation as cv
 from esphome.const import CONF_ID
 
 DEPENDENCIES = ["api", "lvgl"]
-AUTO_LOAD = ["json"]
+AUTO_LOAD = ["json", "touchscreen"]
 
 wallpanel_ns = cg.global_ns.namespace("wallpanel")
 Dashboard = wallpanel_ns.class_("Dashboard", cg.Component)

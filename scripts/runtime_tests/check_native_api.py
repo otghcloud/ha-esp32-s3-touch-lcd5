@@ -229,9 +229,11 @@ async def check():
             async def touch(phase, x=0, y=0):
                 await client.execute_service(service["test_touch"], {"phase": phase, "x": x, "y": y})
 
-            async def hold(x, y, drift=(0, 0)):
+            async def hold(x, y, drift=(0, 0), extra_contacts=False):
                 await touch(0, x, y)
-                if drift != (0, 0):
+                if extra_contacts:
+                    await touch(4, x + drift[0], y + drift[1])
+                elif drift != (0, 0):
                     await touch(1, x + drift[0], y + drift[1])
                 await wait_probe(lambda value: value["detail_visible"])
                 await touch(2)
@@ -249,7 +251,14 @@ async def check():
             previous = await wait_probe()
             await send(details.snapshot(), "detail-model")
             await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
-            await hold(78, 142)
+            before_owner_loss = await wait_probe()
+            await touch(0, 78, 142)
+            await touch(5, 78, 142)
+            cancelled = await wait_probe(lambda value: value["tick"] > before_owner_loss["tick"] + 700)
+            assert not cancelled["detail_visible"], "Another nearby contact took over the hold"
+            await touch(2)
+            assert actions.empty(), "Losing the original contact leaked a toggle"
+            await hold(78, 142, extra_contacts=True)
             await wait_probe(lambda value: value["slider_visible"] and value["detail_value"] == "50%")
             await tap(695, 168)
             await expect_action("switch.toggle", "switch.outlet")
@@ -260,10 +269,17 @@ async def check():
             await wait_probe(lambda value: value["related_white"])
             await tap(695, 168)
             await expect_action("switch.toggle", "switch.outlet")
-            await tap(69, 369)
+            await touch(0, 69, 369)
+            await touch(4, 69, 369)
+            await touch(2)
             await expect_action("light.toggle", "light.detail")
             await touch(0, 266, 250)
-            await touch(1, 266, 130)
+            await touch(5, 266, 130)
+            await touch(2)
+            await asyncio.sleep(.15)
+            assert actions.empty(), "Losing the original contact committed a slider edit"
+            await touch(0, 266, 250)
+            await touch(4, 266, 130)
             await wait_probe(lambda value: value["detail_value"] == "100%")
             assert actions.empty(), "Brightness drag sent commands before release"
             details.attributes["light.detail"]["brightness"] = 20
@@ -325,7 +341,7 @@ async def check():
             await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
             for x in (107, 497, 692):
                 # Finger centres can sit just below the small icon, above its title.
-                await hold(x, 127, drift=(35, 25))
+                await hold(x, 127, drift=(35, 25), extra_contacts=True)
                 await wait_probe(lambda value: value["slider_visible"])
                 if x != 692:
                     await tap(69, 456)

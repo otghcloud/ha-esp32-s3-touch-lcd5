@@ -10,6 +10,7 @@
 #include "esphome/components/api/custom_api_device.h"
 #include "esphome/components/json/json_util.h"
 #include "esphome/components/lvgl/lvgl_esphome.h"
+#include "esphome/components/touchscreen/touchscreen.h"
 #include "esphome/core/component.h"
 #include "esphome/core/log.h"
 #include "esphome/core/time.h"
@@ -500,13 +501,36 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     }
   }
 
+  void update_touches(const esphome::touchscreen::TouchPoints_t &touches) {
+    if (!gesture_.valid()) return;
+    const auto active = [](const esphome::touchscreen::TouchPoint &point) {
+      return point.state == esphome::touchscreen::STATE_PRESSED ||
+             point.state == esphome::touchscreen::STATE_UPDATED;
+    };
+    const auto owner = std::find_if(touches.begin(), touches.end(), [&](const auto &point) {
+      return active(point) && point.id == gesture_.id();
+    });
+    if (owner != touches.end()) {
+      update_touch(owner->id, owner->x, owner->y);
+    } else {
+      const auto remaining = std::find_if(touches.begin(), touches.end(), active);
+      if (remaining != touches.end()) {
+        ESP_LOGD("dashboard", "Touch owner ID %d missing; remaining ID %u state %d at (%u,%u)",
+                 gesture_.id(), unsigned(remaining->id), int(remaining->state),
+                 unsigned(remaining->x), unsigned(remaining->y));
+        update_touch(remaining->id, remaining->x, remaining->y);
+      }
+    }
+  }
+
   void update_touch(int id, int x, int y) {
     gesture_.update(id, x, y);
     if (hold_candidate_ && !gesture_.hold_stationary()) {
       if (gesture_.valid())
         ESP_LOGD("dashboard", "Light hold cancelled: movement exceeded %dpx", TouchGesture::HOLD_SLOP_PX);
       else
-        ESP_LOGD("dashboard", "Light hold cancelled: additional touch or changed touch ID");
+        ESP_LOGD("dashboard", "Light hold cancelled: owner ID %d replaced by ID %d at (%d,%d)",
+                 gesture_.id(), id, x, y);
       hold_candidate_ = false;
     }
     if (detail_editing_ && gesture_.valid()) preview_detail(x, y);
