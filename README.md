@@ -87,6 +87,14 @@ After reboot the panel shows **Waiting for Home Assistant** until it receives co
 
 The static 800 × 480 background in [`assets/background_dark.png`](./assets/background_dark.png) is embedded in the firmware and displayed on every page, including the waiting screen.
 
+### Display backlight
+
+After installing the updated firmware, the device's **Configuration** section in Home Assistant includes a **Display backlight** switch. It controls the board's active-high CH422G EXIO2 backlight enable and turns on after every reboot. No blueprint update is needed.
+
+Turning it off only disables the backlight: the dashboard, touch controls and Home Assistant connection remain active. Touching the screen does not turn the backlight back on; use the Home Assistant switch or an automation.
+
+Brightness adjustment is not supported by this connection: [ESPHome's CH422G driver](https://esphome.io/components/ch422g/) does not support PWM. A true brightness slider would require a hardware-supported dimming connection; no simulated slider is exposed.
+
 ### Example configuration
 
 | Blueprint input | Office (page 01) | Landing (page 02) |

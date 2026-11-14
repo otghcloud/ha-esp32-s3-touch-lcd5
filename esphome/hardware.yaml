@@ -3,10 +3,31 @@ i2c:
   scl: GPIO9
   scan: true
 
+# Enabling the output bank also requires driving the EXIO1/EXIO3 reset lines.
+ch422g:
+  - id: io_expander
+
+switch:
+  - platform: gpio
+    id: display_backlight
+    name: Display backlight
+    icon: mdi:monitor
+    entity_category: config
+    restore_mode: ALWAYS_ON
+    pin:
+      ch422g: io_expander
+      number: 2
+      mode: OUTPUT
+      inverted: false
+
 touchscreen:
   - platform: gt911
     id: touch
     interrupt_pin: GPIO4
+    reset_pin:
+      ch422g: io_expander
+      number: 1
+      mode: OUTPUT
     on_touch:
       then:
         - lambda: |-
@@ -33,6 +54,10 @@ display:
     update_interval: never
     auto_clear_enabled: false
     byte_order: big_endian
+    reset_pin:
+      ch422g: io_expander
+      number: 3
+      mode: OUTPUT
 
     dimensions:
       width: 800
