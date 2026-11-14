@@ -3,7 +3,7 @@ blueprint:
   description: >-
     Configure up to four button pages without rebuilding firmware. Each page supports a title,
     an optional temperature sensor and up to four light, switch, automation or lock entities.
-    Empty pages and buttons are hidden. Button labels use Home Assistant friendly names.
+    Empty pages and buttons are hidden. Optional button titles override Home Assistant friendly names.
     Automation buttons enable/disable automations; they do not trigger them.
     Enable "Allow the device to perform Home Assistant actions" in the ESPHome integration.
     Create only one configuration automation per panel.
@@ -51,18 +51,39 @@ blueprint:
                   - switch
                   - automation
                   - lock
+        page_1_button_1_title:
+          name: Button 1 - Title
+          description: &title_description Leave blank to use the entity's Home Assistant display name.
+          default: ""
+          selector: &title_selector
+            text:
         page_1_button_2:
           name: Button 2 - Entity
           default: []
           selector: *button_selector
+        page_1_button_2_title:
+          name: Button 2 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_1_button_3:
           name: Button 3 - Entity
           default: []
           selector: *button_selector
+        page_1_button_3_title:
+          name: Button 3 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_1_button_4:
           name: Button 4 - Entity
           default: []
           selector: *button_selector
+        page_1_button_4_title:
+          name: Button 4 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
     page_2:
       name: Button page 02
       icon: mdi:gesture-tap-button
@@ -82,18 +103,38 @@ blueprint:
           name: Button 1 - Entity
           default: []
           selector: *button_selector
+        page_2_button_1_title:
+          name: Button 1 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_2_button_2:
           name: Button 2 - Entity
           default: []
           selector: *button_selector
+        page_2_button_2_title:
+          name: Button 2 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_2_button_3:
           name: Button 3 - Entity
           default: []
           selector: *button_selector
+        page_2_button_3_title:
+          name: Button 3 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_2_button_4:
           name: Button 4 - Entity
           default: []
           selector: *button_selector
+        page_2_button_4_title:
+          name: Button 4 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
     page_3:
       name: Button page 03
       icon: mdi:gesture-tap-button
@@ -113,18 +154,38 @@ blueprint:
           name: Button 1 - Entity
           default: []
           selector: *button_selector
+        page_3_button_1_title:
+          name: Button 1 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_3_button_2:
           name: Button 2 - Entity
           default: []
           selector: *button_selector
+        page_3_button_2_title:
+          name: Button 2 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_3_button_3:
           name: Button 3 - Entity
           default: []
           selector: *button_selector
+        page_3_button_3_title:
+          name: Button 3 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_3_button_4:
           name: Button 4 - Entity
           default: []
           selector: *button_selector
+        page_3_button_4_title:
+          name: Button 4 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
     page_4:
       name: Button page 04
       icon: mdi:gesture-tap-button
@@ -144,18 +205,38 @@ blueprint:
           name: Button 1 - Entity
           default: []
           selector: *button_selector
+        page_4_button_1_title:
+          name: Button 1 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_4_button_2:
           name: Button 2 - Entity
           default: []
           selector: *button_selector
+        page_4_button_2_title:
+          name: Button 2 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_4_button_3:
           name: Button 3 - Entity
           default: []
           selector: *button_selector
+        page_4_button_3_title:
+          name: Button 3 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
         page_4_button_4:
           name: Button 4 - Entity
           default: []
           selector: *button_selector
+        page_4_button_4_title:
+          name: Button 4 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
 
 mode: restart
 max_exceeded: silent
@@ -177,6 +258,11 @@ variables:
     - [!input page_2_button_1, !input page_2_button_2, !input page_2_button_3, !input page_2_button_4]
     - [!input page_3_button_1, !input page_3_button_2, !input page_3_button_3, !input page_3_button_4]
     - [!input page_4_button_1, !input page_4_button_2, !input page_4_button_3, !input page_4_button_4]
+  button_titles:
+    - [!input page_1_button_1_title, !input page_1_button_2_title, !input page_1_button_3_title, !input page_1_button_4_title]
+    - [!input page_2_button_1_title, !input page_2_button_2_title, !input page_2_button_3_title, !input page_2_button_4_title]
+    - [!input page_3_button_1_title, !input page_3_button_2_title, !input page_3_button_3_title, !input page_3_button_4_title]
+    - [!input page_4_button_1_title, !input page_4_button_2_title, !input page_4_button_3_title, !input page_4_button_4_title]
   endpoint: >-
     {% set ns = namespace(value='') %}
     {% for entity in device_entities(panel_device) %}
@@ -238,7 +324,8 @@ actions:
               {% set row = namespace(buttons=[]) %}
               {% for entity in buttons[p] %}
                 {% if entity is string and entity %}
-                  {% set name = (state_attr(entity, 'friendly_name') or entity)[:80] %}
+                  {% set custom_title = button_titles[p][loop.index0] | trim %}
+                  {% set name = (custom_title or state_attr(entity, 'friendly_name') or entity)[:80] %}
                   {% set state = states(entity)[:40] %}
                   {% set row.buttons = row.buttons + [dict(entity=entity, name=name, state=state)] %}
                 {% else %}

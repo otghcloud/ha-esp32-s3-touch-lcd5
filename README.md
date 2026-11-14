@@ -64,12 +64,14 @@ Pages and entities are configured at runtime by the [Home Assistant blueprint](.
    The import URL works after these changes are published to `main`. Before publication, copy `wallpanel_blueprint.yaml` to `/config/blueprints/automation/otghcloud/wallpanel_blueprint.yaml` and reload automations.
 
 4. Create an automation from the blueprint and select your panel device.
-5. Expand **Button page 01** through **Button page 04**. Each provides a page title, an optional temperature sensor and four optional button entity selectors. Leave all buttons empty to hide a page.
+5. Expand **Button page 01** through **Button page 04**. Each provides a page title, an optional temperature sensor and four optional button entity selectors, each with an optional **Title** field. Leave all buttons empty to hide a page.
 6. Save and enable the automation. Run its actions once for an immediate update; future entity changes and reconnects update automatically. Keep only one configuration automation enabled per panel.
 
 The **Dashboard endpoint** diagnostic sensor must remain enabled. It lets the blueprint discover the correct ESPHome action even if you rename the device's friendly name or HA entities.
 
-Buttons use HA friendly names and built-in domain icons. Lights and switches toggle, automation buttons enable/disable (not trigger), and locks unlock when locked or lock when unlocked, without confirmation.
+Buttons use HA friendly names unless their **Title** field is filled in. Blank or whitespace-only titles retain the default name; titles without an entity do not create a button. Labels use at most 80 characters. Built-in domain icons remain unchanged. Lights and switches toggle, automation buttons enable/disable (not trigger), and locks unlock when locked or lock when unlocked, without confirmation.
+
+To add these fields to an existing installation, re-import the updated blueprint and reload automations. Existing automations use blank titles by default; no firmware update is needed.
 
 Swipe left/right anywhere on the screen, including over buttons. Navigation wraps at both ends and skips empty pages. A horizontal movement of at least 100 pixels changes page when you lift your finger. Buttons activate only on release after a tap with no movement beyond 20 pixels; drags and multi-touch gestures do not activate controls. Bottom-centred dots highlight the current page; they are hidden for a single page. Temperature values use the sensor's unit of measurement.
 

@@ -106,6 +106,38 @@ class BlueprintTests(unittest.TestCase):
         self.inputs["page_1_button_1"] = []
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["entity"], "")
 
+    def test_custom_titles_apply_to_every_button_slot(self):
+        for page in range(1, 5):
+            for button in range(1, 5):
+                key = f"page_{page}_button_{button}"
+                self.inputs[key] = f"light.test_{page}_{button}"
+                self.inputs[f"{key}_title"] = f'  Custom "{page}/{button}"  '
+        snapshot = self.snapshot()
+        for page, row in enumerate(snapshot["pages"], start=1):
+            for button, item in enumerate(row["buttons"], start=1):
+                self.assertEqual(item["name"], f'Custom "{page}/{button}"')
+                self.assertEqual(item["entity"], f"light.test_{page}_{button}")
+
+    def test_blank_titles_restore_default_names_and_ignore_empty_slots(self):
+        entity = "light.office"
+        self.inputs["page_1_button_1"] = entity
+        self.attributes[entity] = {"friendly_name": "Office Lamp"}
+        for title, expected in (("Custom Lamp", "Custom Lamp"), ("", "Office Lamp"), ("  ", "Office Lamp")):
+            with self.subTest(title=title):
+                self.inputs["page_1_button_1_title"] = title
+                self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["name"], expected)
+        self.attributes[entity] = {}
+        self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["name"], entity)
+        self.inputs["page_1_button_1"] = []
+        self.inputs["page_1_button_1_title"] = "No entity"
+        self.assertEqual(self.snapshot()["pages"][0]["buttons"][0],
+                         {"entity": "", "name": "", "state": ""})
+
+    def test_custom_title_keeps_existing_label_limit(self):
+        self.inputs["page_1_button_1"] = "light.office"
+        self.inputs["page_1_button_1_title"] = "x" * 81
+        self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["name"], "x" * 80)
+
     def test_temperature_unknown_and_optional_sensor(self):
         self.inputs["page_1_temperature"] = "sensor.temperature"
         self.states["sensor.temperature"] = "unavailable"
