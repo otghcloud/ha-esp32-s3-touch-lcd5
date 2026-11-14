@@ -7,42 +7,24 @@ touchscreen:
   - platform: gt911
     id: touch
     interrupt_pin: GPIO4
+    on_touch:
+      then:
+        - lambda: |-
+            id(dashboard).begin_touch(touch.id, touch.x, touch.y);
+            for (const auto &point : touches) {
+              if (point.state != 0)
+                id(dashboard).update_touch(point.id, point.x, point.y);
+            }
     on_update:
       then:
-        - if:
-            condition:
-              lambda: |-
-                for (auto touch : touches) {
-                  if (touch.state >= 4) {
-                    const int dx = touch.x - touch.x_org;
-                    const int dy = touch.y - touch.y_org;
-                    const int abs_dx = dx < 0 ? -dx : dx;
-                    const int abs_dy = dy < 0 ? -dy : dy;
-                    if (dx < -100 && abs_dx > abs_dy) {
-                      return true;
-                    }
-                  }
-                }
-                return false;
-            then:
-              - script.execute: dashboard_next
-        - if:
-            condition:
-              lambda: |-
-                for (auto touch : touches) {
-                  if (touch.state >= 4) {
-                    const int dx = touch.x - touch.x_org;
-                    const int dy = touch.y - touch.y_org;
-                    const int abs_dx = dx < 0 ? -dx : dx;
-                    const int abs_dy = dy < 0 ? -dy : dy;
-                    if (dx > 100 && abs_dx > abs_dy) {
-                      return true;
-                    }
-                  }
-                }
-                return false;
-            then:
-              - script.execute: dashboard_previous
+        - lambda: |-
+            for (const auto &point : touches) {
+              if (point.state != 0)
+                id(dashboard).update_touch(point.id, point.x, point.y);
+            }
+    on_release:
+      then:
+        - lambda: id(dashboard).end_touch();
 
 display:
   - platform: rpi_dpi_rgb

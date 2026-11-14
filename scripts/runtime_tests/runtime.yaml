@@ -14,6 +14,31 @@ esphome:
             }
           };
           auto hidden = [](lv_obj_t *obj) { return lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN); };
+          wallpanel::TouchGesture gesture;
+          using TouchAction = wallpanel::TouchAction;
+          gesture.begin(1, 300, 150);
+          gesture.update(1, 320, 150);
+          require(gesture.finish() == TouchAction::TAP, "20 pixel tap tolerance");
+          require(gesture.finish() == TouchAction::NONE, "release consumed once");
+          gesture.begin(1, 300, 150);
+          gesture.update(1, 321, 150);
+          gesture.update(1, 300, 150);
+          require(gesture.finish() == TouchAction::NONE, "drag returning to origin is not a tap");
+          gesture.begin(1, 300, 150);
+          gesture.update(1, 201, 150);
+          require(gesture.finish() == TouchAction::NONE, "sub-threshold swipe is not a tap");
+          gesture.begin(1, 300, 150);
+          gesture.update(1, 200, 150);
+          require(gesture.finish() == TouchAction::NEXT, "100 pixel left swipe");
+          gesture.begin(1, 300, 150);
+          gesture.update(1, 400, 150);
+          require(gesture.finish() == TouchAction::PREVIOUS, "100 pixel right swipe");
+          gesture.begin(1, 300, 150);
+          gesture.update(1, 450, 350);
+          require(gesture.finish() == TouchAction::NONE, "vertical drag cannot activate button or swipe");
+          gesture.begin(1, 300, 150);
+          gesture.update(2, 450, 150);
+          require(gesture.finish() == TouchAction::NONE, "multi-touch cannot activate controls");
           require(!hidden(id(dashboard_waiting)), "waiting on reboot");
           auto snapshot = [](int mode) {
             return esphome::json::build_json([mode](JsonObject root) {
@@ -48,9 +73,19 @@ esphome:
                   lv_obj_get_style_bg_opa(id(dot_2_0), LV_PART_MAIN) == LV_OPA_TRANSP, "current page dot highlighted");
           require(std::string(lv_label_get_text(id(temperature_2))) == "Temperature: 21.5 C", "dynamic temperature");
           id(dashboard).navigate(1);
-          require(!hidden(id(page_2)), "no wrapping beyond last page");
+          require(!hidden(id(page_0)), "next wraps from last page to first");
+          id(dashboard).navigate(-1);
+          require(!hidden(id(page_2)), "previous wraps from first page to last");
           id(dashboard).navigate(-1);
           require(!hidden(id(page_0)), "previous page skips empty slots");
+          id(dashboard).begin_touch(1, 300, 150);
+          id(dashboard).update_touch(1, 180, 150);
+          require(!hidden(id(page_0)), "swipe over button waits for release");
+          require(id(dashboard).end_touch() == TouchAction::NEXT && !hidden(id(page_2)),
+                  "swipe over button changes page, not a tap");
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(page_2)),
+                  "swipe only changes page once");
+          id(dashboard).navigate(-1);
           id(dashboard).receive(snapshot(1));
           require(std::string(lv_label_get_text(id(button_0_0_state))) == "ON", "last known appearance retained");
           require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "unavailable entity disabled");
@@ -61,6 +96,9 @@ esphome:
           id(dashboard).receive(snapshot(2));
           require(hidden(id(page_0)) && !hidden(id(page_2)), "removed selected page falls back");
           require(hidden(id(dot_2_0)) && hidden(id(dot_2_1)), "single page has no dots");
+          id(dashboard).navigate(1);
+          id(dashboard).navigate(-1);
+          require(!hidden(id(page_2)), "single-page wrapping stays on its page");
           id(dashboard).receive(snapshot(4));
           require(hidden(id(page_0)) && !hidden(id(page_2)), "reject fifth page atomically");
           id(dashboard).receive(snapshot(5));
@@ -74,6 +112,8 @@ esphome:
             require(std::string(lv_label_get_text(id(button_2_3_state))) == entry.second, "domain-specific state");
           }
           id(dashboard).receive(snapshot(3));
+          id(dashboard).navigate(1);
+          id(dashboard).navigate(-1);
           require(!hidden(id(dashboard_waiting)) && hidden(id(page_2)), "all pages cleared");
           ESP_LOGI("runtime_test", "All runtime dashboard assertions passed");
           std::exit(0);

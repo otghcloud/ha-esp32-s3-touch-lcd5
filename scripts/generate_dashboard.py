@@ -32,7 +32,6 @@ def make_dashboard():
                 "y": 65 if b < 2 else 230, "width": 360, "height": 155,
                 "bg_color": 0x171F2C, "bg_opa": "90%", "border_color": 0x344154,
                 "border_width": 1, "radius": 18, "scrollable": False,
-                "on_click": [{"lambda": f"id(dashboard).press({p}, {b});"}],
                 "widgets": [
                     {"image": {"id": f"{prefix}_icon", "src": "icon_light",
                                "x": 22, "y": 42, "image_recolor": 0xF2C66D,

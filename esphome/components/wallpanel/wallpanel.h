@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdlib>
 #include <string>
 #include "esphome/components/api/custom_api_device.h"
 #include "esphome/components/json/json_util.h"
@@ -38,6 +39,57 @@ struct PageData {
   std::string temperature;
   std::array<ButtonData, 4> buttons;
   bool enabled{false};
+};
+
+enum class TouchAction { NONE, TAP, NEXT, PREVIOUS };
+
+class TouchGesture {
+ public:
+  void begin(int id, int x, int y) {
+    id_ = id;
+    start_x_ = x_ = x;
+    start_y_ = y_ = y;
+    active_ = true;
+    cancelled_ = moved_ = false;
+  }
+
+  void update(int id, int x, int y) {
+    if (!active_)
+      return;
+    if (id != id_) {
+      cancelled_ = true;
+      return;
+    }
+    x_ = x;
+    y_ = y;
+    moved_ |= std::abs(x_ - start_x_) > 20 || std::abs(y_ - start_y_) > 20;
+  }
+
+  TouchAction finish() {
+    if (!active_)
+      return TouchAction::NONE;
+    active_ = false;
+    if (cancelled_)
+      return TouchAction::NONE;
+    const int dx = x_ - start_x_;
+    const int dy = y_ - start_y_;
+    if (std::abs(dx) >= 100 && std::abs(dx) > std::abs(dy))
+      return dx < 0 ? TouchAction::NEXT : TouchAction::PREVIOUS;
+    return moved_ ? TouchAction::NONE : TouchAction::TAP;
+  }
+
+  int x() const { return x_; }
+  int y() const { return y_; }
+
+ private:
+  int id_{0};
+  int start_x_{0};
+  int start_y_{0};
+  int x_{0};
+  int y_{0};
+  bool active_{false};
+  bool cancelled_{false};
+  bool moved_{false};
 };
 
 class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevice {
@@ -132,13 +184,41 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   void navigate(int direction) {
     if (!ready_)
       return;
-    for (int p = int(current_) + direction; p >= 0 && p < 4; p += direction) {
+    int p = int(current_);
+    for (size_t step = 0; step < pages_.size(); step++) {
+      p = (p + direction + int(pages_.size())) % int(pages_.size());
       if (pages_[p].enabled) {
         current_ = p;
         render();
         return;
       }
     }
+  }
+
+  void begin_touch(int id, int x, int y) {
+    gesture_.begin(id, x, y);
+    touch_page_ = current_;
+    if (ready_)
+      lv_obj_update_layout(widgets_[current_].container);
+    touch_button_ = ready_ ? hit_button(current_, x, y) : -1;
+    touch_entity_ = touch_button_ >= 0 ? pages_[current_].buttons[touch_button_].entity : "";
+  }
+
+  void update_touch(int id, int x, int y) { gesture_.update(id, x, y); }
+
+  TouchAction end_touch() {
+    const auto action = gesture_.finish();
+    if (!ready_)
+      return TouchAction::NONE;
+    if (action == TouchAction::NEXT)
+      navigate(1);
+    else if (action == TouchAction::PREVIOUS)
+      navigate(-1);
+    else if (action == TouchAction::TAP && touch_button_ >= 0 && touch_page_ == current_ &&
+             hit_button(current_, gesture_.x(), gesture_.y()) == touch_button_ &&
+             pages_[current_].buttons[touch_button_].entity == touch_entity_)
+      press(current_, touch_button_);
+    return action;
   }
 
   void press(size_t page, size_t button) {
@@ -160,6 +240,21 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
  private:
+  int hit_button(size_t page, int x, int y) const {
+    if (!pages_[page].enabled)
+      return -1;
+    for (size_t b = 0; b < 4; b++) {
+      auto *button = widgets_[page].buttons[b].button;
+      if (lv_obj_has_flag(button, LV_OBJ_FLAG_HIDDEN) || lv_obj_has_state(button, LV_STATE_DISABLED))
+        continue;
+      lv_area_t area;
+      lv_obj_get_coords(button, &area);
+      if (x >= area.x1 && x <= area.x2 && y >= area.y1 && y <= area.y2)
+        return int(b);
+    }
+    return -1;
+  }
+
   static bool read_string(JsonVariant value, std::string &out, size_t limit) {
     if (!value.is<const char *>())
       return false;
@@ -267,6 +362,10 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   bool ready_{false};
   bool configured_{false};
   bool online_{false};
+  TouchGesture gesture_;
+  size_t touch_page_{0};
+  int touch_button_{-1};
+  std::string touch_entity_;
 };
 
 }  // namespace wallpanel
