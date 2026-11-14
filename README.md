@@ -144,7 +144,7 @@ Brightness adjustment is not supported by this connection: [ESPHome's CH422G dri
 
 ### Development
 
-The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware preallocates six pages with eighteen button slots each. This reduces the generated startup widget tree from 841 objects in the eight-page build to 621, without changing watchdog settings. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
+The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores six page models with eighteen button slots each, but uses one shared pool of eighteen LVGL tiles for the selected page. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. This reduces the generated startup tree from 621 objects with six duplicated control trees to 172. LVGL's boot-time resolution/theme refresh traverses this smaller tree; watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
 
 ```sh
 python3 scripts/generate_dashboard.py
@@ -154,7 +154,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 
 The generator also maintains the MDI lookup header from the pinned [`scripts/mdi-icons.json`](./scripts/mdi-icons.json) catalogue. Use `python3 scripts/generate_dashboard.py --update-icons` to refresh that catalogue from the pinned upstream stylesheet. Change `MDI_VERSION` and regenerate together when upgrading the font. MDI licensing is recorded in [`MDI-LICENSE`](./esphome/components/wallpanel/MDI-LICENSE). The one-bit icon font keeps the complete library within flash without loading every icon bitmap into RAM.
 
-The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks display idle/wake handling, rendered background/header/footer pixels, layout bounds, menu and swipe navigation, live page changes, dots, state labels, offline controls and rejection of invalid snapshots:
+The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks startup widget/refresh-work bounds, independent per-page appearance retention, display idle/wake handling, rendered background/header/footer pixels, layout bounds, menu and swipe navigation, live page changes, dots, state labels, offline controls and rejection of invalid snapshots:
 
 ```sh
 esphome compile scripts/runtime_tests/runtime.yaml
@@ -168,7 +168,7 @@ The generator requires PyYAML; blueprint template tests also use Jinja2 (both ar
 
 The new blueprint appends `_chunk` to the discovered endpoint and sends ordered `set_dashboard_chunk` calls with a transfer ID, zero-based index, total and string payload. Each payload has a `~` text prefix followed by at most 4096 bytes of ASCII JSON; the complete snapshot is capped at 256 KiB/64 chunks. Incomplete transfers expire after 30 seconds of inactivity. Only a complete, validated snapshot replaces the UI. Chunking avoids ESPHome's 32 KiB native API message limit without modifying ESPHome internals.
 
-Automated validation includes a 125,849-byte Unicode snapshot across 31 native API chunks. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom or confirm that the page reduction resolves the boot watchdog: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility and touch responsiveness on the panel, particularly with all 108 controls configured.
+Automated validation includes a 125,849-byte Unicode snapshot across 31 native API chunks. The shared-widget startup regression reduces measured host LVGL refresh requests from 4,498 to 1,173. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom or confirm the startup fix on hardware: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility and touch responsiveness on the panel, particularly with all 108 controls configured.
 
 For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
 

@@ -1,9 +1,18 @@
 #pragma once
 #include <malloc.h>
 #include "esphome/components/display/display_buffer.h"
+#include "esphome/components/lvgl/lvgl_esphome.h"
 class TestDisplay : public esphome::display::DisplayBuffer {
  public:
+  void setup() override {
+    lv_display_add_event_cb(lv_display_get_default(), [](lv_event_t *event) {
+      auto *display = static_cast<TestDisplay *>(lv_event_get_user_data(event));
+      display->startup_refresh_requests++;
+    }, LV_EVENT_REFR_REQUEST, this);
+  }
+  float get_setup_priority() const override { return esphome::setup_priority::HARDWARE; }
   void update() override {}
+  size_t startup_refresh_requests{0};
   int sample_x{5};
   int sample_y{400};
   esphome::Color sample_pixel;

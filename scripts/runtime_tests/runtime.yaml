@@ -14,6 +14,19 @@ esphome:
             }
           };
           auto hidden = [](lv_obj_t *obj) { return lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN); };
+          ESP_LOGI("runtime_test", "Startup LVGL refresh requests: %u",
+                   unsigned(id(test_lcd).startup_refresh_requests));
+          require(id(test_lcd).startup_refresh_requests < 1500,
+                  "resolution/theme setup stays within the bounded refresh workload");
+          auto count_objects = [&](auto &&self, lv_obj_t *object) -> size_t {
+            size_t count = 1;
+            for (uint32_t child = 0; child < lv_obj_get_child_count(object); child++)
+              count += self(self, lv_obj_get_child(object, child));
+            return count;
+          };
+          require(count_objects(count_objects, lv_screen_active()) +
+                  count_objects(count_objects, lv_layer_top()) < 180,
+                  "page models share one control tree rather than duplicating LVGL tiles");
           wallpanel::DisplayIdle idle;
           require(!idle.expired(100000), "default display timeout is disabled");
           idle.set_timeout(2, 100);
@@ -365,7 +378,7 @@ esphome:
           require(!hidden(id(navigation)) && !lv_obj_has_state(id(navigation_2), LV_STATE_DISABLED),
                   "offline navigation remains available");
           tap(id(navigation_2));
-          require(!hidden(id(page_2)) && lv_obj_has_state(id(button_2_3), LV_STATE_DISABLED),
+          require(!hidden(id(page_2)) && lv_obj_has_state(id(button_0_3), LV_STATE_DISABLED),
                   "offline page selection preserves disabled entity controls");
           tap(id(dashboard_menu));
           id(dashboard).begin_touch(1, 200, 150);
@@ -391,22 +404,22 @@ esphome:
           require(!hidden(id(page_2)), "reject invalid JSON without replacing layout");
           for (auto entry : {std::pair<int, const char *>{6, "ENABLED"}, {7, "LOCKED"}, {8, "OFF"}, {9, "UNLOCKED"}}) {
             id(dashboard).receive(snapshot(entry.first));
-            require(std::string(lv_label_get_text(id(button_2_3_state))) == entry.second, "domain-specific state");
+            require(std::string(lv_label_get_text(id(button_0_3_state))) == entry.second, "domain-specific state");
           }
-          require(icon_is(id(button_2_3_icon), "mdi:lock-open-variant"), "unlocked HA default");
+          require(icon_is(id(button_0_3_icon), "mdi:lock-open-variant"), "unlocked HA default");
           id(dashboard).receive(snapshot(7));
-          require(icon_is(id(button_2_3_icon), "mdi:lock"), "locked HA default");
+          require(icon_is(id(button_0_3_icon), "mdi:lock"), "locked HA default");
           id(dashboard).receive(snapshot(8));
-          require(icon_is(id(button_2_3_icon), "mdi:toggle-switch-variant-off"), "switch off default");
+          require(icon_is(id(button_0_3_icon), "mdi:toggle-switch-variant-off"), "switch off default");
           id(dashboard).receive(snapshot(11));
-          require(icon_is(id(button_2_3_icon), "mdi:lightbulb-auto"), "HA custom automation icon");
+          require(icon_is(id(button_0_3_icon), "mdi:lightbulb-auto"), "HA custom automation icon");
           id(dashboard).receive(snapshot(12));
-          require(icon_is(id(button_2_3_icon), "mdi:door-open"), "HA custom door icon");
+          require(icon_is(id(button_0_3_icon), "mdi:door-open"), "HA custom door icon");
           id(dashboard).receive(snapshot(15));
-          require(icon_is(id(button_2_3_icon), "mdi:door-open"), "invalid icon type rejects snapshot atomically");
+          require(icon_is(id(button_0_3_icon), "mdi:door-open"), "invalid icon type rejects snapshot atomically");
           for (int mode : {13, 14, 16}) {
             id(dashboard).receive(snapshot(mode));
-            require(icon_is(id(button_2_3_icon), "mdi:lightbulb"), "unsupported or cleared icon uses default");
+            require(icon_is(id(button_0_3_icon), "mdi:lightbulb"), "unsupported or cleared icon uses default");
           }
           auto state_snapshot = [&](const char *entity, const char *state) {
             return esphome::json::build_json([&](JsonObject root) {
@@ -421,19 +434,19 @@ esphome:
           for (auto entry : {std::pair<const char *, const char *>{"off", "mdi:lightbulb-off"},
                               {"on", "mdi:lightbulb"}}) {
             id(dashboard).receive(state_snapshot("light.test", entry.first));
-            require(icon_is(id(button_2_3_icon), entry.second), "light icon follows on/off state");
+            require(icon_is(id(button_0_3_icon), entry.second), "light icon follows on/off state");
           }
           id(dashboard).receive(state_snapshot("automation.test", "off"));
-          require(icon_is(id(button_2_3_icon), "mdi:robot-off"), "automation off default");
+          require(icon_is(id(button_0_3_icon), "mdi:robot-off"), "automation off default");
           id(dashboard).receive(state_snapshot("automation.test", "unavailable"));
-          require(icon_is(id(button_2_3_icon), "mdi:robot-off"), "unavailable automation retains its icon");
+          require(icon_is(id(button_0_3_icon), "mdi:robot-off"), "unavailable automation retains its icon");
           id(dashboard).receive(state_snapshot("lock.test", "unavailable"));
-          require(icon_is(id(button_2_3_icon), "mdi:lock"), "changed unavailable entity resets prior icon");
+          require(icon_is(id(button_0_3_icon), "mdi:lock"), "changed unavailable entity resets prior icon");
           for (auto entry : {std::pair<const char *, const char *>{"locking", "mdi:lock-clock"},
                               {"jammed", "mdi:lock-alert"}, {"open", "mdi:lock-open-variant"}}) {
             id(dashboard).receive(state_snapshot("lock.test", entry.first));
-            require(icon_is(id(button_2_3_icon), entry.second), "lock transition icon");
-            require(lv_obj_has_state(id(button_2_3), LV_STATE_DISABLED), "lock transition stays non-actionable");
+            require(icon_is(id(button_0_3_icon), entry.second), "lock transition icon");
+            require(lv_obj_has_state(id(button_0_3), LV_STATE_DISABLED), "lock transition stays non-actionable");
           }
           tap(id(dashboard_menu));
           id(dashboard).receive(snapshot(3));
@@ -543,7 +556,7 @@ esphome:
           require(within(id(navigation_5_icon), 410, 230, 584, 384) &&
                   within(id(navigation_5_title), 460, 230, 584, 384), "menu icon and title fit side by side");
           tap(id(navigation_5));
-          require(!hidden(id(page_5)) && std::string(lv_label_get_text(id(button_5_17_name))) == "Control 18",
+          require(!hidden(id(page_5)) && std::string(lv_label_get_text(id(button_0_17_name))) == "Control 18",
                   "menu reaches page six and its eighteenth control");
           choose_wake_page("Last used page");
           tap(id(dashboard_menu));
@@ -596,6 +609,47 @@ esphome:
                   lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "offline icon is grey and disabled");
           id(dashboard).receive(modern("6x3"));
           require(!lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "reconnection restores controls");
+          id(dashboard).begin_touch(1, 80, 110);
+          id(dashboard).navigate(1);
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(page_1)),
+                  "reusing a tile for another page cannot activate the previous touch target");
+          id(dashboard).navigate(-1);
+          id(dashboard).receive(transform(modern("6x3"), [](JsonObject root) {
+            root["pages"][0]["buttons"][0]["icon"] = "";
+            root["pages"][0]["buttons"][0]["state"] = "off";
+            root["pages"][2]["buttons"][0]["entity"] = "automation.other_page";
+            root["pages"][2]["buttons"][0]["icon"] = "";
+            root["pages"][2]["buttons"][0]["state"] = "off";
+          }));
+          require(icon_is(id(button_0_0_icon), "mdi:lightbulb-off"),
+                  "active page appearance does not inherit hidden-page entities");
+          id(dashboard).receive(transform(modern("6x3"), [](JsonObject root) {
+            root["pages"][0]["buttons"][0]["icon"] = "";
+            root["pages"][0]["buttons"][0]["state"] = "unavailable";
+            root["pages"][2]["buttons"][0]["entity"] = "automation.other_page";
+            root["pages"][2]["buttons"][0]["icon"] = "";
+            root["pages"][2]["buttons"][0]["state"] = "unavailable";
+          }));
+          choose_wake_page("Page 3");
+          id(dashboard).wake();
+          require(icon_is(id(button_0_0_icon), "mdi:robot-off") &&
+                  std::string(lv_label_get_text(id(button_0_0_state))) == "DISABLED" &&
+                  lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED),
+                  "hidden-page state changes retain that entity's own last-known appearance");
+          choose_wake_page("Page 1");
+          id(dashboard).wake();
+          require(icon_is(id(button_0_0_icon), "mdi:lightbulb-off") &&
+                  std::string(lv_label_get_text(id(button_0_0_state))) == "OFF",
+                  "page switches restore independent cached appearances into shared tiles");
+          id(dashboard).receive(transform(modern("6x3"), [](JsonObject root) {
+            root["pages"][0]["buttons"][0]["entity"] = "lock.replacement";
+            root["pages"][0]["buttons"][0]["icon"] = "";
+            root["pages"][0]["buttons"][0]["state"] = "unavailable";
+          }));
+          require(icon_is(id(button_0_0_icon), "mdi:lock") &&
+                  std::string(lv_label_get_text(id(button_0_0_state))) == "UNKNOWN",
+                  "replacing an unavailable entity cannot inherit the prior entity's appearance");
+          id(dashboard).receive(modern("6x3"));
           for (int invalid = 0; invalid < 7; invalid++) {
             id(dashboard).receive(transform(modern("6x3"), [&](JsonObject root) {
               if (invalid == 0) root["navigation_layout"] = "2x2";
@@ -632,7 +686,7 @@ esphome:
             id(dashboard).receive_chunk("complete", index, total,
                 "~" + body.substr(index * wallpanel::CHUNK_BYTES, wallpanel::CHUNK_BYTES));
           require(std::string(lv_label_get_text(id(title_0))) == "Modern page 1" &&
-                  std::string(lv_label_get_text(id(button_5_17_name))) == "Control 18",
+                  std::string(lv_label_get_text(id(button_0_17_name))) == "Control 18",
                   "complete ordered chunks apply all 108 controls together");
           id(dashboard).receive(snapshot(0));
           ESP_LOGI("runtime_test", "All runtime dashboard assertions passed");
@@ -662,7 +716,7 @@ text_sensor:
     update_interval: 100ms
     lambda: |-
       return esphome::json::build_json([&](JsonObject root) {
-        auto *label = id(button_5_17_name);
+        auto *label = id(button_0_17_name);
         const auto mode = lv_label_get_long_mode(label);
         // DOT mode edits the visible text buffer; restore it to inspect the full received label.
         lv_label_set_long_mode(label, LV_LABEL_LONG_CLIP);

@@ -52,7 +52,6 @@ struct PageWidgets {
   lv_obj_t *title;
   lv_obj_t *temperature;
   std::array<lv_obj_t *, MAX_PAGES> dots;
-  std::array<ButtonWidgets, MAX_BUTTONS> buttons;
 };
 
 struct NavigationWidgets {
@@ -68,6 +67,10 @@ struct ButtonData {
   std::string name;
   std::string state;
   std::string icon;
+  // Cache static labels/glyphs per entity slot, independently of the shared tile.
+  const char *display_state{"UNKNOWN"};
+  const char *display_icon{nullptr};
+  uint32_t display_color{0xAAB4C5};
 };
 
 struct PageData {
@@ -172,6 +175,10 @@ class TouchGesture {
 class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevice {
  public:
   void bind_page(size_t index, const PageWidgets &widgets) { widgets_[index] = widgets; }
+  void bind_buttons(lv_obj_t *container, const std::array<ButtonWidgets, MAX_BUTTONS> &buttons) {
+    buttons_container_ = container;
+    buttons_ = buttons;
+  }
   void bind_navigation(const NavigationWidgets &widgets) { navigation_ = widgets; }
   void bind_fonts(const lv_font_t *icons, const lv_font_t *dense_icons,
                   const lv_font_t *medium, const lv_font_t *small) {
@@ -269,11 +276,28 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         layout_changed |= next[p].enabled != pages_[p].enabled || next[p].title != pages_[p].title ||
                           next[p].icon != pages_[p].icon || next[p].layout != pages_[p].layout;
         for (size_t b = 0; b < MAX_BUTTONS; b++) {
-          if (next[p].buttons[b].entity != pages_[p].buttons[b].entity) {
+          auto &data = next[p].buttons[b];
+          const auto &previous = pages_[p].buttons[b];
+          if (data.entity != previous.entity) {
             layout_changed = true;
-            lv_label_set_text(widgets_[p].buttons[b].state, "UNKNOWN");
-            lv_obj_set_style_text_color(widgets_[p].buttons[b].state, lv_color_hex(0xAAB4C5), 0);
-            lv_label_set_text(widgets_[p].buttons[b].icon, mdi_glyph(default_icon(next[p].buttons[b])));
+          } else {
+            data.display_state = previous.display_state;
+            data.display_color = previous.display_color;
+            data.display_icon = previous.display_icon;
+          }
+          if (data.entity.empty())
+            continue;
+          if (data.display_icon == nullptr || known_state(data) || !data.icon.empty() ||
+              data.state == "jammed" || data.state == "locking" || data.state == "unlocking" ||
+              data.state == "opening" || data.state == "open")
+            data.display_icon = mdi_glyph(data.icon.empty() ? default_icon(data) : data.icon.c_str());
+          if (known_state(data)) {
+            const bool active = data.state == "on" || data.state == "locked";
+            const auto domain = data.entity.substr(0, data.entity.find('.'));
+            data.display_state = domain == "lock" ? (active ? "LOCKED" : "UNLOCKED")
+                                 : domain == "automation" ? (active ? "ENABLED" : "DISABLED")
+                                                          : (active ? "ON" : "OFF");
+            data.display_color = state_color(data);
           }
         }
       }
@@ -338,6 +362,12 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
                         uint32_t(esphome::millis() - last_update_) < 65000;
     if (online != online_) {
       online_ = online;
+      for (auto &page : pages_) {
+        for (auto &button : page.buttons) {
+          if (known_state(button))
+            button.display_color = state_color(button, online_);
+        }
+      }
       render();
     }
   }
@@ -504,7 +534,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     if (!pages_[current_].enabled)
       return {};
     for (size_t b = 0; b < MAX_BUTTONS; b++) {
-      if (hit_widget(widgets_[current_].buttons[b].button, x, y))
+      if (hit_widget(buttons_[b].button, x, y))
         return {TargetKind::ENTITY, b};
     }
     return {};
@@ -530,8 +560,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     lv_obj_set_style_text_align(label, align, 0);
   }
 
-  uint32_t state_color(const ButtonData &button) const {
-    if (!online_ || button.state == "unknown" || button.state == "unavailable")
+  static uint32_t state_color(const ButtonData &button, bool online = true) {
+    if (!online || button.state == "unknown" || button.state == "unavailable")
       return 0xAAB4C5;
     if (button.entity.compare(0, 5, "lock.") == 0) {
       if (button.state == "locked")
@@ -648,61 +678,53 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         lv_obj_set_x(widgets.dots[d], 400 - dot_width / 2 + int(d * 20));
         lv_obj_set_style_bg_opa(widgets.dots[d], d == page_rank ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
       }
-      size_t button_count = 0;
-      for (const auto &button : page.buttons)
-        button_count += !button.entity.empty();
-      size_t button_rank = 0;
-      for (size_t b = 0; b < MAX_BUTTONS; b++) {
-        const auto &data = page.buttons[b];
-        auto &button = widgets.buttons[b];
-        visible(button.button, !data.entity.empty());
-        if (data.entity.empty())
-          continue;
-        position_button(button.button, page.layout, button_count, button_rank++);
-        const auto profile = grid(page.layout);
-        const bool large = page.layout == Layout::TWO_BY_TWO;
-        const bool compact = page.layout == Layout::SIX_BY_THREE;
-        place_label(button.icon, large ? 22 : (profile.width - 36) / 2, large ? 42 : compact ? 10 : 16,
-                    large ? 72 : 36, large ? 72 : 36, large ? icons_ : dense_icons_, LV_TEXT_ALIGN_CENTER);
-        place_label(button.name, large ? 112 : 6, large ? 30 : compact ? 59 : 65,
-                    profile.width - (large ? 136 : 12), large ? 32 : 22,
-                    large ? medium_ : small_, large ? LV_TEXT_ALIGN_LEFT : LV_TEXT_ALIGN_CENTER);
-        place_label(button.state, large ? 112 : 6, large ? 78 : 100,
-                    profile.width - (large ? 136 : 12), large ? 32 : 22,
-                    large ? medium_ : small_, large ? LV_TEXT_ALIGN_LEFT : LV_TEXT_ALIGN_CENTER);
-        place_label(button.unavailable, 8, large ? 8 : 132, profile.width - 16, 20,
-                    small_, large ? LV_TEXT_ALIGN_RIGHT : LV_TEXT_ALIGN_CENTER);
-        visible(button.state, !compact);
-        lv_label_set_text(button.name, data.name.c_str());
-        const bool available = online_ && known_state(data);
-        visible(button.unavailable, !available && !compact);
-        lv_obj_set_style_opa(button.button, available ? LV_OPA_COVER : LV_OPA_50, 0);
-        lv_obj_set_style_text_color(button.icon, lv_color_hex(state_color(data)), 0);
-        if (available)
-          lv_obj_remove_state(button.button, LV_STATE_DISABLED);
-        else
-          lv_obj_add_state(button.button, LV_STATE_DISABLED);
-        const auto domain = data.entity.substr(0, data.entity.find('.'));
-        const auto icon = data.icon.empty() ? default_icon(data) : data.icon.c_str();
-        // Preserve the last icon when an entity becomes unavailable.
-        if (known_state(data) || !data.icon.empty() || data.state == "jammed" ||
-            data.state == "locking" || data.state == "unlocking" || data.state == "opening" ||
-            data.state == "open")
-          lv_label_set_text(button.icon, mdi_glyph(icon));
-        if (known_state(data)) {
-          const bool active = data.state == "on" || data.state == "locked";
-          const char *label = domain == "lock" ? (active ? "LOCKED" : "UNLOCKED")
-                              : domain == "automation" ? (active ? "ENABLED" : "DISABLED")
-                                                       : (active ? "ON" : "OFF");
-          lv_label_set_text(button.state, label);
-          lv_obj_set_style_text_color(button.state, lv_color_hex(state_color(data)), 0);
-        }
-      }
       page_rank += page.enabled;
+    }
+    const auto &page = pages_[current_];
+    visible(buttons_container_, !navigation_open_ && page.enabled);
+    size_t button_count = 0;
+    for (const auto &button : page.buttons)
+      button_count += !button.entity.empty();
+    size_t button_rank = 0;
+    for (size_t b = 0; b < MAX_BUTTONS; b++) {
+      const auto &data = page.buttons[b];
+      auto &button = buttons_[b];
+      visible(button.button, !data.entity.empty());
+      if (data.entity.empty())
+        continue;
+      position_button(button.button, page.layout, button_count, button_rank++);
+      const auto profile = grid(page.layout);
+      const bool large = page.layout == Layout::TWO_BY_TWO;
+      const bool compact = page.layout == Layout::SIX_BY_THREE;
+      place_label(button.icon, large ? 22 : (profile.width - 36) / 2, large ? 42 : compact ? 10 : 16,
+                  large ? 72 : 36, large ? 72 : 36, large ? icons_ : dense_icons_, LV_TEXT_ALIGN_CENTER);
+      place_label(button.name, large ? 112 : 6, large ? 30 : compact ? 59 : 65,
+                  profile.width - (large ? 136 : 12), large ? 32 : 22,
+                  large ? medium_ : small_, large ? LV_TEXT_ALIGN_LEFT : LV_TEXT_ALIGN_CENTER);
+      place_label(button.state, large ? 112 : 6, large ? 78 : 100,
+                  profile.width - (large ? 136 : 12), large ? 32 : 22,
+                  large ? medium_ : small_, large ? LV_TEXT_ALIGN_LEFT : LV_TEXT_ALIGN_CENTER);
+      place_label(button.unavailable, 8, large ? 8 : 132, profile.width - 16, 20,
+                  small_, large ? LV_TEXT_ALIGN_RIGHT : LV_TEXT_ALIGN_CENTER);
+      visible(button.state, !compact);
+      lv_label_set_text(button.name, data.name.c_str());
+      const bool available = online_ && known_state(data);
+      visible(button.unavailable, !available && !compact);
+      lv_obj_set_style_opa(button.button, available ? LV_OPA_COVER : LV_OPA_50, 0);
+      lv_obj_set_style_text_color(button.icon, lv_color_hex(state_color(data, online_)), 0);
+      if (available)
+        lv_obj_remove_state(button.button, LV_STATE_DISABLED);
+      else
+        lv_obj_add_state(button.button, LV_STATE_DISABLED);
+      lv_label_set_text(button.icon, data.display_icon);
+      lv_label_set_text(button.state, data.display_state);
+      lv_obj_set_style_text_color(button.state, lv_color_hex(data.display_color), 0);
     }
   }
 
   std::array<PageWidgets, MAX_PAGES> widgets_{};
+  lv_obj_t *buttons_container_{nullptr};
+  std::array<ButtonWidgets, MAX_BUTTONS> buttons_{};
   NavigationWidgets navigation_{};
   std::array<PageData, MAX_PAGES> pages_{};
   Layout navigation_layout_{Layout::TWO_BY_TWO};
