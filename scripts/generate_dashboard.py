@@ -16,6 +16,8 @@ ICON_DATA = ROOT / "scripts" / "mdi-icons.json"
 ICON_HEADER = ROOT / "esphome" / "components" / "wallpanel" / "mdi_icons.h"
 MDI_VERSION = "7.4.47"
 MDI_SOURCE = f"https://cdn.jsdelivr.net/npm/@mdi/font@{MDI_VERSION}"
+MAX_PAGES = 8
+MAX_BUTTONS = 18
 
 
 def load_icons():
@@ -66,14 +68,14 @@ def make_dashboard():
         ("dashboard_header", 0, 56, 0x000000), ("dashboard_footer", 432, 48, 0x999999)
     )]
     bindings = []
-    for p in range(4):
+    for p in range(MAX_PAGES):
         children = [
             label(f"title_{p}", "", "font_medium", x=24, y=14, width=560, height=32, long_mode="DOT"),
             label(f"temperature_{p}", "", "font_small", align="BOTTOM_LEFT", x=24, y=-14,
                   width=300, height=20, long_mode="DOT", text_color=0x111111),
         ]
         button_bindings = []
-        for b in range(4):
+        for b in range(MAX_BUTTONS):
             prefix = f"button_{p}_{b}"
             children.append({"button": {
                 "id": prefix, "x": 20 if b % 2 == 0 else 420,
@@ -85,7 +87,7 @@ def make_dashboard():
                           x=22, y=42, width=72, height=72, text_align="CENTER",
                           text_color=0xF2C66D),
                     label(f"{prefix}_name", "", "font_medium", x=112, y=30,
-                          width=220, long_mode="DOT"),
+                          width=220, height=32, long_mode="DOT"),
                     label(f"{prefix}_state", "UNKNOWN", "font_medium", x=112, y=78,
                           text_color=0xAAB4C5),
                     label(f"{prefix}_unavailable", "UNAVAILABLE", "font_small",
@@ -96,7 +98,7 @@ def make_dashboard():
                 "{" + ", ".join(f"id({prefix}{suffix})" for suffix in
                                  ("", "_name", "_state", "_unavailable", "_icon")) + "}"
             )
-        for d in range(4):
+        for d in range(MAX_PAGES):
             children.append({"obj": {
                 "id": f"dot_{p}_{d}", "x": 364 + d * 20, "align": "BOTTOM_LEFT",
                 "y": -18, "width": 12, "height": 12, "radius": 6,
@@ -109,7 +111,7 @@ def make_dashboard():
             "pad_all": 0, "border_width": 0, "bg_opa": "TRANSP",
             "scrollable": False, "hidden": True, "widgets": children,
         }})
-        dots = ", ".join(f"id(dot_{p}_{d})" for d in range(4))
+        dots = ", ".join(f"id(dot_{p}_{d})" for d in range(MAX_PAGES))
         bindings.append(
             f"id(dashboard).bind_page({p}, "
             + "{"
@@ -122,10 +124,12 @@ def make_dashboard():
         "bg_color": 0x171F2C, "bg_opa": "90%", "border_color": 0x344154,
         "border_width": 1, "radius": 18, "scrollable": False,
         "widgets": [
+            label(f"navigation_{p}_icon", "\U000F056E", "font_icons",
+                  x=22, y=42, width=72, height=72, text_align="CENTER"),
             label(f"navigation_{p}_title", "", "font_medium", align="CENTER",
                   width=316, height=32, long_mode="DOT", text_align="CENTER"),
         ],
-    }} for p in range(4)]
+    }} for p in range(MAX_PAGES)]
     widgets.append({"obj": {
         "id": "navigation", "x": 0, "y": 0, "width": 800, "height": 480,
         "pad_all": 0, "border_width": 0, "bg_opa": "TRANSP",
@@ -138,11 +142,16 @@ def make_dashboard():
     }})
     bindings.append(
         "id(dashboard).bind_navigation({id(navigation), id(dashboard_menu), {"
-        + ", ".join(f"id(navigation_{p})" for p in range(4)) + "}, {"
-        + ", ".join(f"id(navigation_{p}_title)" for p in range(4)) + "}});"
+        + ", ".join(f"id(navigation_{p})" for p in range(MAX_PAGES)) + "}, {"
+        + ", ".join(f"id(navigation_{p}_title)" for p in range(MAX_PAGES)) + "}, {"
+        + ", ".join(f"id(navigation_{p}_icon)" for p in range(MAX_PAGES)) + "}});"
     )
     widgets.append(label("dashboard_waiting", "Waiting for Home Assistant", "font_medium",
                          align="CENTER"))
+    bindings.append(
+        "id(dashboard).bind_fonts(id(font_icons)->get_lv_font(), id(font_dense_icons)->get_lv_font(), "
+        "id(font_medium)->get_lv_font(), id(font_small)->get_lv_font());"
+    )
     bindings.append(
         "id(dashboard).initialize(id(dashboard_waiting), id(dashboard_connection));"
     )
@@ -152,6 +161,10 @@ def make_dashboard():
                  for name, size in (("font_large", 38), ("font_medium", 24), ("font_small", 16))]
                 + [{"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
                     "id": "font_icons", "size": 72, "bpp": 1, "glyphsets": [],
+                    "glyphs": [chr(codepoint) for codepoint in
+                               sorted({int(value, 16) for value in load_icons().values()})]},
+                   {"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
+                    "id": "font_dense_icons", "size": 36, "bpp": 1, "glyphsets": [],
                     "glyphs": [chr(codepoint) for codepoint in
                                sorted({int(value, 16) for value in load_icons().values()})]},
                    {"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",

@@ -66,28 +66,42 @@ Pages and entities are configured at runtime by the [Home Assistant blueprint](.
    The import URL works after these changes are published to `main`. Before publication, copy `wallpanel_blueprint.yaml` to `/config/blueprints/automation/otghcloud/wallpanel_blueprint.yaml` and reload automations.
 
 4. Create an automation from the blueprint and select your panel device.
-5. Expand **Button page 01** through **Button page 04**. Each provides a page title, an optional temperature sensor and four optional button entity selectors, each with an optional **Title** field. Leave all buttons empty to hide a page.
+5. Expand **Button page 01** through **Button page 08**. Each provides a layout, page icon/title, optional temperature sensor and up to eighteen entity selectors with optional **Title** overrides. Choose **2x2**, **4x2** or **6x3** for 4, 8 or 18 controls respectively. Leave all active button slots empty to hide a page.
 6. Save and enable the automation. Run its actions once for an immediate update; future entity changes and reconnects update automatically. Keep only one configuration automation enabled per panel.
 
 The **Dashboard endpoint** diagnostic sensor must remain enabled. It lets the blueprint discover the correct ESPHome action even if you rename the device's friendly name or HA entities.
 
 Buttons use HA friendly names unless their **Title** field is filled in. Blank or whitespace-only titles retain the default name; titles without an entity do not create a button. Labels use at most 80 characters. Lights and switches toggle, automation buttons enable/disable (not trigger), and locks unlock when locked or lock when unlocked, without confirmation.
 
-To add these fields to an existing installation, re-import the updated blueprint and reload automations. Existing automations use blank titles by default; no firmware update is needed.
+**Upgrade order:** install the updated firmware **first**, then re-import the updated blueprint and reload automations. Existing input IDs are preserved and new layouts default to 2x2. The new firmware still accepts the old four-page blueprint; older firmware cannot consume the new eight-page protocol.
 
 ### Home Assistant icons
 
-The firmware includes the complete **Material Design Icons 7.4.47** font at 72 pixels. The blueprint sends each entity's `icon` attribute, so custom `mdi:` icons (including light, door, lock and automation variants) display on the panel. Without an explicit icon, buttons use Home Assistant's state-aware defaults: lightbulb/lightbulb-off, robot/robot-off, toggle-switch-variant/toggle-switch-variant-off, and locked/unlocked/jammed/transition lock icons. Outlet switches use power-plug/power-plug-off. Explicit icons take precedence and remain unchanged unless HA changes the attribute.
+The firmware includes the complete **Material Design Icons 7.4.47** font at 72 pixels for 2x2 tiles and 36 pixels for denser tiles. The blueprint sends each entity's `icon` attribute, so custom `mdi:` icons (including light, door, lock and automation variants) display on the panel. Without an explicit icon, buttons use Home Assistant's state-aware defaults: lightbulb/lightbulb-off, robot/robot-off, toggle-switch-variant/toggle-switch-variant-off, and locked/unlocked/jammed/transition lock icons. Outlet switches use power-plug/power-plug-off. Explicit glyphs take precedence, but their colours still follow entity state.
+
+Icons are amber for on/enabled and grey for off/disabled automations. Locks use green for locked, red for unlocked/open/jammed and amber for transitions. Unknown/unavailable entities and disconnected controls use grey, dimmed tiles. Lock transitions, jammed and open states remain non-actionable.
+
+Each page's **Page icon** selector controls its icon beside the page name in navigation. Blank or unsupported page icons use `mdi:view-dashboard`; unsupported icons also log a warning.
 
 This matches entity icons, not icon overrides defined only in individual Lovelace cards. Non-MDI icon packs and icons added after 7.4.47 are not supported; the panel logs a warning and uses a default instead. Door icons are available for existing controls; this does not add door sensors or cover controls.
 
-**Updating an existing panel:** re-import the blueprint, reload automations and install the updated firmware. The full icon library requires the board's 16 MB flash layout; existing installations built with the old default 4 MB layout need a **USB/manual factory flash**, because OTA cannot replace the partition table. Subsequent updates can use OTA. Icons are included during compilation; the panel does not download them at runtime.
+The full icon library requires the board's 16 MB flash layout; existing installations built with the old default 4 MB layout need a **USB/manual factory flash**, because OTA cannot replace the partition table. Subsequent updates can use OTA. Icons are included during compilation; the panel does not download them at runtime.
 
 ### Layout and page navigation
 
 Each button page has a 56-pixel black header with its title on the left and the clock on the right. A 48-pixel grey (`#999999`) footer contains the optional page temperature, centred page dots and a bottom-right menu icon. Long titles and temperature values are truncated to avoid overlapping neighbouring controls. Blank or whitespace-only page titles display as **Page N**, using the blueprint slot number.
 
-Tap the menu icon to open **Pages**, then tap a page button to select it. Only populated pages appear, in blueprint-slot order, compacted into a two-column layout. Page buttons use the configured titles; duplicate titles still select their separate slots. Tap the menu icon again to return without changing the current page. Navigation hides page-specific temperatures and dots, and ignores swipes.
+Each button page independently selects its grid:
+
+| Layout (columns x rows) | Active input slots | Tile content |
+| --- | --- | --- |
+| 2x2 | 1-4 | Icon, title and state |
+| 4x2 | 1-8 | Icon, title and state |
+| 6x3 | 1-18 | Icon and title; unavailable controls are dimmed/disabled |
+
+Populated slots compact in configured order, with incomplete rows centred. A smaller layout does **not** delete higher-numbered settings: they are ignored with a Home Assistant warning until a larger layout is selected again. Ignored slots do not enable a page or generate watched-entity updates.
+
+Tap the menu icon to open **Pages**, then tap a page button to select it. Only populated pages appear, in blueprint-slot order, using the independent **Navigation > Menu layout** setting. Page buttons show their configured icons and titles; duplicate titles still select separate slots. More than four populated pages require a **4x2** or **6x3** menu. An invalid menu configuration logs an error and retains the previous dashboard (or waiting screen), rather than hiding pages or adding scrolling/pagination. Tap the menu icon again to return without changing the current page. Navigation hides page-specific temperatures and dots, and ignores swipes.
 
 Swipe left/right anywhere on a button page, including over buttons. Navigation wraps at both ends and skips empty pages. A horizontal movement of at least 100 pixels changes page when you lift your finger. Buttons activate only on release after a tap with no movement beyond 20 pixels; drags and multi-touch gestures do not activate controls. Bottom-centred dots highlight the current page; they are hidden for a single page. Temperature values use the sensor's unit of measurement.
 
@@ -97,7 +111,7 @@ Page navigation remains available offline using the last known configuration. Re
 
 The static 800 × 480 background in [`assets/background_dark.png`](./assets/background_dark.png) is embedded in the firmware and visible behind the content area of every view, including waiting and navigation.
 
-**Updating an existing panel:** install the updated firmware to add the header, footer and menu. No blueprint re-import or automation changes are required for these layout/navigation features.
+Changing layouts, page icons or controls after the firmware/blueprint upgrade does not require recompilation.
 
 ### Display backlight
 
@@ -109,7 +123,7 @@ Touching a dark screen turns the backlight on. That entire first gesture is wake
 
 Turning the backlight off does not stop the dashboard or Home Assistant connection. A timeout of 0 still permits manual switch-off, with touch-to-wake available.
 
-The saved **Wake-up page** dropdown defaults to **Last used page**, or can select **Page 1** through **Page 4** (the blueprint's fixed page slots). It applies whenever the backlight turns on, whether by touch, Home Assistant or reboot. Waking closes navigation before applying the preference; **Last used page** means the last button page, not the navigation screen. An empty selected page falls back to the first populated page. If no pages have arrived yet, the preference is applied when Home Assistant sends them. Changing the dropdown does not immediately navigate, and normal touches while the backlight is on do not change pages.
+The saved **Wake-up page** dropdown defaults to **Last used page**, or can select **Page 1** through **Page 8** (the blueprint's fixed page slots). Existing saved choices retain their meaning. It applies whenever the backlight turns on, whether by touch, Home Assistant or reboot. Waking closes navigation before applying the preference; **Last used page** means the last button page, not the navigation screen. An empty selected page falls back to the first populated page. If no pages have arrived yet, the preference is applied when Home Assistant sends them. Changing the dropdown does not immediately navigate, and normal touches while the backlight is on do not change pages.
 
 The **Restart** button in **Configuration** reboots the panel. The timeout and wake-up page settings are retained; the dashboard waits for Home Assistant to resend its configuration as usual.
 
@@ -128,7 +142,7 @@ Brightness adjustment is not supported by this connection: [ESPHome's CH422G dri
 
 ### Development
 
-The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware preallocates four pages with four button slots each. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
+The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware preallocates eight pages with eighteen button slots each. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
 
 ```sh
 python3 scripts/generate_dashboard.py
@@ -143,9 +157,16 @@ The headless runtime test uses real ESPHome/LVGL with a no-output display driver
 ```sh
 esphome compile scripts/runtime_tests/runtime.yaml
 scripts/runtime_tests/.esphome/build/dynamic-host/.pioenvs/dynamic-host/program
+python3 scripts/runtime_tests/check_native_api.py
 ```
 
-The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). The blueprint sends a versioned JSON snapshot to `esphome.<device_name>_set_dashboard`. The runtime validates the entire snapshot before changing the UI; unsupported entities and malformed payloads are logged and rejected without replacing the previous configuration.
+The connected native API check also requires `aioesphomeapi` (included with ESPHome). It starts/stops its own local host process, requires port 16053 to be unused, and tests blueprint-generated 144-control snapshots, Unicode, partial-transfer atomicity and real entity actions through all three layouts. It runs with a 128 KiB host stack and checks bounded retained heap after repeated transfers.
+
+The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). Version 2 uses eight page slots with per-page layout/icon metadata and exactly 4, 8 or 18 button slots. The runtime validates the entire snapshot before changing the UI; unsupported entities and malformed payloads are logged and rejected without replacing the previous configuration. Legacy version-1 four-page snapshots remain supported by `esphome.<device_name>_set_dashboard`.
+
+The new blueprint appends `_chunk` to the discovered endpoint and sends ordered `set_dashboard_chunk` calls with a transfer ID, zero-based index, total and string payload. Each payload has a `~` text prefix followed by at most 4096 bytes of ASCII JSON; the complete snapshot is capped at 256 KiB/64 chunks. Incomplete transfers expire after 30 seconds of inactivity. Only a complete, validated snapshot replaces the UI. Chunking avoids ESPHome's 32 KiB native API message limit without modifying ESPHome internals.
+
+Automated validation includes a 167,781-byte Unicode snapshot across 41 native API chunks. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm PSRAM/free heap, dense-label legibility and touch responsiveness on the panel, particularly with all 144 controls configured.
 
 For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
 

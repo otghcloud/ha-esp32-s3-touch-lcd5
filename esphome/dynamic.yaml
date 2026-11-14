@@ -24,6 +24,10 @@ select:
       - Page 2
       - Page 3
       - Page 4
+      - Page 5
+      - Page 6
+      - Page 7
+      - Page 8
     on_value:
       then:
         - lambda: id(dashboard).set_wake_page(i);
@@ -36,6 +40,14 @@ api:
         payload: string
       then:
         - lambda: id(dashboard).receive(payload);
+    - action: set_dashboard_chunk
+      variables:
+        transfer: string
+        index: int
+        total: int
+        payload: string
+      then:
+        - lambda: id(dashboard).receive_chunk(transfer, index, total, payload);
   on_client_connected:
     then:
       - delay: 2s

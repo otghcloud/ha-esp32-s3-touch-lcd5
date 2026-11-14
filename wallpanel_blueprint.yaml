@@ -1,12 +1,13 @@
 blueprint:
   name: HA ESP32-S3 Touch LCD 5 - Button pages
   description: >-
-    Configure up to four button pages without rebuilding firmware. Each page supports a title,
-    an optional temperature sensor and up to four light, switch, automation or lock entities.
+    Configure up to eight button pages without rebuilding firmware. Each page supports an icon,
+    a title, an optional temperature sensor and 2x2, 4x2 or 6x3 layouts (4, 8 or 18 controls).
     Empty pages and buttons are hidden. Optional button titles override Home Assistant friendly names.
     Automation buttons enable/disable automations; they do not trigger them.
     Enable "Allow the device to perform Home Assistant actions" in the ESPHome integration.
     Create only one configuration automation per panel.
+    Install version-2-capable firmware before importing this blueprint.
   domain: automation
   source_url: https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/heads/main/wallpanel_blueprint.yaml
   homeassistant:
@@ -19,12 +20,35 @@ blueprint:
         device:
           filter:
             integration: esphome
+    navigation_settings:
+      name: Navigation
+      icon: mdi:view-dashboard
+      collapsed: true
+      input:
+        navigation_layout:
+          name: Menu layout (columns x rows)
+          description: More than four populated pages require 4x2 or 6x3.
+          default: 2x2
+          selector: &layout_selector
+            select:
+              options: [2x2, 4x2, 6x3]
     page_1:
       name: Button page 01
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_1_layout:
+          name: Layout (columns x rows)
+          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
+          default: 2x2
+          selector: *layout_selector
+        page_1_icon:
+          name: Page icon
+          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          default: ""
+          selector:
+            icon:
         page_1_title:
           name: Page title
           default: ""
@@ -84,12 +108,149 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_5:
+          name: Button 5 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_5_title:
+          name: Button 5 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_6:
+          name: Button 6 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_6_title:
+          name: Button 6 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_7:
+          name: Button 7 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_7_title:
+          name: Button 7 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_8:
+          name: Button 8 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_8_title:
+          name: Button 8 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_9:
+          name: Button 9 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_9_title:
+          name: Button 9 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_10:
+          name: Button 10 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_10_title:
+          name: Button 10 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_11:
+          name: Button 11 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_11_title:
+          name: Button 11 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_12:
+          name: Button 12 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_12_title:
+          name: Button 12 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_13:
+          name: Button 13 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_13_title:
+          name: Button 13 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_14:
+          name: Button 14 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_14_title:
+          name: Button 14 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_15:
+          name: Button 15 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_15_title:
+          name: Button 15 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_16:
+          name: Button 16 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_16_title:
+          name: Button 16 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_17:
+          name: Button 17 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_17_title:
+          name: Button 17 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_1_button_18:
+          name: Button 18 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_1_button_18_title:
+          name: Button 18 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
     page_2:
       name: Button page 02
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_2_layout:
+          name: Layout (columns x rows)
+          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
+          default: 2x2
+          selector: *layout_selector
+        page_2_icon:
+          name: Page icon
+          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          default: ""
+          selector:
+            icon:
         page_2_title:
           name: Page title
           default: ""
@@ -135,12 +296,149 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_5:
+          name: Button 5 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_5_title:
+          name: Button 5 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_6:
+          name: Button 6 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_6_title:
+          name: Button 6 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_7:
+          name: Button 7 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_7_title:
+          name: Button 7 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_8:
+          name: Button 8 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_8_title:
+          name: Button 8 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_9:
+          name: Button 9 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_9_title:
+          name: Button 9 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_10:
+          name: Button 10 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_10_title:
+          name: Button 10 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_11:
+          name: Button 11 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_11_title:
+          name: Button 11 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_12:
+          name: Button 12 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_12_title:
+          name: Button 12 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_13:
+          name: Button 13 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_13_title:
+          name: Button 13 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_14:
+          name: Button 14 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_14_title:
+          name: Button 14 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_15:
+          name: Button 15 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_15_title:
+          name: Button 15 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_16:
+          name: Button 16 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_16_title:
+          name: Button 16 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_17:
+          name: Button 17 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_17_title:
+          name: Button 17 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_2_button_18:
+          name: Button 18 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_2_button_18_title:
+          name: Button 18 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
     page_3:
       name: Button page 03
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_3_layout:
+          name: Layout (columns x rows)
+          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
+          default: 2x2
+          selector: *layout_selector
+        page_3_icon:
+          name: Page icon
+          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          default: ""
+          selector:
+            icon:
         page_3_title:
           name: Page title
           default: ""
@@ -186,12 +484,149 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_5:
+          name: Button 5 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_5_title:
+          name: Button 5 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_6:
+          name: Button 6 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_6_title:
+          name: Button 6 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_7:
+          name: Button 7 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_7_title:
+          name: Button 7 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_8:
+          name: Button 8 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_8_title:
+          name: Button 8 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_9:
+          name: Button 9 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_9_title:
+          name: Button 9 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_10:
+          name: Button 10 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_10_title:
+          name: Button 10 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_11:
+          name: Button 11 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_11_title:
+          name: Button 11 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_12:
+          name: Button 12 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_12_title:
+          name: Button 12 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_13:
+          name: Button 13 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_13_title:
+          name: Button 13 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_14:
+          name: Button 14 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_14_title:
+          name: Button 14 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_15:
+          name: Button 15 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_15_title:
+          name: Button 15 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_16:
+          name: Button 16 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_16_title:
+          name: Button 16 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_17:
+          name: Button 17 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_17_title:
+          name: Button 17 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_3_button_18:
+          name: Button 18 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_3_button_18_title:
+          name: Button 18 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
     page_4:
       name: Button page 04
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_4_layout:
+          name: Layout (columns x rows)
+          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
+          default: 2x2
+          selector: *layout_selector
+        page_4_icon:
+          name: Page icon
+          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          default: ""
+          selector:
+            icon:
         page_4_title:
           name: Page title
           default: ""
@@ -237,6 +672,884 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_5:
+          name: Button 5 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_5_title:
+          name: Button 5 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_6:
+          name: Button 6 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_6_title:
+          name: Button 6 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_7:
+          name: Button 7 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_7_title:
+          name: Button 7 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_8:
+          name: Button 8 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_8_title:
+          name: Button 8 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_9:
+          name: Button 9 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_9_title:
+          name: Button 9 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_10:
+          name: Button 10 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_10_title:
+          name: Button 10 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_11:
+          name: Button 11 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_11_title:
+          name: Button 11 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_12:
+          name: Button 12 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_12_title:
+          name: Button 12 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_13:
+          name: Button 13 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_13_title:
+          name: Button 13 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_14:
+          name: Button 14 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_14_title:
+          name: Button 14 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_15:
+          name: Button 15 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_15_title:
+          name: Button 15 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_16:
+          name: Button 16 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_16_title:
+          name: Button 16 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_17:
+          name: Button 17 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_17_title:
+          name: Button 17 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_4_button_18:
+          name: Button 18 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_4_button_18_title:
+          name: Button 18 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+    page_5:
+      name: Button page 05
+      icon: mdi:gesture-tap-button
+      description: Leave all button entities empty to hide this page.
+      collapsed: true
+      input:
+        page_5_layout:
+          name: Layout (columns x rows)
+          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
+          default: 2x2
+          selector: *layout_selector
+        page_5_icon:
+          name: Page icon
+          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          default: ""
+          selector:
+            icon:
+        page_5_title:
+          name: Page title
+          default: ""
+          selector:
+            text:
+        page_5_temperature:
+          name: Temperature sensor
+          default: []
+          selector: *temperature_selector
+        page_5_button_1:
+          name: Button 1 - Entity
+          default: []
+          selector: *button_selector
+        page_5_button_1_title:
+          name: Button 1 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_2:
+          name: Button 2 - Entity
+          default: []
+          selector: *button_selector
+        page_5_button_2_title:
+          name: Button 2 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_3:
+          name: Button 3 - Entity
+          default: []
+          selector: *button_selector
+        page_5_button_3_title:
+          name: Button 3 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_4:
+          name: Button 4 - Entity
+          default: []
+          selector: *button_selector
+        page_5_button_4_title:
+          name: Button 4 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_5:
+          name: Button 5 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_5_title:
+          name: Button 5 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_6:
+          name: Button 6 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_6_title:
+          name: Button 6 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_7:
+          name: Button 7 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_7_title:
+          name: Button 7 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_8:
+          name: Button 8 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_8_title:
+          name: Button 8 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_9:
+          name: Button 9 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_9_title:
+          name: Button 9 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_10:
+          name: Button 10 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_10_title:
+          name: Button 10 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_11:
+          name: Button 11 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_11_title:
+          name: Button 11 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_12:
+          name: Button 12 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_12_title:
+          name: Button 12 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_13:
+          name: Button 13 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_13_title:
+          name: Button 13 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_14:
+          name: Button 14 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_14_title:
+          name: Button 14 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_15:
+          name: Button 15 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_15_title:
+          name: Button 15 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_16:
+          name: Button 16 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_16_title:
+          name: Button 16 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_17:
+          name: Button 17 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_17_title:
+          name: Button 17 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_5_button_18:
+          name: Button 18 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_5_button_18_title:
+          name: Button 18 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+    page_6:
+      name: Button page 06
+      icon: mdi:gesture-tap-button
+      description: Leave all button entities empty to hide this page.
+      collapsed: true
+      input:
+        page_6_layout:
+          name: Layout (columns x rows)
+          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
+          default: 2x2
+          selector: *layout_selector
+        page_6_icon:
+          name: Page icon
+          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          default: ""
+          selector:
+            icon:
+        page_6_title:
+          name: Page title
+          default: ""
+          selector:
+            text:
+        page_6_temperature:
+          name: Temperature sensor
+          default: []
+          selector: *temperature_selector
+        page_6_button_1:
+          name: Button 1 - Entity
+          default: []
+          selector: *button_selector
+        page_6_button_1_title:
+          name: Button 1 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_2:
+          name: Button 2 - Entity
+          default: []
+          selector: *button_selector
+        page_6_button_2_title:
+          name: Button 2 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_3:
+          name: Button 3 - Entity
+          default: []
+          selector: *button_selector
+        page_6_button_3_title:
+          name: Button 3 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_4:
+          name: Button 4 - Entity
+          default: []
+          selector: *button_selector
+        page_6_button_4_title:
+          name: Button 4 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_5:
+          name: Button 5 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_5_title:
+          name: Button 5 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_6:
+          name: Button 6 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_6_title:
+          name: Button 6 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_7:
+          name: Button 7 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_7_title:
+          name: Button 7 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_8:
+          name: Button 8 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_8_title:
+          name: Button 8 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_9:
+          name: Button 9 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_9_title:
+          name: Button 9 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_10:
+          name: Button 10 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_10_title:
+          name: Button 10 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_11:
+          name: Button 11 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_11_title:
+          name: Button 11 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_12:
+          name: Button 12 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_12_title:
+          name: Button 12 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_13:
+          name: Button 13 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_13_title:
+          name: Button 13 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_14:
+          name: Button 14 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_14_title:
+          name: Button 14 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_15:
+          name: Button 15 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_15_title:
+          name: Button 15 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_16:
+          name: Button 16 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_16_title:
+          name: Button 16 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_17:
+          name: Button 17 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_17_title:
+          name: Button 17 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_6_button_18:
+          name: Button 18 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_6_button_18_title:
+          name: Button 18 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+    page_7:
+      name: Button page 07
+      icon: mdi:gesture-tap-button
+      description: Leave all button entities empty to hide this page.
+      collapsed: true
+      input:
+        page_7_layout:
+          name: Layout (columns x rows)
+          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
+          default: 2x2
+          selector: *layout_selector
+        page_7_icon:
+          name: Page icon
+          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          default: ""
+          selector:
+            icon:
+        page_7_title:
+          name: Page title
+          default: ""
+          selector:
+            text:
+        page_7_temperature:
+          name: Temperature sensor
+          default: []
+          selector: *temperature_selector
+        page_7_button_1:
+          name: Button 1 - Entity
+          default: []
+          selector: *button_selector
+        page_7_button_1_title:
+          name: Button 1 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_2:
+          name: Button 2 - Entity
+          default: []
+          selector: *button_selector
+        page_7_button_2_title:
+          name: Button 2 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_3:
+          name: Button 3 - Entity
+          default: []
+          selector: *button_selector
+        page_7_button_3_title:
+          name: Button 3 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_4:
+          name: Button 4 - Entity
+          default: []
+          selector: *button_selector
+        page_7_button_4_title:
+          name: Button 4 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_5:
+          name: Button 5 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_5_title:
+          name: Button 5 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_6:
+          name: Button 6 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_6_title:
+          name: Button 6 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_7:
+          name: Button 7 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_7_title:
+          name: Button 7 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_8:
+          name: Button 8 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_8_title:
+          name: Button 8 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_9:
+          name: Button 9 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_9_title:
+          name: Button 9 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_10:
+          name: Button 10 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_10_title:
+          name: Button 10 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_11:
+          name: Button 11 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_11_title:
+          name: Button 11 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_12:
+          name: Button 12 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_12_title:
+          name: Button 12 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_13:
+          name: Button 13 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_13_title:
+          name: Button 13 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_14:
+          name: Button 14 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_14_title:
+          name: Button 14 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_15:
+          name: Button 15 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_15_title:
+          name: Button 15 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_16:
+          name: Button 16 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_16_title:
+          name: Button 16 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_17:
+          name: Button 17 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_17_title:
+          name: Button 17 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_7_button_18:
+          name: Button 18 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_7_button_18_title:
+          name: Button 18 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+    page_8:
+      name: Button page 08
+      icon: mdi:gesture-tap-button
+      description: Leave all button entities empty to hide this page.
+      collapsed: true
+      input:
+        page_8_layout:
+          name: Layout (columns x rows)
+          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
+          default: 2x2
+          selector: *layout_selector
+        page_8_icon:
+          name: Page icon
+          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          default: ""
+          selector:
+            icon:
+        page_8_title:
+          name: Page title
+          default: ""
+          selector:
+            text:
+        page_8_temperature:
+          name: Temperature sensor
+          default: []
+          selector: *temperature_selector
+        page_8_button_1:
+          name: Button 1 - Entity
+          default: []
+          selector: *button_selector
+        page_8_button_1_title:
+          name: Button 1 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_2:
+          name: Button 2 - Entity
+          default: []
+          selector: *button_selector
+        page_8_button_2_title:
+          name: Button 2 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_3:
+          name: Button 3 - Entity
+          default: []
+          selector: *button_selector
+        page_8_button_3_title:
+          name: Button 3 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_4:
+          name: Button 4 - Entity
+          default: []
+          selector: *button_selector
+        page_8_button_4_title:
+          name: Button 4 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_5:
+          name: Button 5 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_5_title:
+          name: Button 5 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_6:
+          name: Button 6 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_6_title:
+          name: Button 6 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_7:
+          name: Button 7 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_7_title:
+          name: Button 7 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_8:
+          name: Button 8 - Entity (4x2 / 6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_8_title:
+          name: Button 8 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_9:
+          name: Button 9 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_9_title:
+          name: Button 9 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_10:
+          name: Button 10 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_10_title:
+          name: Button 10 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_11:
+          name: Button 11 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_11_title:
+          name: Button 11 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_12:
+          name: Button 12 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_12_title:
+          name: Button 12 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_13:
+          name: Button 13 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_13_title:
+          name: Button 13 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_14:
+          name: Button 14 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_14_title:
+          name: Button 14 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_15:
+          name: Button 15 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_15_title:
+          name: Button 15 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_16:
+          name: Button 16 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_16_title:
+          name: Button 16 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_17:
+          name: Button 17 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_17_title:
+          name: Button 17 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
+        page_8_button_18:
+          name: Button 18 - Entity (6x3)
+          default: []
+          selector: *button_selector
+        page_8_button_18_title:
+          name: Button 18 - Title
+          description: *title_description
+          default: ""
+          selector: *title_selector
 
 mode: restart
 max_exceeded: silent
@@ -248,21 +1561,56 @@ variables:
     - !input page_2_title
     - !input page_3_title
     - !input page_4_title
+    - !input page_5_title
+    - !input page_6_title
+    - !input page_7_title
+    - !input page_8_title
   temperatures:
     - !input page_1_temperature
     - !input page_2_temperature
     - !input page_3_temperature
     - !input page_4_temperature
+    - !input page_5_temperature
+    - !input page_6_temperature
+    - !input page_7_temperature
+    - !input page_8_temperature
+  navigation_layout: !input navigation_layout
+  layouts:
+    - !input page_1_layout
+    - !input page_2_layout
+    - !input page_3_layout
+    - !input page_4_layout
+    - !input page_5_layout
+    - !input page_6_layout
+    - !input page_7_layout
+    - !input page_8_layout
+  page_icons:
+    - !input page_1_icon
+    - !input page_2_icon
+    - !input page_3_icon
+    - !input page_4_icon
+    - !input page_5_icon
+    - !input page_6_icon
+    - !input page_7_icon
+    - !input page_8_icon
   buttons:
-    - [!input page_1_button_1, !input page_1_button_2, !input page_1_button_3, !input page_1_button_4]
-    - [!input page_2_button_1, !input page_2_button_2, !input page_2_button_3, !input page_2_button_4]
-    - [!input page_3_button_1, !input page_3_button_2, !input page_3_button_3, !input page_3_button_4]
-    - [!input page_4_button_1, !input page_4_button_2, !input page_4_button_3, !input page_4_button_4]
+    - [!input page_1_button_1, !input page_1_button_2, !input page_1_button_3, !input page_1_button_4, !input page_1_button_5, !input page_1_button_6, !input page_1_button_7, !input page_1_button_8, !input page_1_button_9, !input page_1_button_10, !input page_1_button_11, !input page_1_button_12, !input page_1_button_13, !input page_1_button_14, !input page_1_button_15, !input page_1_button_16, !input page_1_button_17, !input page_1_button_18]
+    - [!input page_2_button_1, !input page_2_button_2, !input page_2_button_3, !input page_2_button_4, !input page_2_button_5, !input page_2_button_6, !input page_2_button_7, !input page_2_button_8, !input page_2_button_9, !input page_2_button_10, !input page_2_button_11, !input page_2_button_12, !input page_2_button_13, !input page_2_button_14, !input page_2_button_15, !input page_2_button_16, !input page_2_button_17, !input page_2_button_18]
+    - [!input page_3_button_1, !input page_3_button_2, !input page_3_button_3, !input page_3_button_4, !input page_3_button_5, !input page_3_button_6, !input page_3_button_7, !input page_3_button_8, !input page_3_button_9, !input page_3_button_10, !input page_3_button_11, !input page_3_button_12, !input page_3_button_13, !input page_3_button_14, !input page_3_button_15, !input page_3_button_16, !input page_3_button_17, !input page_3_button_18]
+    - [!input page_4_button_1, !input page_4_button_2, !input page_4_button_3, !input page_4_button_4, !input page_4_button_5, !input page_4_button_6, !input page_4_button_7, !input page_4_button_8, !input page_4_button_9, !input page_4_button_10, !input page_4_button_11, !input page_4_button_12, !input page_4_button_13, !input page_4_button_14, !input page_4_button_15, !input page_4_button_16, !input page_4_button_17, !input page_4_button_18]
+    - [!input page_5_button_1, !input page_5_button_2, !input page_5_button_3, !input page_5_button_4, !input page_5_button_5, !input page_5_button_6, !input page_5_button_7, !input page_5_button_8, !input page_5_button_9, !input page_5_button_10, !input page_5_button_11, !input page_5_button_12, !input page_5_button_13, !input page_5_button_14, !input page_5_button_15, !input page_5_button_16, !input page_5_button_17, !input page_5_button_18]
+    - [!input page_6_button_1, !input page_6_button_2, !input page_6_button_3, !input page_6_button_4, !input page_6_button_5, !input page_6_button_6, !input page_6_button_7, !input page_6_button_8, !input page_6_button_9, !input page_6_button_10, !input page_6_button_11, !input page_6_button_12, !input page_6_button_13, !input page_6_button_14, !input page_6_button_15, !input page_6_button_16, !input page_6_button_17, !input page_6_button_18]
+    - [!input page_7_button_1, !input page_7_button_2, !input page_7_button_3, !input page_7_button_4, !input page_7_button_5, !input page_7_button_6, !input page_7_button_7, !input page_7_button_8, !input page_7_button_9, !input page_7_button_10, !input page_7_button_11, !input page_7_button_12, !input page_7_button_13, !input page_7_button_14, !input page_7_button_15, !input page_7_button_16, !input page_7_button_17, !input page_7_button_18]
+    - [!input page_8_button_1, !input page_8_button_2, !input page_8_button_3, !input page_8_button_4, !input page_8_button_5, !input page_8_button_6, !input page_8_button_7, !input page_8_button_8, !input page_8_button_9, !input page_8_button_10, !input page_8_button_11, !input page_8_button_12, !input page_8_button_13, !input page_8_button_14, !input page_8_button_15, !input page_8_button_16, !input page_8_button_17, !input page_8_button_18]
   button_titles:
-    - [!input page_1_button_1_title, !input page_1_button_2_title, !input page_1_button_3_title, !input page_1_button_4_title]
-    - [!input page_2_button_1_title, !input page_2_button_2_title, !input page_2_button_3_title, !input page_2_button_4_title]
-    - [!input page_3_button_1_title, !input page_3_button_2_title, !input page_3_button_3_title, !input page_3_button_4_title]
-    - [!input page_4_button_1_title, !input page_4_button_2_title, !input page_4_button_3_title, !input page_4_button_4_title]
+    - [!input page_1_button_1_title, !input page_1_button_2_title, !input page_1_button_3_title, !input page_1_button_4_title, !input page_1_button_5_title, !input page_1_button_6_title, !input page_1_button_7_title, !input page_1_button_8_title, !input page_1_button_9_title, !input page_1_button_10_title, !input page_1_button_11_title, !input page_1_button_12_title, !input page_1_button_13_title, !input page_1_button_14_title, !input page_1_button_15_title, !input page_1_button_16_title, !input page_1_button_17_title, !input page_1_button_18_title]
+    - [!input page_2_button_1_title, !input page_2_button_2_title, !input page_2_button_3_title, !input page_2_button_4_title, !input page_2_button_5_title, !input page_2_button_6_title, !input page_2_button_7_title, !input page_2_button_8_title, !input page_2_button_9_title, !input page_2_button_10_title, !input page_2_button_11_title, !input page_2_button_12_title, !input page_2_button_13_title, !input page_2_button_14_title, !input page_2_button_15_title, !input page_2_button_16_title, !input page_2_button_17_title, !input page_2_button_18_title]
+    - [!input page_3_button_1_title, !input page_3_button_2_title, !input page_3_button_3_title, !input page_3_button_4_title, !input page_3_button_5_title, !input page_3_button_6_title, !input page_3_button_7_title, !input page_3_button_8_title, !input page_3_button_9_title, !input page_3_button_10_title, !input page_3_button_11_title, !input page_3_button_12_title, !input page_3_button_13_title, !input page_3_button_14_title, !input page_3_button_15_title, !input page_3_button_16_title, !input page_3_button_17_title, !input page_3_button_18_title]
+    - [!input page_4_button_1_title, !input page_4_button_2_title, !input page_4_button_3_title, !input page_4_button_4_title, !input page_4_button_5_title, !input page_4_button_6_title, !input page_4_button_7_title, !input page_4_button_8_title, !input page_4_button_9_title, !input page_4_button_10_title, !input page_4_button_11_title, !input page_4_button_12_title, !input page_4_button_13_title, !input page_4_button_14_title, !input page_4_button_15_title, !input page_4_button_16_title, !input page_4_button_17_title, !input page_4_button_18_title]
+    - [!input page_5_button_1_title, !input page_5_button_2_title, !input page_5_button_3_title, !input page_5_button_4_title, !input page_5_button_5_title, !input page_5_button_6_title, !input page_5_button_7_title, !input page_5_button_8_title, !input page_5_button_9_title, !input page_5_button_10_title, !input page_5_button_11_title, !input page_5_button_12_title, !input page_5_button_13_title, !input page_5_button_14_title, !input page_5_button_15_title, !input page_5_button_16_title, !input page_5_button_17_title, !input page_5_button_18_title]
+    - [!input page_6_button_1_title, !input page_6_button_2_title, !input page_6_button_3_title, !input page_6_button_4_title, !input page_6_button_5_title, !input page_6_button_6_title, !input page_6_button_7_title, !input page_6_button_8_title, !input page_6_button_9_title, !input page_6_button_10_title, !input page_6_button_11_title, !input page_6_button_12_title, !input page_6_button_13_title, !input page_6_button_14_title, !input page_6_button_15_title, !input page_6_button_16_title, !input page_6_button_17_title, !input page_6_button_18_title]
+    - [!input page_7_button_1_title, !input page_7_button_2_title, !input page_7_button_3_title, !input page_7_button_4_title, !input page_7_button_5_title, !input page_7_button_6_title, !input page_7_button_7_title, !input page_7_button_8_title, !input page_7_button_9_title, !input page_7_button_10_title, !input page_7_button_11_title, !input page_7_button_12_title, !input page_7_button_13_title, !input page_7_button_14_title, !input page_7_button_15_title, !input page_7_button_16_title, !input page_7_button_17_title, !input page_7_button_18_title]
+    - [!input page_8_button_1_title, !input page_8_button_2_title, !input page_8_button_3_title, !input page_8_button_4_title, !input page_8_button_5_title, !input page_8_button_6_title, !input page_8_button_7_title, !input page_8_button_8_title, !input page_8_button_9_title, !input page_8_button_10_title, !input page_8_button_11_title, !input page_8_button_12_title, !input page_8_button_13_title, !input page_8_button_14_title, !input page_8_button_15_title, !input page_8_button_16_title, !input page_8_button_17_title, !input page_8_button_18_title]
   endpoint: >-
     {% set ns = namespace(value='') %}
     {% for entity in device_entities(panel_device) %}
@@ -274,12 +1622,46 @@ variables:
     {{ ns.value }}
   watched_entities: >-
     {% set ns = namespace(entities=[]) %}
-    {% for entity in temperatures + (buttons | sum(start=[])) %}
+    {% for entity in temperatures %}
       {% if entity is string and entity %}
         {% set ns.entities = ns.entities + [entity] %}
       {% endif %}
     {% endfor %}
+    {% for p in range(8) %}
+      {% set capacity = {'2x2': 4, '4x2': 8, '6x3': 18}[layouts[p]] %}
+      {% for entity in buttons[p][:capacity] %}
+        {% if entity is string and entity %}
+          {% set ns.entities = ns.entities + [entity] %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
     {{ ns.entities }}
+  ignored_slots: >-
+    {% set ns = namespace(slots=[]) %}
+    {% for p in range(8) %}
+      {% set capacity = {'2x2': 4, '4x2': 8, '6x3': 18}[layouts[p]] %}
+      {% for entity in buttons[p][capacity:] %}
+        {% if entity is string and entity %}
+          {% set ns.slots = ns.slots + ['Page ' ~ (p + 1) ~ ' button ' ~ (capacity + loop.index)] %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+    {{ ns.slots }}
+  configuration_error: >-
+    {% set ns = namespace(pages=0) %}
+    {% for p in range(8) %}
+      {% set active = namespace(count=0) %}
+      {% set capacity = {'2x2': 4, '4x2': 8, '6x3': 18}[layouts[p]] %}
+      {% for entity in buttons[p][:capacity] %}
+        {% if entity is string and entity %}
+          {% set active.count = active.count + 1 %}
+        {% endif %}
+      {% endfor %}
+      {% if active.count > 0 %}
+        {% set ns.pages = ns.pages + 1 %}
+      {% endif %}
+    {% endfor %}
+    {{ 'More than four populated pages require a 4x2 or 6x3 navigation layout.' if ns.pages > 4 and navigation_layout == '2x2' else '' }}
 
 triggers:
   - trigger: homeassistant
@@ -315,14 +1697,28 @@ actions:
               message: >-
                 Wallpanel configuration: selected device has no available Dashboard endpoint sensor.
                 Check the firmware, ESPHome connection and that the diagnostic sensor is enabled.
+      - conditions: "{{ configuration_error != '' }}"
+        sequence:
+          - action: system_log.write
+            data:
+              level: error
+              message: "Wallpanel configuration unchanged: {{ configuration_error }}"
     default:
-      - action: "{{ endpoint }}"
-        data:
-          payload: >-
+      - if: "{{ ignored_slots | length > 0 }}"
+        then:
+          - action: system_log.write
+            data:
+              level: warning
+              message: >-
+                Wallpanel: ignoring slots outside the selected page layouts:
+                {{ ignored_slots | join(', ') }}. These inputs remain saved.
+      - variables:
+          dashboard_snapshot: >-
             {% set ns = namespace(pages=[]) %}
-            {% for p in range(4) %}
+            {% for p in range(8) %}
               {% set row = namespace(buttons=[]) %}
-              {% for entity in buttons[p] %}
+              {% set capacity = {'2x2': 4, '4x2': 8, '6x3': 18}[layouts[p]] %}
+              {% for entity in buttons[p][:capacity] %}
                 {% if entity is string and entity %}
                   {% set custom_title = button_titles[p][loop.index0] | trim %}
                   {% set name = (custom_title or state_attr(entity, 'friendly_name') or entity)[:80] %}
@@ -347,6 +1743,17 @@ actions:
                 {% endif %}
               {% endif %}
               {% set title = (titles[p] | trim)[:80] or ('Page ' ~ (p + 1)) %}
-              {% set ns.pages = ns.pages + [dict(title=title, temperature=text[:80], buttons=row.buttons)] %}
+              {% set ns.pages = ns.pages + [dict(title=title, icon=page_icons[p], layout=layouts[p], temperature=text[:80], buttons=row.buttons)] %}
             {% endfor %}
-            {{ dict(version=1, pages=ns.pages) | to_json }}
+            {{ dict(version=2, navigation_layout=navigation_layout, pages=ns.pages) }}
+          transfer: "{{ now().isoformat() }}"
+      - repeat:
+          count: "{{ (((dashboard_snapshot | to_json) | length) + 4095) // 4096 }}"
+          sequence:
+            - action: "{{ endpoint ~ '_chunk' }}"
+              data:
+                transfer: "{{ transfer }}"
+                index: "{{ repeat.index - 1 }}"
+                total: "{{ (((dashboard_snapshot | to_json) | length) + 4095) // 4096 }}"
+                # The prefix prevents HA from interpreting a complete JSON fragment as a native object.
+                payload: "~{{ (dashboard_snapshot | to_json)[(repeat.index - 1) * 4096 : repeat.index * 4096] }}"

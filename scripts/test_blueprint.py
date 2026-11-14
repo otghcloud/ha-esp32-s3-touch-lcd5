@@ -69,11 +69,30 @@ class BlueprintTests(unittest.TestCase):
         result["watched_entities"] = ast.literal_eval(
             self.env.from_string(result["watched_entities"]).render(**result).strip()
         )
+        result["ignored_slots"] = ast.literal_eval(
+            self.env.from_string(result["ignored_slots"]).render(**result).strip()
+        )
+        result["configuration_error"] = self.env.from_string(result["configuration_error"]).render(**result).strip()
         return result
 
     def snapshot(self):
-        source = self.blueprint["actions"][0]["default"][0]["data"]["payload"]
-        return json.loads(self.env.from_string(source).render(**self.variables()))
+        source = self.blueprint["actions"][0]["default"][1]["variables"]["dashboard_snapshot"]
+        return ast.literal_eval(self.env.from_string(source).render(**self.variables()).strip())
+
+    def chunks(self, snapshot):
+        repeat = self.blueprint["actions"][0]["default"][2]["repeat"]
+        variables = {"dashboard_snapshot": snapshot, "transfer": "test-transfer"}
+        count = int(self.env.from_string(repeat["count"]).render(**variables))
+        data = repeat["sequence"][0]["data"]
+        return [
+            {
+                key: self.env.from_string(value).render(
+                    repeat=SimpleNamespace(index=index + 1), **variables
+                )
+                for key, value in data.items()
+            }
+            for index in range(count)
+        ]
 
     def test_sparse_pages_and_buttons_keep_slots_and_escape_names(self):
         self.inputs.update(
@@ -87,7 +106,7 @@ class BlueprintTests(unittest.TestCase):
             "sensor.landing": {"unit_of_measurement": "C"},
         })
         snapshot = self.snapshot()
-        self.assertEqual(len(snapshot["pages"]), 4)
+        self.assertEqual(len(snapshot["pages"]), 8)
         self.assertEqual(snapshot["pages"][0]["buttons"][0]["entity"], "")
         page = snapshot["pages"][1]
         self.assertEqual(page["title"], 'Landing "night"')
@@ -107,8 +126,9 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["entity"], "")
 
     def test_custom_titles_apply_to_every_button_slot(self):
-        for page in range(1, 5):
-            for button in range(1, 5):
+        for page in range(1, 9):
+            self.inputs[f"page_{page}_layout"] = "6x3"
+            for button in range(1, 19):
                 key = f"page_{page}_button_{button}"
                 self.inputs[key] = f"light.test_{page}_{button}"
                 self.inputs[f"{key}_title"] = f'  Custom "{page}/{button}"  '
@@ -139,8 +159,9 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["name"], "x" * 80)
 
     def test_entity_icons_apply_to_every_slot_and_follow_attribute_changes(self):
-        for page in range(1, 5):
-            for button in range(1, 5):
+        for page in range(1, 9):
+            self.inputs[f"page_{page}_layout"] = "6x3"
+            for button in range(1, 19):
                 entity = f"light.test_{page}_{button}"
                 self.inputs[f"page_{page}_button_{button}"] = entity
                 self.attributes[entity] = {"icon": "mdi:lightbulb-auto"}
@@ -151,6 +172,77 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["icon"], "mdi:ceiling-light")
         del self.attributes["light.test_1_1"]["icon"]
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["icon"], "")
+
+    def test_independent_layouts_icons_and_retained_extra_slots(self):
+        self.inputs.update(
+            page_1_layout="2x2", page_2_layout="4x2", page_3_layout="6x3",
+            page_1_button_5="light.saved", page_2_button_8="switch.eight",
+            page_3_button_18="lock.eighteen", page_3_icon="mdi:door-open",
+            navigation_layout="6x3",
+        )
+        snapshot = self.snapshot()
+        self.assertEqual(snapshot["version"], 2)
+        self.assertEqual(snapshot["navigation_layout"], "6x3")
+        self.assertEqual([len(page["buttons"]) for page in snapshot["pages"][:3]], [4, 8, 18])
+        self.assertEqual(snapshot["pages"][2]["icon"], "mdi:door-open")
+        self.assertEqual(snapshot["pages"][2]["buttons"][17]["entity"], "lock.eighteen")
+        variables = self.variables()
+        self.assertEqual(variables["ignored_slots"], ["Page 1 button 5"])
+        self.assertNotIn("light.saved", variables["watched_entities"])
+        self.assertIn("switch.eight", variables["watched_entities"])
+        self.assertIn("lock.eighteen", variables["watched_entities"])
+        self.inputs["page_1_layout"] = "4x2"
+        self.assertEqual(self.snapshot()["pages"][0]["buttons"][4]["entity"], "light.saved")
+        self.assertEqual(self.variables()["ignored_slots"], [])
+
+    def test_menu_capacity_guard_prevents_dispatch_but_ignored_slots_do_not_enable_pages(self):
+        self.states["sensor.renamed_dashboard_endpoint"] = "esphome.test_set_dashboard"
+        for page in range(1, 6):
+            self.inputs[f"page_{page}_button_1"] = f"light.page_{page}"
+        variables = self.variables()
+        guard = self.blueprint["actions"][0]["choose"][1]
+        self.assertEqual(self.env.from_string(guard["conditions"]).render(**variables), "True")
+        self.assertEqual(guard["sequence"][0]["data"]["level"], "error")
+        for layout in ("4x2", "6x3"):
+            self.inputs["navigation_layout"] = layout
+            self.assertEqual(self.variables()["configuration_error"], "")
+        self.inputs.update(navigation_layout="2x2", page_5_button_1=[], page_5_button_18="light.ignored")
+        self.assertEqual(self.variables()["configuration_error"], "")
+        warning = self.blueprint["actions"][0]["default"][0]
+        self.assertEqual(self.env.from_string(warning["if"]).render(**self.variables()), "True")
+        message = self.env.from_string(warning["then"][0]["data"]["message"]).render(**self.variables())
+        self.assertIn("Page 5 button 18", message)
+
+    def full_snapshot(self, title="Full control"):
+        self.inputs["navigation_layout"] = "4x2"
+        for page in range(1, 9):
+            self.inputs[f"page_{page}_layout"] = "6x3"
+            self.inputs[f"page_{page}_title"] = f"API page {page}"
+            for button in range(1, 19):
+                key = f"page_{page}_button_{button}"
+                self.inputs[key] = "light." + f"p{page}_b{button}_".ljust(122, "x")
+                self.inputs[f"{key}_title"] = title
+                self.states[self.inputs[key]] = "on"
+                self.attributes[self.inputs[key]] = {"icon": "mdi:ceiling-light"}
+        return self.snapshot()
+
+    def test_full_unicode_snapshot_round_trips_through_bounded_blueprint_chunks(self):
+        snapshot = self.full_snapshot("\U0001f600" * 80)
+        chunks = self.chunks(snapshot)
+        body = "".join(chunk["payload"][1:] for chunk in chunks)
+        self.assertGreater(len(body.encode()), 32768)
+        self.assertLessEqual(len(body.encode()), 262144)
+        self.assertEqual(json.loads(body), snapshot)
+        for index, chunk in enumerate(chunks):
+            self.assertEqual(int(chunk["index"]), index)
+            self.assertEqual(int(chunk["total"]), len(chunks))
+            self.assertTrue(chunk["payload"].startswith("~"))
+            self.assertLessEqual(len(chunk["payload"].encode()), 4097)
+        # A small snapshot is also framed as text, not a native HA dictionary.
+        self.setUp()
+        small = self.chunks(self.snapshot())
+        self.assertEqual(len(small), 1)
+        self.assertTrue(small[0]["payload"].startswith("~{"))
 
     def test_outlet_icons_follow_state_and_respect_custom_icon(self):
         self.inputs["page_1_button_1"] = "switch.outlet"
