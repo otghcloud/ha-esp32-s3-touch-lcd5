@@ -38,7 +38,8 @@ class DisplayIdle {
 
 class TouchGesture {
  public:
-  void begin(int id, int x, int y) {
+  void begin(int id, int x, int y, uint32_t now = 0) {
+    began_at_ = now;
     id_ = id;
     start_x_ = x_ = x;
     start_y_ = y_ = y;
@@ -69,7 +70,10 @@ class TouchGesture {
   }
   int x() const { return x_; }
   int y() const { return y_; }
+  bool valid() const { return active_ && !cancelled_; }
+  bool held(uint32_t now) const { return valid() && !moved_ && uint32_t(now - began_at_) >= 600; }
  private:
+  uint32_t began_at_{0};
   int id_{0}, start_x_{0}, start_y_{0}, x_{0}, y_{0};
   bool active_{false}, cancelled_{false}, moved_{false};
 };

@@ -2,14 +2,18 @@
 """Generate the fixed LVGL slots configured at runtime by Home Assistant."""
 
 import argparse
+import colorsys
 import json
+import math
 from pathlib import Path
 import re
+import struct
 from urllib.request import urlopen
+import zlib
 
 import yaml
 
-from dashboard_pages import buttons, homepage, navigation, screensaver, settings
+from dashboard_pages import buttons, homepage, light_detail, navigation, screensaver, settings, update
 from dashboard_pages.shared import MAX_PAGES, chrome, dots, label
 
 
@@ -17,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "esphome" / "dashboard.yaml"
 ICON_DATA = ROOT / "scripts" / "mdi-icons.json"
 ICON_HEADER = ROOT / "esphome" / "components" / "wallpanel" / "mdi_icons.h"
+WHEEL_OUTPUT = ROOT / "assets" / "light_colour_wheel.png"
 MDI_VERSION = "7.4.47"
 MDI_SOURCE = f"https://cdn.jsdelivr.net/npm/@mdi/font@{MDI_VERSION}"
 
@@ -58,7 +63,7 @@ def render_icons():
 def make_dashboard():
     page_widgets, bindings = buttons.build()
     menu, menu_binding = navigation.build()
-    widgets = chrome() + page_widgets + [menu, homepage.build(), settings.build()] + dots()
+    widgets = chrome() + page_widgets + [menu, homepage.build(), settings.build(), light_detail.build()] + dots()
     widgets.append(label("dashboard_waiting", "Waiting for Home Assistant", "font_medium", align="CENTER"))
     bindings += [
         menu_binding,
@@ -69,6 +74,9 @@ def make_dashboard():
         "id(dashboard).bind_screensaver(id(dashboard_screensaver));",
         "id(dashboard).bind_homepage(id(homepage), id(homepage_title));",
         "id(dashboard).bind_settings(id(settings), id(dashboard_settings));",
+        "id(dashboard).bind_update(id(dashboard_updating));",
+        "id(dashboard).bind_detail({id(light_detail), id(detail_title), id(detail_status), "
+        "id(detail_slider), id(detail_value), id(detail_wheel), id(detail_marker)});",
         "id(dashboard).initialize(id(dashboard_waiting), id(dashboard_connection));",
     ]
     return {
@@ -86,8 +94,11 @@ def make_dashboard():
                     "id": "font_ui_icons", "size": 32, "bpp": 1, "glyphsets": [],
                     "glyphs": [chr(int(load_icons()[name], 16)) for name in ("menu", "cog")]}],
         "image": [{"platform": "file", "file": "../assets/background_dark.png",
-                   "id": "dashboard_background", "type": "RGB565", "resize": "800x480"}],
+                   "id": "dashboard_background", "type": "RGB565", "resize": "800x480"},
+                  {"platform": "file", "file": "../assets/light_colour_wheel.png",
+                   "id": "light_colour_wheel", "type": "RGB565", "transparency": "alpha_channel"}],
         "lvgl": {
+            "id": "dashboard_lvgl",
             "bg_color": 0x111827, "bg_image_src": "dashboard_background",
             "pad_all": 0, "scrollable": False,
             "top_layer": {"widgets": [
@@ -114,6 +125,7 @@ def make_dashboard():
                     ],
                 }},
                 screensaver.build(),
+                update.build(),
             ]},
             "widgets": widgets,
         },
@@ -126,6 +138,25 @@ def render():
     )
 
 
+def render_colour_wheel():
+    size = 240
+    pixels = bytearray()
+    for y in range(size):
+        pixels.append(0)
+        for x in range(size):
+            dx, dy = x - 119.5, 119.5 - y
+            radius = math.hypot(dx, dy) / 119.5
+            hue = (math.atan2(dy, dx) / math.tau) % 1
+            rgb = colorsys.hsv_to_rgb(hue, min(radius, 1), 1)
+            pixels.extend(round(channel * 255) for channel in rgb)
+            pixels.append(255 if radius <= 1 else 0)
+
+    def chunk(name, data):
+        return struct.pack(">I", len(data)) + name + data + struct.pack(">I", zlib.crc32(name + data))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(pixels, 9)) + chunk(b"IEND", b""))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
@@ -136,12 +167,13 @@ def main():
         if args.check:
             parser.error("--check cannot be combined with --update-icons")
         update_icons()
-    for path, content in ((OUTPUT, render()), (ICON_HEADER, render_icons())):
+    for path, content in ((OUTPUT, render().encode()), (ICON_HEADER, render_icons().encode()),
+                          (WHEEL_OUTPUT, render_colour_wheel())):
         if args.check:
-            if not path.exists() or path.read_text(encoding="utf-8") != content:
+            if not path.exists() or path.read_bytes() != content:
                 parser.error(f"{path.name} is stale; run python3 scripts/generate_dashboard.py")
         else:
-            path.write_text(content, encoding="utf-8")
+            path.write_bytes(content)
 
 
 if __name__ == "__main__":

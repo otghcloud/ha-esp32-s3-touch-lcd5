@@ -53,6 +53,11 @@ esphome:
 
         id(dashboard).bind_settings(id(settings), id(dashboard_settings));
 
+        id(dashboard).bind_update(id(dashboard_updating));
+
+        id(dashboard).bind_detail({id(light_detail), id(detail_title), id(detail_status), id(detail_slider),
+        id(detail_value), id(detail_wheel), id(detail_marker)});
+
         id(dashboard).initialize(id(dashboard_waiting), id(dashboard_connection));'
 font:
 - file: gfonts://Roboto
@@ -15005,7 +15010,13 @@ image:
   id: dashboard_background
   type: RGB565
   resize: 800x480
+- platform: file
+  file: ../assets/light_colour_wheel.png
+  id: light_colour_wheel
+  type: RGB565
+  transparency: alpha_channel
 lvgl:
+  id: dashboard_lvgl
   bg_color: 1120295
   bg_image_src: dashboard_background
   pad_all: 0
@@ -15104,6 +15115,34 @@ lvgl:
             long_mode: DOT
         bg_color: 1120295
         bg_image_src: dashboard_background
+        radius: 0
+    - obj:
+        id: dashboard_updating
+        x: 0
+        y: 0
+        width: 800
+        height: 480
+        pad_all: 0
+        border_width: 0
+        bg_opa: COVER
+        scrollable: false
+        hidden: true
+        widgets:
+        - label:
+            id: update_title
+            text: Updating firmware
+            text_font: font_large
+            text_color: 15922424
+            align: CENTER
+            y: -28
+        - label:
+            id: update_hint
+            text: Please wait. Do not disconnect power.
+            text_font: font_medium
+            text_color: 15922424
+            align: CENTER
+            y: 32
+        bg_color: 1120295
         radius: 0
   widgets:
   - obj:
@@ -16345,6 +16384,80 @@ lvgl:
           width: 560
           height: 32
           long_mode: DOT
+  - obj:
+      id: light_detail
+      x: 0
+      y: 0
+      width: 800
+      height: 480
+      pad_all: 0
+      border_width: 0
+      bg_opa: TRANSP
+      scrollable: false
+      hidden: true
+      widgets:
+      - label:
+          id: detail_title
+          text: ''
+          text_font: font_medium
+          text_color: 15922424
+          x: 24
+          y: 14
+          width: 560
+          height: 32
+          long_mode: DOT
+      - label:
+          id: detail_status
+          text: ''
+          text_font: font_small
+          text_color: 15922424
+          x: 24
+          y: 64
+          width: 550
+          height: 28
+          long_mode: DOT
+      - slider:
+          id: detail_slider
+          x: 230
+          y: 130
+          width: 72
+          height: 242
+          min_value: 0
+          max_value: 100
+          value: 0
+          animated: false
+          indicator:
+            bg_color: 15922424
+          knob:
+            bg_color: 16765286
+      - label:
+          id: detail_value
+          text: ''
+          text_font: font_medium
+          text_color: 15922424
+          x: 120
+          y: 98
+          width: 260
+          height: 32
+          text_align: CENTER
+      - image:
+          id: detail_wheel
+          src: light_colour_wheel
+          x: 120
+          y: 132
+      - obj:
+          id: detail_marker
+          width: 16
+          height: 16
+          radius: 8
+          bg_opa: TRANSP
+          border_color: 16777215
+          border_width: 3
+          outline_color: 1120295
+          outline_width: 2
+          pad_all: 0
+          clickable: false
+          scrollable: false
   - obj:
       id: dashboard_dot_0
       x: 364

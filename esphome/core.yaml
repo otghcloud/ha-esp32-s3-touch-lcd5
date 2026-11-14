@@ -26,6 +26,49 @@ logger:
 
 ota:
   - platform: esphome
+    on_begin:
+      then:
+        - lambda: |-
+            id(dashboard).begin_update();
+            id(ota_backlight_was_on) = id(display_backlight).state;
+            id(dashboard_lvgl).set_paused(true, false);
+            id(display_idle).cancel_touch();
+            if (${ota_blank_display})
+              id(display_backlight).turn_off();
+    on_error:
+      then:
+        - script.execute: recover_ota_display
+    on_abort:
+      then:
+        - script.execute: recover_ota_display
+
+script:
+  - id: recover_ota_display
+    then:
+      - lambda: |-
+          if (!id(dashboard).updating()) return;
+          id(dashboard_lvgl).set_paused(false, false);
+          if (id(ota_backlight_was_on))
+            id(display_backlight).turn_on();
+          else
+            id(display_backlight).turn_off();
+          id(dashboard).finish_update();
+          lv_obj_invalidate(lv_screen_active());
+      - homeassistant.event:
+          event: esphome.wallpanel_ready
+          data:
+            endpoint: !lambda |-
+              std::string name = App.get_name();
+              std::replace(name.begin(), name.end(), '-', '_');
+              return "esphome." + name + "_set_dashboard";
+
+substitutions:
+  ota_blank_display: "false"
+
+globals:
+  - id: ota_backlight_was_on
+    type: bool
+    initial_value: 'false'
 
 button:
   - platform: restart

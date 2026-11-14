@@ -82,7 +82,9 @@ The maximum is **eight button pages / 144 controls**, plus an optional Homepage,
 
 The firmware includes the complete **Material Design Icons 7.4.47** font at 72 pixels for 2x2 tiles and 36 pixels for denser tiles. The blueprint sends each entity's `icon` attribute, so custom `mdi:` icons (including light, door, lock and automation variants) display on the panel. Without an explicit icon, buttons use Home Assistant's state-aware defaults: lightbulb/lightbulb-off, robot/robot-off, toggle-switch-variant/toggle-switch-variant-off, and locked/unlocked/jammed/transition lock icons. Outlet switches use power-plug/power-plug-off. Explicit glyphs take precedence, but their colours still follow entity state.
 
-Icons are amber for on/enabled and grey for off/disabled automations. Locks use green for locked, red for unlocked/open/jammed and amber for transitions. Unknown/unavailable entities and disconnected controls use grey, dimmed tiles. Lock transitions, jammed and open states remain non-actionable.
+Active entity tiles are white with contrasting dark text; inactive tiles stay dark. Normally ON/enabled is active, while locks are active when **unlocked**. **Appearance > Reverse active state** selects entities that invert only this white-fill rule, consistently on pages and related controls. Actions and reported state labels are never reversed. Unknown/unavailable, transitional and disconnected controls never become white through reversal.
+
+Icons retain amber for on/enabled and grey for off/disabled, with darker shades on white. Locks retain green for locked, red for unlocked/open/jammed and amber for transitions. Unknown/unavailable entities and disconnected controls are grey and dimmed. Lock transitions, jammed and open states remain non-actionable.
 
 Each page's **Page icon** selector controls its icon beside the page name in navigation. Blank or unsupported page icons use `mdi:view-dashboard`; unsupported icons also log a warning.
 
@@ -118,9 +120,35 @@ Page navigation remains available offline using the last known configuration. Re
 
 The static 800 × 480 background in [`assets/background_dark.png`](./assets/background_dark.png) is embedded in the firmware and visible behind the content area of every view, including waiting and navigation.
 
-The latest darker artwork has been verified byte-for-byte against the generated RGB565 image in both a local candidate build and a separately resolved published `main` package. Tiles remain 90% opaque, so compare exposed areas between tiles or the screensaver rather than tile centres. If a device still looks unchanged, allow both the package and external-component 300-second refresh windows to expire, confirm repository updates in the validation log, use **Clean Build Files**, then rebuild and install. Compare the installed firmware's reported compilation time with the new build. These checks do not establish which firmware is currently on your device; no artwork or tile opacity has been changed.
+The darker artwork was verified byte-for-byte against generated RGB565 images in local and independently resolved published-package builds. Compare exposed areas between tiles or the screensaver: inactive tiles are 90% opaque, and active white tiles are opaque. If artwork appears stale, allow the package/component 300-second refresh windows to expire, use **Clean Build Files**, rebuild and check the installed compilation time. These checks do not establish which firmware is currently on your device.
+
 
 Changing layouts, page icons or controls after the firmware/blueprint upgrade does not require recompilation.
+
+### Light details and related controls
+
+Install the firmware first, re-import the updated blueprint and reload automations. Short taps still toggle. **Hold a light's icon for 600 ms** to open its details; moving more than 20 pixels or adding another finger cancels the hold. Opening details consumes that entire gesture, so release before using a control. Holding the title/body does not open details.
+
+The left three quarters contain Power and the supported brightness, temperature and colour controls. Select a mode at the right of that area. The HS wheel changes hue/saturation; colour-capable RGB/XY lights use Home Assistant's conversion. Temperature appears only when the light advertises colour-temperature support and a valid Kelvin range. Missing bounds show **Temperature range unavailable**; missing readings remain **Unknown**. On/off-only lights show Power without invented sliders. Older snapshots or lights without capability information still offer Power with an explanatory status.
+
+Drag to preview locally; **one command is sent on release**, not continuously. Brightness zero calls `light.turn_off`; other brightness, temperature and colour edits call `light.turn_on`, including when the light is off. Incoming state updates do not overwrite an active drag. The view waits for reported confirmation, then returns to authoritative state; an unconfirmed change shows a warning after five seconds. Offline/unavailable controls cannot send commands. Capability changes, entity removal, manual backlight-off, wake/screensaver transitions and OTA cancel edits safely.
+
+Under **Light details > Related controls**, add a structured row for a primary light and select up to two related **light, switch or automation** entities, with optional titles. They occupy the right-hand quarter and behave as ordinary toggles. Related entities need no main-page tile and are watched for updates automatically. Shared entities are transmitted once; title overrides remain specific to each binding. No row is required merely to enable normal light details. Existing automation tiles are not removed automatically: clear them yourself if replaced by related controls. Rows for lights outside the active layouts are retained but inactive.
+
+Back returns to the source content page. Details never enter page ordering, dots, wake choices or last-used content identity. The footer menu/cog remain available. Configurable short-tap actions, continuous/throttled drag commands, related sensors/energy readings, HA `button` entities, four related controls and non-light detail pages are deferred.
+
+### Firmware updates
+
+OTA uploads show a static **Updating firmware** overlay. The frame is flushed before flash writes and LVGL is paused without animation; touches, commands, clock redraws, wake/idle transitions and incoming dashboard transfers are blocked. A previously dark display stays dark. Successful uploads remain paused until the normal reboot. On abort/error, the prior view/backlight/manual-sleep policy is restored, inactivity deadlines restart and the panel requests fresh configuration rather than replaying partial transfers.
+
+Pausing LVGL does **not** stop the RGB controller scanning its PSRAM framebuffer. Physical upload testing is still required: a static frame alone cannot guarantee that flash/PSRAM-related corruption is eliminated. If corruption persists, set this device-YAML substitution and rebuild:
+
+```yaml
+substitutions:
+  ota_blank_display: "true"
+```
+
+The fallback blanks the backlight for the upload and restores its previous state on abort/error. The default is `"false"`. Display timings and watchdog settings are unchanged.
 
 ### Homepage and Settings
 
@@ -179,7 +207,7 @@ Manual **Sleep** or HA backlight-off takes priority over an existing ON sensor. 
 
 ### Development
 
-The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores eight page models with eighteen button slots each, but shares one eighteen-tile LVGL pool between entity pages, Navigation and Settings, plus one nine-dot strip. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. The tree remains below the unchanged 220-object limit (versus 841 with duplicated controls), with 964 measured startup refresh requests below the unchanged 1500-request limit. Watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
+The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores eight page models with eighteen button slots each, but shares one eighteen-tile LVGL pool between entity pages, Navigation, Settings and light details, plus one nine-dot strip and a single detail editor. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. The tree has 155 actual screen/top-layer objects, below the unchanged 220-object limit (versus 841 with duplicated controls), with 1016 measured startup refresh requests below the unchanged 1500-request limit. Watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
 
 ```sh
 python3 scripts/generate_dashboard.py
@@ -187,7 +215,7 @@ python3 scripts/generate_dashboard.py --check
 python3 -m unittest discover -s scripts -p 'test_*.py'
 ```
 
-The generator also maintains the MDI lookup header from the pinned [`scripts/mdi-icons.json`](./scripts/mdi-icons.json) catalogue. Use `python3 scripts/generate_dashboard.py --update-icons` to refresh that catalogue from the pinned upstream stylesheet. Change `MDI_VERSION` and regenerate together when upgrading the font. MDI licensing is recorded in [`MDI-LICENSE`](./esphome/components/wallpanel/MDI-LICENSE). The one-bit icon font keeps the complete library within flash without loading every icon bitmap into RAM.
+The generator also maintains the deterministic 240 × 240 HS wheel in [`assets/light_colour_wheel.png`](./assets/light_colour_wheel.png) and the MDI lookup header from the pinned [`scripts/mdi-icons.json`](./scripts/mdi-icons.json) catalogue. The wheel uses standard-library PNG encoding, not a dynamic canvas or another runtime dependency. Use `python3 scripts/generate_dashboard.py --update-icons` to refresh the catalogue from the pinned upstream stylesheet. Change `MDI_VERSION` and regenerate together when upgrading the font. MDI licensing is recorded in [`MDI-LICENSE`](./esphome/components/wallpanel/MDI-LICENSE). The one-bit icon font keeps the complete library within flash without loading every icon bitmap into RAM.
 
 Page builders live in [`scripts/dashboard_pages/`](./scripts/dashboard_pages/); runtime models, interaction, shared geometry and page-specific renderers live in [`esphome/components/wallpanel/`](./esphome/components/wallpanel/). The coordinator retains atomic snapshot validation, transport and explicit view routing. Screensaver is an overlay, not a content route; entity slot identity remains independent of visual ordering. Keep package `on_boot` automations as lists so page initialization and local hardware/clock bindings compose rather than override each other.
 
@@ -199,15 +227,17 @@ scripts/runtime_tests/.esphome/build/dynamic-host/.pioenvs/dynamic-host/program
 python3 scripts/runtime_tests/check_native_api.py
 ```
 
-The connected native API check also requires `aioesphomeapi` (included with ESPHome). It starts/stops its own local host process, requires port 16053 to be unused, and tests blueprint-generated 144-control snapshots, Unicode, partial-transfer atomicity, real entity actions through all three layouts, Homepage, local Settings actions, clock format changes, sensor wake/manual precedence and hold expiry. Host Restart/backlight actions are test callbacks, not real restarts or hardware output. It runs with a 128 KiB host stack and checks bounded retained heap after repeated transfers.
+The connected native API check also requires `aioesphomeapi` (included with ESPHome). It starts/stops its own local host process, requires port 16053 to be unused, and tests blueprint-generated 144-control snapshots, Unicode, partial-transfer atomicity, real entity actions through all three layouts, Homepage, local Settings actions, clock format changes, sensor wake/manual precedence and hold expiry. Batch 3 checks also cover hold consumption/cancellation, reusable detail geometry, white/reversed appearance, atomic metadata rejection, OTA gates/recovery, typed numeric/HS-list service envelopes, release-only edits, confirmation timeout, related toggles and primary-entity removal. Host Restart/backlight actions are test callbacks, not real restarts or hardware output. It runs with a 128 KiB host stack and checks bounded retained heap after repeated transfers.
 
 The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). Version 2 uses eight page slots with per-page layout/icon metadata and exactly 4, 8 or 18 button slots. The optional root `page_order` is a permutation of zero-based slot indices 0-7, separate from the unchanged `pages` array; omission retains legacy numeric ordering. The blueprint expands partial user orders to a complete permutation. The runtime validates the entire snapshot before changing the UI; unsupported entities and malformed payloads are logged and rejected without replacing the previous configuration. Legacy version-1 four-page snapshots remain supported by `esphome.<device_name>_set_dashboard`.
 
 Optional snapshot fields are `homepage: {enabled, position, title}` (insertion position 0-8 among ordered entity slots), `localization: {time, date}` (allowlisted preset IDs), and boolean `wake_hold`. Omission disables Homepage/hold and restores the default formats. The separate `esphome.<device_name>_wake_display` action represents a fresh sensor activation; the blueprint sends it before the snapshot transfer so a later attribute/periodic update cannot cancel it mid-transfer. Local manual-sleep precedence is not stored in HA snapshots.
 
+Batch 3 adds optional `reverse_active` (unique entity IDs), `light_details` (unique primary-light capability/readings/bindings), and `detail_entities` (deduplicated related entity/name/state/icon records). Detail readings include normalized `colour_mode`, brightness 0–255, HS values and Kelvin bounds/value; missing readings use -1 rather than a manufactured setting. Up to two related entity references and optional titles belong to each primary binding. Omitting these fields preserves legacy operation, without reversal or invented capabilities. Metadata is validated with the rest of the snapshot before an atomic replacement. Outgoing brightness/Kelvin values and HS lists use native HA `data_template` expressions; they are not quoted string-valued colour arrays.
+
 The new blueprint appends `_chunk` to the discovered endpoint and sends ordered `set_dashboard_chunk` calls with a transfer ID, zero-based index, total and string payload. Each payload has a `~` text prefix followed by at most 4096 bytes of ASCII JSON; the complete snapshot is capped at 256 KiB/64 chunks. Incomplete transfers expire after 30 seconds of inactivity. Only a complete, validated snapshot replaces the UI. Chunking avoids ESPHome's 32 KiB native API message limit without modifying ESPHome internals.
 
-Automated validation includes a 167,851-byte Unicode snapshot across 41 native API chunks. The eight-page shared-widget startup regression records 1,446 host LVGL refresh requests including the screensaver, below the unchanged 1,500-request limit used for the six-page build. The six-page shared-widget firmware and layouts have been confirmed on the panel; the restored eight-page build and screensaver still need device confirmation. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility and touch responsiveness, particularly with all 144 controls configured.
+Automated validation includes a 225,220-byte Unicode snapshot with light metadata across 55 native API chunks, within the unchanged 256 KiB cap. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. The Batch 3 production build uses 6,373,704 bytes flash (78.4%) and 124,636 bytes static RAM (36.5%). Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light controls and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
 
 For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
 

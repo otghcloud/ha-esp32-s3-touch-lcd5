@@ -96,6 +96,77 @@ class BlueprintTests(unittest.TestCase):
             for index in range(count)
         ]
 
+    def test_light_capabilities_related_watching_and_deduplication(self):
+        self.inputs.update(page_1_button_1="light.colour", page_2_button_1="light.colour",
+                           page_1_button_2="light.simple", reverse_active=["light.colour"],
+                           light_details=[dict(light="light.colour", related_1="automation.auto",
+                                               related_1_title=" Auto ", related_2="switch.outlet")])
+        self.attributes["light.colour"] = {
+            "supported_color_modes": ["rgb", "color_temp"], "brightness": 128, "hs_color": [33, 75],
+            "color_temp_kelvin": 3000, "min_color_temp_kelvin": 2200, "max_color_temp_kelvin": 6500,
+        }
+        self.attributes["light.simple"] = {"supported_color_modes": ["onoff"]}
+        self.attributes["automation.auto"] = {"friendly_name": "Automatic lighting"}
+        self.states["automation.auto"] = "off"
+        self.assertEqual(self.variables()["configuration_error"], "")
+        self.assertIn("automation.auto", self.variables()["watched_entities"])
+        self.assertIn("switch.outlet", self.variables()["watched_entities"])
+        result = self.snapshot()
+        self.assertEqual(result["reverse_active"], ["light.colour"])
+        self.assertEqual(len(result["light_details"]), 2)
+        light, simple = result["light_details"]
+        self.assertEqual(light, dict(
+            entity="light.colour", colour_mode="", known=True, dimmable=True, colour=True, temperature=True, temperature_issue=False,
+            brightness=128, kelvin=3000, min_kelvin=2200, max_kelvin=6500, hue=33, saturation=75,
+            related=["automation.auto", "switch.outlet"], related_titles=["Auto", ""],
+        ))
+        self.assertTrue(simple["known"])
+        self.assertFalse(simple["dimmable"] or simple["colour"] or simple["temperature"])
+        self.assertEqual(simple["brightness"], -1)
+        self.assertEqual(result["detail_entities"][0]["name"], "Automatic lighting")
+        self.assertEqual(result["detail_entities"][0]["state"], "off")
+        self.inputs["light_details"].append(dict(light="light.simple", related_1="automation.auto",
+                                                related_1_title="Other Auto"))
+        result = self.snapshot()
+        self.assertEqual(len(result["detail_entities"]), 2, "shared related entities are transmitted once")
+        self.assertEqual(result["light_details"][1]["related_titles"], ["Other Auto"])
+        self.inputs["page_1_button_18"] = "light.hidden"
+        self.inputs["light_details"].append(dict(light="light.hidden", related_1="switch.hidden"))
+        self.assertNotIn("switch.hidden", self.variables()["watched_entities"])
+        self.assertNotIn("light.hidden", [light["entity"] for light in self.snapshot()["light_details"]])
+
+    def test_missing_and_partial_light_attributes_remain_unknown(self):
+        self.inputs["page_1_button_1"] = "light.test"
+        self.assertFalse(self.snapshot()["light_details"][0]["known"])
+        for modes, dimmable, colour in [
+                (["brightness"], True, False), (["xy"], True, True), (["white"], True, False),
+                (["rgbww"], True, True), (["color_temp"], True, False)]:
+            with self.subTest(modes=modes):
+                self.attributes["light.test"] = {"supported_color_modes": modes, "hs_color": [22]}
+                light = self.snapshot()["light_details"][0]
+                self.assertEqual((light["dimmable"], light["colour"]), (dimmable, colour))
+                self.assertFalse(light["temperature"], "missing Kelvin bounds cannot invent a range")
+                self.assertEqual((light["hue"], light["saturation"], light["brightness"]), (-1, -1, -1))
+
+    def test_invalid_related_configuration_is_rejected(self):
+        for value in [None, "light.test", {}, [None], [{}], [dict(light="switch.bad")],
+                      [dict(light="light.test", related_1="lock.bad")],
+                      [dict(light="light.test", related_1="light.test")],
+                      [dict(light="light.test", related_1="switch.a", related_2="switch.a")],
+                      [dict(light="light.test", related_1_title=123)],
+                      [dict(light="light.test"), dict(light="light.test")]]:
+            with self.subTest(value=value):
+                self.inputs["light_details"] = value
+                self.assertTrue(self.variables()["configuration_error"])
+
+    def test_oversized_rich_configuration_sends_no_partial_model(self):
+        snapshot = self.full_snapshot("\U0001f600" * 80)
+        snapshot["padding"] = "X" * 262144
+        self.assertEqual(self.chunks(snapshot), [])
+        error = self.blueprint["actions"][-1]["default"][3]
+        self.assertEqual(self.env.from_string(error["if"]).render(dashboard_snapshot=snapshot), "True")
+        self.assertEqual(error["then"][0]["data"]["level"], "error")
+
     def test_sparse_pages_and_buttons_keep_slots_and_escape_names(self):
         self.inputs.update(
             page_2_title='Landing "night"',

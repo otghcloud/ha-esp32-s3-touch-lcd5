@@ -76,6 +76,61 @@ blueprint:
                         - {label: Page 6, value: "6"}
                         - {label: Page 7, value: "7"}
                         - {label: Page 8, value: "8"}
+    appearance_settings:
+      name: Appearance
+      icon: mdi:palette
+      collapsed: true
+      input:
+        reverse_active:
+          name: Reverse active state
+          description: White normally means ON/enabled, or unlocked for locks. Selected entities invert only this appearance rule, never the action.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: [light, switch, automation, lock]
+    light_detail_settings:
+      name: Light details
+      icon: mdi:lightbulb
+      collapsed: true
+      input:
+        light_details:
+          name: Related controls
+          description: >-
+            Hold a light icon to open details. Add a row to show up to two related
+            light/switch/automation controls there, without main-page tiles.
+            Rows for lights outside active page layouts remain saved but unused.
+          default: []
+          selector:
+            object:
+              multiple: true
+              label_field: light
+              fields:
+                light:
+                  label: Primary light
+                  required: true
+                  selector:
+                    entity:
+                      filter:
+                        domain: light
+                related_1:
+                  label: Related entity 1
+                  selector: &related_selector
+                    entity:
+                      filter:
+                        domain: [light, switch, automation]
+                related_1_title:
+                  label: Related title 1 (optional)
+                  selector:
+                    text:
+                related_2:
+                  label: Related entity 2
+                  selector: *related_selector
+                related_2_title:
+                  label: Related title 2 (optional)
+                  selector:
+                    text:
     homepage_settings:
       name: Homepage
       icon: mdi:home
@@ -1671,6 +1726,8 @@ mode: restart
 max_exceeded: silent
 
 variables:
+  reverse_active: !input reverse_active
+  light_details: !input light_details
   panel_device: !input panel_device
   screensaver_enabled: !input screensaver_enabled
   homepage_enabled: !input homepage_enabled
@@ -1764,6 +1821,15 @@ variables:
         {% endif %}
       {% endfor %}
     {% endfor %}
+    {% set active = ns.entities | list %}
+    {% for row in (light_details if light_details is sequence and light_details is not string and light_details is not mapping else []) if row is mapping and row.get('light') in active %}
+      {% for key in ['related_1', 'related_2'] %}
+        {% set entity = row.get(key, '') %}
+        {% if entity is string and entity and entity not in ns.entities %}
+          {% set ns.entities = ns.entities + [entity] %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
     {{ ns.entities }}
   ignored_slots: >-
     {% set ns = namespace(slots=[]) %}
@@ -1778,6 +1844,35 @@ variables:
     {{ ns.slots }}
   configuration_error: >-
     {% set ns = namespace(pages=1 if homepage_enabled else 0, seen=[], error='') %}
+    {% if light_details is not sequence or light_details is string or light_details is mapping %}
+      {% set ns.error = 'Light details must be a list.' %}
+    {% else %}
+      {% set detail_rows = namespace(seen=[]) %}
+      {% for row in light_details %}
+        {% if row is not mapping or row.get('light') is not string or not row.light.startswith('light.') %}
+          {% set ns.error = 'Each light-detail row must select a light.' %}
+        {% elif row.light in detail_rows.seen %}
+          {% set ns.error = 'Duplicate primary light in related controls.' %}
+        {% else %}
+          {% set detail_rows.seen = detail_rows.seen + [row.light] %}
+          {% set related = namespace(seen=[]) %}
+          {% for key in ['related_1', 'related_2'] %}
+            {% set entity = row.get(key, '') %}
+            {% if entity not in ['', none, []] %}
+              {% if entity is not string or entity.split('.')[0] not in ['light', 'switch', 'automation'] or '.' not in entity %}
+                {% set ns.error = 'Related controls support only lights, switches and automations.' %}
+              {% elif entity == row.light or entity in related.seen %}
+                {% set ns.error = 'Related entities must be distinct and different from the primary light.' %}
+              {% endif %}
+              {% set related.seen = related.seen + [entity] %}
+            {% endif %}
+            {% if row.get(key ~ '_title', '') is not string %}
+              {% set ns.error = 'Related titles must be text.' %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
     {% if page_order is not sequence or page_order is string or page_order is mapping %}
       {% set ns.error = 'Page order must be a list of page rows.' %}
     {% else %}
@@ -1864,7 +1959,8 @@ actions:
                 {{ ignored_slots | join(', ') }}. These inputs remain saved.
       - variables:
           dashboard_snapshot: >-
-            {% set ns = namespace(pages=[], order=[], home_position=0, home_title='Homepage', hold=false) %}
+            {% set ns = namespace(pages=[], order=[], home_position=0, home_title='Homepage', hold=false,
+                                  lights=[], related=[], seen_lights=[], seen_related=[]) %}
             {% for item in page_order %}
               {% if item.page == 'home' %}
                 {% set ns.home_position = ns.order | length %}
@@ -1919,13 +2015,57 @@ actions:
                 {% set ns.hold = true %}
               {% endif %}
             {% endfor %}
+            {% for page in ns.pages %}
+              {% for button in page.buttons if button.entity.startswith('light.') and button.entity not in ns.seen_lights %}
+                {% set entity = button.entity %}
+                {% set ns.seen_lights = ns.seen_lights + [entity] %}
+                {% set raw_modes = state_attr(entity, 'supported_color_modes') or [] %}
+                {% set modes = (raw_modes if raw_modes is sequence and raw_modes is not string else []) | select('in', ['onoff', 'brightness', 'color_temp', 'hs', 'xy', 'rgb', 'rgbw', 'rgbww', 'white']) | list %}
+                {% set colour_mode = state_attr(entity, 'color_mode') %}
+                {% set dimmable = modes | select('in', ['brightness', 'color_temp', 'hs', 'xy', 'rgb', 'rgbw', 'rgbww', 'white']) | list | length > 0 %}
+                {% set colour = modes | select('in', ['hs', 'xy', 'rgb', 'rgbw', 'rgbww']) | list | length > 0 %}
+                {% set low = state_attr(entity, 'min_color_temp_kelvin') %}
+                {% set high = state_attr(entity, 'max_color_temp_kelvin') %}
+                {% set temperature = 'color_temp' in modes and is_number(low) and is_number(high) and 0 < (low | float) < (high | float) <= 100000 %}
+                {% set brightness = state_attr(entity, 'brightness') %}
+                {% set kelvin = state_attr(entity, 'color_temp_kelvin') %}
+                {% set hs = state_attr(entity, 'hs_color') %}
+                {% set hs_valid = hs is sequence and hs is not string and hs | length == 2 and is_number(hs[0]) and is_number(hs[1]) and 0 <= (hs[0] | float) <= 360 and 0 <= (hs[1] | float) <= 100 %}
+                {% set binding = namespace(refs=[], titles=[]) %}
+                {% for row in light_details if row.light == entity %}
+                  {% for key in ['related_1', 'related_2'] %}
+                    {% set related = row.get(key, '') %}
+                    {% if related is string and related %}
+                      {% set binding.refs = binding.refs + [related] %}
+                      {% set binding.titles = binding.titles + [(row.get(key ~ '_title', '') | trim)[:80]] %}
+                      {% if related not in ns.seen_related %}
+                        {% set ns.seen_related = ns.seen_related + [related] %}
+                        {% set ns.related = ns.related + [dict(entity=related,
+                            name=(state_attr(related, 'friendly_name') or related)[:80],
+                            state=states(related)[:40], icon=state_attr(related, 'icon') or '')] %}
+                      {% endif %}
+                    {% endif %}
+                  {% endfor %}
+                {% endfor %}
+                {% set ns.lights = ns.lights + [dict(entity=entity, known=modes | length > 0,
+                    colour_mode=colour_mode if colour_mode in modes else '',
+                    dimmable=dimmable, colour=colour, temperature=temperature,
+                    temperature_issue='color_temp' in modes and not temperature,
+                    brightness=(brightness | int) if is_number(brightness) and 0 <= (brightness | float) <= 255 else -1,
+                    kelvin=(kelvin | int) if temperature and is_number(kelvin) and (low | float) <= (kelvin | float) <= (high | float) else -1,
+                    min_kelvin=(low | int) if temperature else 0, max_kelvin=(high | int) if temperature else 0,
+                    hue=(hs[0] | float) if hs_valid else -1, saturation=(hs[1] | float) if hs_valid else -1,
+                    related=binding.refs, related_titles=binding.titles)] %}
+              {% endfor %}
+            {% endfor %}
             {{ dict(version=2, navigation_layout=navigation_layout, screensaver_enabled=screensaver_enabled,
                     homepage=dict(enabled=homepage_enabled, position=ns.home_position, title=ns.home_title),
                     localization=dict(time=time_format, date=date_format), wake_hold=ns.hold,
+                    reverse_active=reverse_active, light_details=ns.lights, detail_entities=ns.related,
                     page_order=ns.order, pages=ns.pages) }}
           transfer: "{{ now().isoformat() }}"
       - repeat:
-          count: "{{ (((dashboard_snapshot | to_json) | length) + 4095) // 4096 }}"
+          count: "{{ ((((dashboard_snapshot | to_json) | length) + 4095) // 4096) if (dashboard_snapshot | to_json) | length <= 262144 else 0 }}"
           sequence:
             - action: "{{ endpoint ~ '_chunk' }}"
               data:
@@ -1934,3 +2074,9 @@ actions:
                 total: "{{ (((dashboard_snapshot | to_json) | length) + 4095) // 4096 }}"
                 # The prefix prevents HA from interpreting a complete JSON fragment as a native object.
                 payload: "~{{ (dashboard_snapshot | to_json)[(repeat.index - 1) * 4096 : repeat.index * 4096] }}"
+      - if: "{{ (dashboard_snapshot | to_json) | length > 262144 }}"
+        then:
+          - action: system_log.write
+            data:
+              level: error
+              message: "Wallpanel configuration unchanged: rich dashboard exceeds 256 KiB. Shorten labels or reduce related controls."

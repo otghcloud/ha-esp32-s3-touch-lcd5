@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <string>
+#include <vector>
 #include "esphome/components/lvgl/lvgl_esphome.h"
 
 namespace wallpanel {
@@ -13,7 +14,7 @@ inline constexpr size_t MAX_PAYLOAD_BYTES = 262144;
 inline constexpr size_t CHUNK_BYTES = 4096;
 
 enum class Layout { TWO_BY_TWO, FOUR_BY_TWO, SIX_BY_THREE };
-enum class View { BUTTONS, NAVIGATION, HOMEPAGE, SETTINGS };
+enum class View { BUTTONS, NAVIGATION, HOMEPAGE, SETTINGS, LIGHT_DETAIL };
 
 struct Grid {
   int columns, rows, width, height, gap;
@@ -42,10 +43,25 @@ struct Fonts {
 };
 struct ButtonData {
   std::string entity, name, state, icon;
+  bool reverse_active{false};
   // These pointers reference static labels/glyphs, never shared widget text.
   const char *display_state{"UNKNOWN"};
   const char *display_icon{nullptr};
   uint32_t display_color{0xAAB4C5};
+};
+struct LightData {
+  std::string entity;
+  std::string colour_mode;
+  bool known{false}, dimmable{false}, colour{false}, temperature{false};
+  bool temperature_issue{false};
+  int brightness{-1}, kelvin{-1}, min_kelvin{0}, max_kelvin{0};
+  float hue{-1}, saturation{-1};
+  std::array<std::string, 2> related{};
+  std::array<std::string, 2> related_titles{};
+};
+struct DetailData {
+  std::vector<LightData> lights;
+  std::vector<ButtonData> related;
 };
 struct PageData {
   std::string title, temperature, icon;

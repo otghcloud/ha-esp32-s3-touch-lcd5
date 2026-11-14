@@ -24,8 +24,10 @@ esphome:
               count += self(self, lv_obj_get_child(object, child));
             return count;
           };
-          require(count_objects(count_objects, lv_screen_active()) +
-                  count_objects(count_objects, lv_layer_top()) < 220,
+          const auto startup_objects = count_objects(count_objects, lv_screen_active()) +
+                                       count_objects(count_objects, lv_layer_top());
+          ESP_LOGI("runtime_test", "Startup LVGL objects: %u", unsigned(startup_objects));
+          require(startup_objects < 220,
                   "page models share one control tree rather than duplicating LVGL tiles");
           wallpanel::DisplayIdle idle;
           require(!idle.expired(100000), "default display timeout is disabled");
@@ -549,7 +551,7 @@ esphome:
               }
             }
             require(hidden(id(button_0_0_state)) == (capacity == 18), "only 6x3 hides state text");
-            require(lv_color_eq(lv_obj_get_style_text_color(id(button_0_0_icon), LV_PART_MAIN), lv_color_hex(0xFFD166)),
+            require(lv_color_eq(lv_obj_get_style_text_color(id(button_0_0_icon), LV_PART_MAIN), lv_color_hex(0x956000)),
                     "active entity icon is amber in every layout");
             require(within(id(dashboard_dot_7), 324, 432, 743, 479), "eight dots fit reserved footer region");
           }
@@ -598,7 +600,7 @@ esphome:
           receive(modern("4x2"));
           require(id(dashboard).end_touch() == TouchAction::NONE, "entity layout changes cancel pending presses");
           for (const char *layout : {"2x2", "4x2", "6x3"}) {
-            for (auto entry : {std::pair<const char *, uint32_t>{"on", 0xFFD166}, {"off", 0xAAB4C5},
+            for (auto entry : {std::pair<const char *, uint32_t>{"on", 0x956000}, {"off", 0xAAB4C5},
                                {"unavailable", 0xAAB4C5}, {"unknown", 0xAAB4C5}}) {
               receive(transform(modern(layout), [&](JsonObject root) {
                 root["pages"][0]["buttons"][0]["state"] = entry.first;
@@ -609,9 +611,12 @@ esphome:
               const bool unavailable = std::string(entry.first) == "unavailable" || std::string(entry.first) == "unknown";
               require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED) == unavailable,
                       "unavailable controls remain disabled");
+              require(lv_color_eq(lv_obj_get_style_bg_color(id(button_0_0), LV_PART_MAIN),
+                                  lv_color_hex(std::string(entry.first) == "on" ? 0xFFFFFF : 0x171F2C)),
+                      "all grid layouts use white only for available active controls");
             }
           }
-          for (auto entry : {std::pair<const char *, uint32_t>{"locked", 0x68D391}, {"unlocked", 0xF87171},
+          for (auto entry : {std::pair<const char *, uint32_t>{"locked", 0x68D391}, {"unlocked", 0xA12B2B},
                              {"jammed", 0xF87171}, {"locking", 0xFFD166}, {"open", 0xF87171}}) {
             receive(transform(modern("6x3"), [&](JsonObject root) {
               root["pages"][0]["buttons"][0]["entity"] = "lock.test";
@@ -1044,6 +1049,151 @@ esphome:
           require(within(id(dashboard_settings), 692, 434, 739, 477) &&
                   within(id(dashboard_menu), 744, 434, 791, 477),
                   "Settings and Navigation have separate non-overlapping footer targets");
+          gesture.begin(1, 200, 150, UINT32_MAX - 299);
+          require(!gesture.held(299) && gesture.held(300), "600ms hold handles millis rollover");
+          gesture.update(1, 221, 150);
+          gesture.update(1, 200, 150);
+          require(!gesture.held(1000), "leaving 20px slop permanently cancels hold");
+          choose_wake_page("Page 1");
+          receive(snapshot(0));
+          id(dashboard).wake();
+          auto hold_icon = [&]() {
+            lv_obj_update_layout(lv_screen_active());
+            lv_area_t area;
+            lv_obj_get_coords(id(button_0_0_icon), &area);
+            id(dashboard).begin_touch(1, (area.x1 + area.x2) / 2, (area.y1 + area.y2) / 2, 1000);
+          };
+          hold_icon();
+          id(dashboard).check_touch_hold(1599);
+          require(hidden(id(light_detail)), "599ms does not open light details");
+          id(dashboard).check_touch_hold(1600);
+          require(!hidden(id(light_detail)) && hidden(id(page_0)) && hidden(id(dashboard_dot_0)),
+                  "600ms icon hold opens reusable details and hides content identity");
+          require(id(dashboard).end_touch() == TouchAction::NONE, "opening hold consumes release");
+          require(hidden(id(detail_slider)) && hidden(id(detail_wheel)) &&
+                  !hidden(id(button_0_0)), "legacy snapshots retain power without invented capabilities");
+          tap(id(button_0_1));
+          require(!hidden(id(page_0)) && !hidden(id(button_0_0_icon)),
+                  "Back restores source page and pooled icon visibility");
+          hold_icon();
+          id(dashboard).update_touch(2, 100, 150);
+          id(dashboard).check_touch_hold(1600);
+          require(hidden(id(light_detail)), "second finger cancels icon hold");
+          id(dashboard).end_touch();
+          hold_icon();
+          id(dashboard).backlight_off();
+          id(dashboard).check_touch_hold(1600);
+          require(hidden(id(light_detail)), "backlight off cancels the hold timer");
+          id(dashboard).touch_activity();
+          const auto detail_snapshot = transform(snapshot(0), [](JsonObject root) {
+            auto light = root["light_details"].to<JsonArray>().add<JsonObject>();
+            light["entity"] = "light.test";
+            light["known"] = true;
+            light["dimmable"] = true;
+            light["colour"] = true;
+            light["temperature"] = true;
+            light["brightness"] = 128;
+            light["hue"] = 0;
+            light["saturation"] = 100;
+            light["kelvin"] = 3000;
+            light["min_kelvin"] = 2200;
+            light["max_kelvin"] = 6500;
+            light["related"].to<JsonArray>();
+          });
+          receive(detail_snapshot);
+          hold_icon();
+          id(dashboard).check_touch_hold(1600);
+          require(!hidden(id(detail_slider)) && hidden(id(detail_wheel)) &&
+                  within(id(detail_slider), 0, 94, 599, 431),
+                  "capability-aware slider fits the primary three-quarter area");
+          tap(id(button_0_4));
+          require(!hidden(id(detail_wheel)) && within(id(detail_wheel), 0, 94, 599, 431),
+                  "one shared HS wheel fits the primary content area");
+          const auto red_wheel_pixel = sample_pixel(340, 252);
+          require(red_wheel_pixel.r > 200 && red_wheel_pixel.g < 80 && red_wheel_pixel.b < 80,
+                  "HS wheel renders the red sector at the same angle used by touch mapping");
+          id(dashboard).check_connection();
+          require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED) &&
+                  std::string(lv_label_get_text(id(detail_status))) == "Home Assistant disconnected",
+                  "offline details preserve the view and disable power and edits");
+          receive(detail_snapshot);
+          id(dashboard).begin_touch(1, 240, 252);
+          id(dashboard).update_touch(1, 359, 252);
+          receive(transform(detail_snapshot, [](JsonObject root) {
+            root["light_details"][0]["colour"] = false;
+          }));
+          require(id(dashboard).end_touch() == TouchAction::NONE && hidden(id(detail_wheel)),
+                  "capability loss cancels a held editor and selects a safe remaining mode");
+          tap(id(button_0_1));
+          receive(detail_snapshot);
+          const auto detail_objects = count_objects(count_objects, lv_screen_active());
+          for (int repeat = 0; repeat < 20; repeat++) {
+            hold_icon();
+            id(dashboard).check_touch_hold(1600);
+            tap(id(button_0_1));
+          }
+          require(count_objects(count_objects, lv_screen_active()) == detail_objects,
+                  "reopening details never allocates another widget tree");
+          for (int invalid = 0; invalid < 7; invalid++) {
+            receive(transform(detail_snapshot, [&](JsonObject root) {
+              root["pages"][0]["title"] = "INVALID";
+              auto light = root["light_details"][0];
+              if (invalid == 0) light["brightness"] = 256;
+              if (invalid == 1) light["hue"] = -0.5;
+              if (invalid == 2) light["min_kelvin"] = 6500;
+              if (invalid == 3) light["related"].add("switch.absent");
+              if (invalid == 4) root["light_details"].add(light);
+              if (invalid == 5) light["related_titles"] = "bad";
+              if (invalid == 6) root["reverse_active"] = "light.test";
+            }));
+            require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                    "malformed detail metadata is rejected atomically");
+          }
+          receive(transform(snapshot(0), [](JsonObject root) {
+            root["reverse_active"].to<JsonArray>().add("light.test");
+            root["pages"][0]["buttons"][0]["state"] = "off";
+          }));
+          require(lv_color_eq(lv_obj_get_style_bg_color(id(button_0_0), LV_PART_MAIN), lv_color_hex(0xFFFFFF)),
+                  "reverse active changes OFF appearance without changing reported state");
+          receive(transform(snapshot(0), [](JsonObject root) {
+            root["reverse_active"].to<JsonArray>().add("light.test");
+            root["pages"][0]["buttons"][0]["state"] = "unavailable";
+          }));
+          require(!lv_color_eq(lv_obj_get_style_bg_color(id(button_0_0), LV_PART_MAIN), lv_color_hex(0xFFFFFF)) &&
+                  lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED),
+                  "reverse active never whitens or enables unknown entities");
+          receive(snapshot(0));
+          hold_icon();
+          id(dashboard).check_touch_hold(1600);
+          id(dashboard).begin_update();
+          id(dashboard_lvgl).set_paused(true, false);
+          require(id(dashboard).updating() && !hidden(id(dashboard_updating)), "OTA shows static update overlay");
+          receive(snapshot(3));
+          id(dashboard).navigate(1);
+          id(dashboard).wake();
+          tap(id(dashboard_settings));
+          require(!hidden(id(light_detail)) && id(dashboard).end_touch() == TouchAction::NONE,
+                  "OTA blocks model replacement, navigation, wake and stale release");
+          id(dashboard_lvgl).set_paused(false, false);
+          id(dashboard).finish_update();
+          require(!id(dashboard).updating() && hidden(id(dashboard_updating)) && !hidden(id(light_detail)),
+                  "failed OTA restores the prior detail view rather than replaying snapshots");
+          const auto ota_hold = transform(snapshot(0), [](JsonObject root) { root["wake_hold"] = true; });
+          receive(ota_hold);
+          id(dashboard).touch_activity();
+          id(dashboard).begin_update();
+          id(dashboard).backlight_off();
+          id(dashboard).finish_update();
+          require(id(dashboard).sensor_hold(), "OTA fallback blanking does not become manual Sleep");
+          id(dashboard).backlight_off();
+          id(dashboard).begin_update();
+          id(dashboard).backlight_on();
+          id(dashboard).finish_update();
+          receive(ota_hold);
+          require(!id(dashboard).sensor_hold(), "OTA recovery preserves a prior manual-sleep override");
+          id(dashboard).touch_activity();
+          receive(snapshot(3));
+          require(hidden(id(light_detail)), "removing the primary entity safely closes detail view");
           choose_wake_page("Last used page");
           receive(snapshot(0));
           id(dashboard).wake();
@@ -1080,6 +1230,17 @@ api:
     - action: test_expire
       then:
         - lambda: id(dashboard).check_connection(millis() + 65000);
+    - action: test_touch
+      variables:
+        phase: int
+        x: int
+        y: int
+      then:
+        - lambda: |-
+            if (phase == 0) id(dashboard).begin_touch(1, x, y);
+            else if (phase == 1) id(dashboard).update_touch(1, x, y);
+            else if (phase == 2) id(dashboard).end_touch();
+            else if (phase == 3) id(dashboard).check_touch_hold(millis() + 600);
 text_sensor:
   - platform: template
     name: Transport probe
@@ -1099,6 +1260,13 @@ text_sensor:
         root["menu_visible"] = lv_obj_is_visible(id(navigation));
         root["homepage_visible"] = lv_obj_is_visible(id(homepage));
         root["settings_visible"] = lv_obj_is_visible(id(settings));
+        root["detail_visible"] = lv_obj_is_visible(id(light_detail));
+        root["slider_visible"] = lv_obj_is_visible(id(detail_slider));
+        root["wheel_visible"] = lv_obj_is_visible(id(detail_wheel));
+        root["detail_value"] = std::string(lv_label_get_text(id(detail_value)));
+        root["detail_status"] = std::string(lv_label_get_text(id(detail_status)));
+        root["related_white"] = lv_color_eq(lv_obj_get_style_bg_color(id(button_0_5), LV_PART_MAIN),
+                                            lv_color_hex(0xFFFFFF));
         root["sensor_hold"] = id(dashboard).sensor_hold();
         root["backlight"] = id(test_backlight);
         root["restarts"] = id(test_restarts);

@@ -11,6 +11,7 @@ import sys
 import tempfile
 
 from aioesphomeapi import APIClient, SelectInfo, TextSensorInfo, TextSensorState
+from jinja2.nativetypes import NativeEnvironment
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -125,6 +126,8 @@ async def check():
             mixed = json.loads(json.dumps(snapshot))
             mixed["pages"][0].update(layout="2x2", buttons=mixed["pages"][0]["buttons"][:4])
             mixed["pages"][1].update(layout="4x2", buttons=mixed["pages"][1]["buttons"][:8])
+            active_entities = {button["entity"] for page in mixed["pages"] for button in page["buttons"]}
+            mixed["light_details"] = [light for light in mixed["light_details"] if light["entity"] in active_entities]
             previous = await wait_probe()
             await send(mixed, "mixed")
             await wait_probe(lambda value: value["tick"] > previous["tick"] + 250)
@@ -194,6 +197,132 @@ async def check():
             assert actions.empty(), "Local Settings/wake actions invoked a Home Assistant entity service"
             await client.execute_service(service["test_expire"], {})
             await wait_probe(lambda value: not value["sensor_hold"])
+
+            details = BlueprintTests()
+            details.setUp()
+            details.inputs.update(
+                page_1_button_1="light.detail", page_1_button_2="light.simple",
+                page_1_button_3="light.dim", page_1_button_4="light.temp",
+                light_details=[dict(light="light.detail", related_1="switch.outlet",
+                                    related_2="automation.auto")],
+            )
+            details.states.update({entity: "on" for entity in
+                                   ("light.detail", "light.simple", "light.dim", "light.temp", "automation.auto")})
+            details.states["switch.outlet"] = "off"
+            details.attributes.update({
+                "light.detail": dict(supported_color_modes=["rgb", "color_temp"], brightness=128,
+                                     hs_color=[90, 50], color_temp_kelvin=3000,
+                                     min_color_temp_kelvin=2200, max_color_temp_kelvin=6500),
+                "light.simple": dict(supported_color_modes=["onoff"]),
+                "light.dim": dict(supported_color_modes=["brightness"], brightness=100),
+                "light.temp": dict(supported_color_modes=["color_temp"], brightness=100,
+                                   min_color_temp_kelvin=2500, max_color_temp_kelvin=6000),
+            })
+
+            async def touch(phase, x=0, y=0):
+                await client.execute_service(service["test_touch"], {"phase": phase, "x": x, "y": y})
+
+            async def hold(x, y):
+                await touch(0, x, y)
+                await touch(3)
+                await wait_probe(lambda value: value["detail_visible"])
+                await touch(2)
+                assert actions.empty(), "Opening details leaked a toggle or edit"
+
+            async def expect_action(name, entity, parameter=None):
+                action = await asyncio.wait_for(actions.get(), 5)
+                assert action.service == name and action.data == {"entity_id": entity}, action
+                rendered = {key: NativeEnvironment().from_string(value).render()
+                            for key, value in action.data_template.items()}
+                if parameter is not None:
+                    assert rendered == parameter, (action, rendered, parameter)
+                return rendered
+
+            previous = await wait_probe()
+            await send(details.snapshot(), "detail-model")
+            await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
+            await hold(78, 142)
+            await wait_probe(lambda value: value["slider_visible"] and value["detail_value"] == "50%")
+            await tap(695, 168)
+            await expect_action("switch.toggle", "switch.outlet")
+            await tap(695, 338)
+            await expect_action("automation.toggle", "automation.auto")
+            details.inputs["reverse_active"] = ["switch.outlet"]
+            await send(details.snapshot(), "detail-reversed-related")
+            await wait_probe(lambda value: value["related_white"])
+            await tap(695, 168)
+            await expect_action("switch.toggle", "switch.outlet")
+            await tap(69, 369)
+            await expect_action("light.toggle", "light.detail")
+            await touch(0, 266, 250)
+            await touch(1, 266, 130)
+            await wait_probe(lambda value: value["detail_value"] == "100%")
+            assert actions.empty(), "Brightness drag sent commands before release"
+            details.attributes["light.detail"]["brightness"] = 20
+            previous = await wait_probe()
+            await send(details.snapshot(), "detail-during-drag")
+            await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
+            assert latest["detail_value"] == "100%", "Authoritative update reset the active preview"
+            await touch(2)
+            await expect_action("light.turn_on", "light.detail", {"brightness_pct": 100})
+            await touch(2)
+            await asyncio.sleep(.15)
+            assert actions.empty(), "Duplicate release repeated the light command"
+            details.attributes["light.detail"]["brightness"] = 255
+            await send(details.snapshot(), "detail-confirmed")
+            await wait_probe(lambda value: value["detail_status"] == "ON")
+            await tap(505, 247)
+            await wait_probe(lambda value: value["detail_value"] == "3000 K")
+            await touch(0, 266, 250)
+            await touch(1, 266, 130)
+            assert actions.empty(), "Temperature drag sent an intermediate command"
+            await touch(2)
+            await expect_action("light.turn_on", "light.detail", {"color_temp_kelvin": 6500})
+            await tap(505, 343)
+            await wait_probe(lambda value: value["wheel_visible"] and not value["slider_visible"])
+            await touch(0, 240, 252)
+            await touch(1, 359, 252)
+            await touch(2)
+            colour = await expect_action("light.turn_on", "light.detail")
+            assert isinstance(colour["hs_color"], list) and len(colour["hs_color"]) == 2, colour
+            assert min(colour["hs_color"][0], 360 - colour["hs_color"][0]) < 1, colour
+            assert 99 < colour["hs_color"][1] <= 100, colour
+            await tap(505, 151)
+            await touch(0, 266, 371)
+            await touch(2)
+            await expect_action("light.turn_off", "light.detail")
+            await wait_probe(lambda value: "not confirmed" in value["detail_status"])
+            await tap(69, 456)
+            await wait_probe(lambda value: not value["detail_visible"])
+            await hold(478, 142)
+            await wait_probe(lambda value: not value["slider_visible"] and not value["wheel_visible"])
+            await tap(69, 369)
+            await expect_action("light.toggle", "light.simple")
+            await tap(69, 456)
+            await hold(78, 307)
+            await wait_probe(lambda value: value["slider_visible"] and not value["wheel_visible"])
+            await tap(69, 456)
+            await hold(478, 307)
+            await wait_probe(lambda value: value["slider_visible"] and not value["wheel_visible"])
+            details.states["light.temp"] = "unavailable"
+            await send(details.snapshot(), "detail-unavailable")
+            await wait_probe(lambda value: value["detail_status"] == "Light unavailable")
+            await touch(0, 266, 250)
+            await touch(2)
+            await tap(69, 369)
+            await asyncio.sleep(.15)
+            assert actions.empty(), "Unavailable details emitted a service command"
+            details.inputs["page_1_button_4"] = []
+            await send(details.snapshot(), "remove-detail-primary")
+            await wait_probe(lambda value: not value["detail_visible"])
+            details.inputs.update(page_1_button_1="lock.test", reverse_active=["lock.test"])
+            for state, command in (("locked", "lock.unlock"), ("unlocked", "lock.lock")):
+                details.states["lock.test"] = state
+                previous = await wait_probe()
+                await send(details.snapshot(), f"reversed-lock-{state}")
+                await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
+                await tap(200, 142)
+                await expect_action(command, "lock.test")
             await send(snapshot, "restore")
             warm = await wait_probe(lambda value: value["last_name"] == "X" * 80 and not value["compact_clock"])
             warm_heap = warm["heap_bytes"]
@@ -203,7 +332,8 @@ async def check():
                 warm = await wait_probe(lambda value: value["tick"] > warm_tick + 100)
             assert warm["heap_bytes"] - warm_heap < 16384, "Repeated transfers grow retained heap"
             size = len(json.dumps(unicode_snapshot).encode())
-            print(f"Native API passed: 144 controls, Homepage, Settings, sensor wake/hold, "
+            print(f"Native API passed: 144 controls, light details and typed release-only commands, "
+                  f"Homepage, Settings, sensor wake/hold, "
                   f"{size} bytes, {len(unicode_chunks)} chunks.")
             print(f"128 KiB host stack; retained host heap {warm['heap_bytes']} bytes "
                   f"(change after repeated transfers: {warm['heap_bytes'] - warm_heap:+d}).")
