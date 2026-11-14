@@ -49,6 +49,8 @@ The remote-package example assumes this project has been published to the `main`
 The initial build downloads the Roboto font and Material Design icons, so the build environment needs internet access.
 The dashboard runtime component is also fetched from this repository's `main` branch.
 
+Home Assistant's **Device info** identifies the panel as **HA Panel LCD5** by **OTGH Cloud**, using `esphome.project` in [`esphome/core.yaml`](./esphome/core.yaml). The project version is currently `dev`; update `esphome.project.version` when publishing versioned firmware. This metadata updates after installing the firmware and reconnecting, without changing the device name or entity IDs.
+
 ## Dashboard configuration
 
 Pages and entities are configured at runtime by the [Home Assistant blueprint](./wallpanel_blueprint.yaml), not baked into firmware. Install the updated firmware once, then:

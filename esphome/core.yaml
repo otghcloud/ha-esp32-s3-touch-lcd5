@@ -1,6 +1,9 @@
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
+  project:
+    name: "OTGH Cloud.HA Panel LCD5"
+    version: "dev"
 
 esp32:
   variant: esp32s3
