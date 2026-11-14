@@ -1,0 +1,53 @@
+substitutions:
+  wallpanel_component_source: github://otghcloud/ha-esp32-s3-touch-lcd5@main
+
+external_components:
+  - source: ${wallpanel_component_source}
+    refresh: 300s
+    components: [wallpanel]
+
+wallpanel:
+  id: dashboard
+
+api:
+  homeassistant_services: true
+  actions:
+    - action: set_dashboard
+      variables:
+        payload: string
+      then:
+        - lambda: id(dashboard).receive(payload);
+  on_client_connected:
+    then:
+      - delay: 2s
+      - homeassistant.event:
+          event: esphome.wallpanel_ready
+          data:
+            endpoint: !lambda |-
+              std::string name = App.get_name();
+              std::replace(name.begin(), name.end(), '-', '_');
+              return "esphome." + name + "_set_dashboard";
+
+text_sensor:
+  - platform: template
+    name: Dashboard endpoint
+    id: dashboard_endpoint
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      std::string name = App.get_name();
+      std::replace(name.begin(), name.end(), '-', '_');
+      return "esphome." + name + "_set_dashboard";
+
+script:
+  - id: dashboard_next
+    then:
+      - lambda: id(dashboard).navigate(1);
+  - id: dashboard_previous
+    then:
+      - lambda: id(dashboard).navigate(-1);
+
+interval:
+  - interval: 1s
+    then:
+      - lambda: id(dashboard).check_connection();

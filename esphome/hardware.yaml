@@ -25,7 +25,7 @@ touchscreen:
                 }
                 return false;
             then:
-              - lvgl.page.next:
+              - script.execute: dashboard_next
         - if:
             condition:
               lambda: |-
@@ -42,7 +42,7 @@ touchscreen:
                 }
                 return false;
             then:
-              - lvgl.page.previous:
+              - script.execute: dashboard_previous
 
 display:
   - platform: rpi_dpi_rgb

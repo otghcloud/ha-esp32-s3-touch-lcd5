@@ -1,0 +1,96 @@
+substitutions:
+  wallpanel_component_source: ../../esphome/components
+
+esphome:
+  name: dynamic-host
+  on_boot:
+    priority: -101
+    then:
+      - lambda: |-
+          auto require = [](bool value, const char *message) {
+            if (!value) {
+              ESP_LOGE("runtime_test", "FAILED: %s", message);
+              std::exit(1);
+            }
+          };
+          auto hidden = [](lv_obj_t *obj) { return lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN); };
+          require(!hidden(id(dashboard_waiting)), "waiting on reboot");
+          auto snapshot = [](int mode) {
+            return esphome::json::build_json([mode](JsonObject root) {
+              root["version"] = 1;
+              JsonArray pages = root["pages"].to<JsonArray>();
+              for (int p = 0; p < (mode == 4 ? 5 : 4); p++) {
+                JsonObject page = pages.add<JsonObject>();
+                page["title"] = p == 0 ? "Office" : "Landing";
+                page["temperature"] = p == 2 ? "Temperature: 21.5 C" : "";
+                JsonArray buttons = page["buttons"].to<JsonArray>();
+                for (int b = 0; b < (mode == 10 ? 5 : 4); b++) {
+                  JsonObject button = buttons.add<JsonObject>();
+                  bool populated = mode != 3 && ((p == 0 && b == 0 && mode != 2) || (p == 2 && b == 3));
+                  button["entity"] = populated ? (mode == 5 ? "cover.invalid" : mode == 6 ? "automation.test"
+                    : mode == 7 || mode == 9 ? "lock.test" : mode == 8 ? "switch.test" : "light.test") : "";
+                  button["name"] = populated ? "Test Light" : "";
+                  button["state"] = populated ? (mode == 1 ? "unavailable" : mode == 7 ? "locked"
+                    : mode == 9 ? "unlocked" : mode == 8 ? "off" : "on") : "";
+                }
+              }
+            });
+          };
+          id(dashboard).receive(snapshot(0));
+          require(!hidden(id(page_0)) && hidden(id(page_2)), "first nonempty page shown");
+          require(hidden(id(page_1)) && hidden(id(page_3)), "empty pages hidden");
+          require(!hidden(id(dot_0_0)) && !hidden(id(dot_0_1)) && hidden(id(dot_0_2)), "two visible page dots");
+          require(std::string(lv_label_get_text(id(button_0_0_state))) == "ON", "light state");
+          require(!lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "available control enabled");
+          id(dashboard).navigate(1);
+          require(hidden(id(page_0)) && !hidden(id(page_2)), "swipe skips empty page");
+          require(lv_obj_get_style_bg_opa(id(dot_2_1), LV_PART_MAIN) == LV_OPA_COVER &&
+                  lv_obj_get_style_bg_opa(id(dot_2_0), LV_PART_MAIN) == LV_OPA_TRANSP, "current page dot highlighted");
+          require(std::string(lv_label_get_text(id(temperature_2))) == "Temperature: 21.5 C", "dynamic temperature");
+          id(dashboard).navigate(1);
+          require(!hidden(id(page_2)), "no wrapping beyond last page");
+          id(dashboard).navigate(-1);
+          require(!hidden(id(page_0)), "previous page skips empty slots");
+          id(dashboard).receive(snapshot(1));
+          require(std::string(lv_label_get_text(id(button_0_0_state))) == "ON", "last known appearance retained");
+          require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "unavailable entity disabled");
+          id(dashboard).receive(snapshot(0));
+          id(dashboard).check_connection();
+          require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "disconnection disables controls");
+          require(!hidden(id(dashboard_connection)), "offline indicator");
+          id(dashboard).receive(snapshot(2));
+          require(hidden(id(page_0)) && !hidden(id(page_2)), "removed selected page falls back");
+          require(hidden(id(dot_2_0)) && hidden(id(dot_2_1)), "single page has no dots");
+          id(dashboard).receive(snapshot(4));
+          require(hidden(id(page_0)) && !hidden(id(page_2)), "reject fifth page atomically");
+          id(dashboard).receive(snapshot(5));
+          require(hidden(id(page_0)) && !hidden(id(page_2)), "reject unsupported domain atomically");
+          id(dashboard).receive(snapshot(10));
+          require(hidden(id(page_0)) && !hidden(id(page_2)), "reject fifth button atomically");
+          id(dashboard).receive("{bad json");
+          require(!hidden(id(page_2)), "reject invalid JSON without replacing layout");
+          for (auto entry : {std::pair<int, const char *>{6, "ENABLED"}, {7, "LOCKED"}, {8, "OFF"}, {9, "UNLOCKED"}}) {
+            id(dashboard).receive(snapshot(entry.first));
+            require(std::string(lv_label_get_text(id(button_2_3_state))) == entry.second, "domain-specific state");
+          }
+          id(dashboard).receive(snapshot(3));
+          require(!hidden(id(dashboard_waiting)) && hidden(id(page_2)), "all pages cleared");
+          ESP_LOGI("runtime_test", "All runtime dashboard assertions passed");
+          std::exit(0);
+
+host:
+logger:
+api:
+  port: 16053
+packages:
+  dashboard: !include ../../esphome/dashboard.yaml
+  dynamic: !include ../../esphome/dynamic.yaml
+external_components:
+  - source:
+      type: local
+      path: test_components
+    components: [test_display]
+test_display:
+  id: test_lcd
+  auto_clear_enabled: false
+  update_interval: never

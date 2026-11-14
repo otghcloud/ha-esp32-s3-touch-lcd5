@@ -4,3 +4,5 @@
 /.esphome/
 /.pioenvs/
 /build/
+**/__pycache__/
+/scripts/runtime_tests/.esphome/

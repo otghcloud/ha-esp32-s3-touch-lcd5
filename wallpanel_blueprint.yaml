@@ -1,0 +1,261 @@
+blueprint:
+  name: HA ESP32-S3 Touch LCD 5 - Button pages
+  description: >-
+    Configure up to four button pages without rebuilding firmware. Each page supports a title,
+    an optional temperature sensor and up to four light, switch, automation or lock entities.
+    Empty pages and buttons are hidden. Button labels use Home Assistant friendly names.
+    Automation buttons enable/disable automations; they do not trigger them.
+    Enable "Allow the device to perform Home Assistant actions" in the ESPHome integration.
+    Create only one configuration automation per panel.
+  domain: automation
+  source_url: https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/heads/main/wallpanel_blueprint.yaml
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    panel_device:
+      name: Panel device (required)
+      description: Select the ESPHome device running this project's firmware.
+      selector:
+        device:
+          filter:
+            integration: esphome
+    page_1:
+      name: Button page 01
+      icon: mdi:gesture-tap-button
+      description: Leave all button entities empty to hide this page.
+      collapsed: true
+      input:
+        page_1_title:
+          name: Page title
+          default: ""
+          selector:
+            text:
+        page_1_temperature:
+          name: Temperature sensor
+          default: []
+          selector: &temperature_selector
+            entity:
+              multiple: false
+              filter:
+                domain: sensor
+                device_class: temperature
+        page_1_button_1:
+          name: Button 1 - Entity
+          default: []
+          selector: &button_selector
+            entity:
+              multiple: false
+              filter:
+                domain:
+                  - light
+                  - switch
+                  - automation
+                  - lock
+        page_1_button_2:
+          name: Button 2 - Entity
+          default: []
+          selector: *button_selector
+        page_1_button_3:
+          name: Button 3 - Entity
+          default: []
+          selector: *button_selector
+        page_1_button_4:
+          name: Button 4 - Entity
+          default: []
+          selector: *button_selector
+    page_2:
+      name: Button page 02
+      icon: mdi:gesture-tap-button
+      description: Leave all button entities empty to hide this page.
+      collapsed: true
+      input:
+        page_2_title:
+          name: Page title
+          default: ""
+          selector:
+            text:
+        page_2_temperature:
+          name: Temperature sensor
+          default: []
+          selector: *temperature_selector
+        page_2_button_1:
+          name: Button 1 - Entity
+          default: []
+          selector: *button_selector
+        page_2_button_2:
+          name: Button 2 - Entity
+          default: []
+          selector: *button_selector
+        page_2_button_3:
+          name: Button 3 - Entity
+          default: []
+          selector: *button_selector
+        page_2_button_4:
+          name: Button 4 - Entity
+          default: []
+          selector: *button_selector
+    page_3:
+      name: Button page 03
+      icon: mdi:gesture-tap-button
+      description: Leave all button entities empty to hide this page.
+      collapsed: true
+      input:
+        page_3_title:
+          name: Page title
+          default: ""
+          selector:
+            text:
+        page_3_temperature:
+          name: Temperature sensor
+          default: []
+          selector: *temperature_selector
+        page_3_button_1:
+          name: Button 1 - Entity
+          default: []
+          selector: *button_selector
+        page_3_button_2:
+          name: Button 2 - Entity
+          default: []
+          selector: *button_selector
+        page_3_button_3:
+          name: Button 3 - Entity
+          default: []
+          selector: *button_selector
+        page_3_button_4:
+          name: Button 4 - Entity
+          default: []
+          selector: *button_selector
+    page_4:
+      name: Button page 04
+      icon: mdi:gesture-tap-button
+      description: Leave all button entities empty to hide this page.
+      collapsed: true
+      input:
+        page_4_title:
+          name: Page title
+          default: ""
+          selector:
+            text:
+        page_4_temperature:
+          name: Temperature sensor
+          default: []
+          selector: *temperature_selector
+        page_4_button_1:
+          name: Button 1 - Entity
+          default: []
+          selector: *button_selector
+        page_4_button_2:
+          name: Button 2 - Entity
+          default: []
+          selector: *button_selector
+        page_4_button_3:
+          name: Button 3 - Entity
+          default: []
+          selector: *button_selector
+        page_4_button_4:
+          name: Button 4 - Entity
+          default: []
+          selector: *button_selector
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  panel_device: !input panel_device
+  titles:
+    - !input page_1_title
+    - !input page_2_title
+    - !input page_3_title
+    - !input page_4_title
+  temperatures:
+    - !input page_1_temperature
+    - !input page_2_temperature
+    - !input page_3_temperature
+    - !input page_4_temperature
+  buttons:
+    - [!input page_1_button_1, !input page_1_button_2, !input page_1_button_3, !input page_1_button_4]
+    - [!input page_2_button_1, !input page_2_button_2, !input page_2_button_3, !input page_2_button_4]
+    - [!input page_3_button_1, !input page_3_button_2, !input page_3_button_3, !input page_3_button_4]
+    - [!input page_4_button_1, !input page_4_button_2, !input page_4_button_3, !input page_4_button_4]
+  endpoint: >-
+    {% set ns = namespace(value='') %}
+    {% for entity in device_entities(panel_device) %}
+      {% set value = states(entity) %}
+      {% if entity.startswith('sensor.') and value.startswith('esphome.') and value.endswith('_set_dashboard') %}
+        {% set ns.value = value %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.value }}
+  watched_entities: >-
+    {% set ns = namespace(entities=[]) %}
+    {% for entity in temperatures + (buttons | sum(start=[])) %}
+      {% if entity is string and entity %}
+        {% set ns.entities = ns.entities + [entity] %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.entities }}
+
+triggers:
+  - trigger: homeassistant
+    event: start
+    id: start
+  - trigger: time_pattern
+    seconds: "/30"
+    id: refresh
+  - trigger: event
+    event_type: esphome.wallpanel_ready
+    id: ready
+  - trigger: event
+    event_type: state_changed
+    id: state
+
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger is not defined
+         or trigger.id in ['start', 'refresh']
+         or (trigger.id == 'ready' and trigger.event.data.get('endpoint') == endpoint)
+         or (trigger.id == 'state' and
+             (trigger.event.data.entity_id in watched_entities
+              or trigger.event.data.entity_id in device_entities(panel_device))) }}
+
+actions:
+  - choose:
+      - conditions: "{{ endpoint == '' }}"
+        sequence:
+          - action: system_log.write
+            data:
+              level: warning
+              message: >-
+                Wallpanel configuration: selected device has no available Dashboard endpoint sensor.
+                Check the firmware, ESPHome connection and that the diagnostic sensor is enabled.
+    default:
+      - action: "{{ endpoint }}"
+        data:
+          payload: >-
+            {% set ns = namespace(pages=[]) %}
+            {% for p in range(4) %}
+              {% set row = namespace(buttons=[]) %}
+              {% for entity in buttons[p] %}
+                {% if entity is string and entity %}
+                  {% set name = (state_attr(entity, 'friendly_name') or entity)[:80] %}
+                  {% set state = states(entity)[:40] %}
+                  {% set row.buttons = row.buttons + [dict(entity=entity, name=name, state=state)] %}
+                {% else %}
+                  {% set row.buttons = row.buttons + [dict(entity='', name='', state='')] %}
+                {% endif %}
+              {% endfor %}
+              {% set temp = temperatures[p] %}
+              {% set text = '' %}
+              {% if temp is string and temp %}
+                {% if is_number(states(temp)) %}
+                  {% set unit = state_attr(temp, 'unit_of_measurement') or '' %}
+                  {% set text = 'Temperature: %.1f %s' | format(states(temp) | float, unit) %}
+                {% else %}
+                  {% set text = 'Temperature: UNAVAILABLE' %}
+                {% endif %}
+              {% endif %}
+              {% set title = (titles[p] | trim)[:80] or ('Page ' ~ (p + 1)) %}
+              {% set ns.pages = ns.pages + [dict(title=title, temperature=text[:80], buttons=row.buttons)] %}
+            {% endfor %}
+            {{ dict(version=1, pages=ns.pages) | to_json }}
