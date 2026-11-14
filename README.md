@@ -131,6 +131,16 @@ The **Restart** button in **Configuration** reboots the panel. The timeout and w
 
 Brightness adjustment is not supported by this connection: [ESPHome's CH422G driver](https://esphome.io/components/ch422g/) does not support PWM. A true brightness slider would require a hardware-supported dimming connection; no simulated slider is exposed.
 
+### Screensaver
+
+Install the updated firmware, re-import the updated blueprint and reload automations. Expand **Screensaver** in the blueprint and turn on **Enable screensaver** (off by default), then save/run the automation.
+
+The device's Home Assistant **Configuration** section now includes **Screensaver time**, saved across reboots. Enter **0 to 86400 seconds**; the default is **60**, and **0** disables the screensaver. After inactivity, a full-screen view covers all page/header/footer/menu content with the shared background, a large centred 24-hour clock and the smaller date below it, for example **18:35** / **Saturday, 14 November 2026**. It uses the same Home Assistant-synchronized time as the header; before synchronization it shows **--:--** and **Waiting for time**.
+
+The first complete touch gesture dismisses the screensaver without activating controls, applies the saved **Wake-up page**, and restarts inactivity. Release before operating controls. Changing **Screensaver time** also dismisses the screensaver and restarts inactivity. Periodic Home Assistant updates and disconnections do not dismiss it.
+
+**Display timeout** remains independent: showing the screensaver does not restart the backlight countdown. For example, set **Screensaver time** to **60** and **Display timeout** to **300** for the clock after one minute and backlight-off after five minutes. A shorter or equal display timeout switches the backlight off first; a display timeout of **0** leaves it on for the screensaver. Both timers pause while touching and restart on release. Existing blueprints without the screensaver toggle keep it disabled.
+
 ### Example configuration
 
 | Blueprint input | Office (page 01) | Landing (page 02) |
@@ -144,7 +154,7 @@ Brightness adjustment is not supported by this connection: [ESPHome's CH422G dri
 
 ### Development
 
-The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores eight page models with eighteen button slots each, but uses one shared pool of eighteen LVGL tiles for the selected page. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. This reduces the generated startup tree from 841 objects with eight duplicated control trees to 212. LVGL's boot-time resolution/theme refresh traverses this smaller tree; watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
+The old static configuration is retained privately under `dev/`; it is no longer used by the public package. The firmware stores eight page models with eighteen button slots each, but uses one shared pool of eighteen LVGL tiles for the selected page. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. This reduces the generated startup tree from 841 objects with eight duplicated control trees to 215, including the three screensaver widgets. LVGL's boot-time resolution/theme refresh traverses this smaller tree; watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
 
 ```sh
 python3 scripts/generate_dashboard.py
@@ -154,7 +164,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 
 The generator also maintains the MDI lookup header from the pinned [`scripts/mdi-icons.json`](./scripts/mdi-icons.json) catalogue. Use `python3 scripts/generate_dashboard.py --update-icons` to refresh that catalogue from the pinned upstream stylesheet. Change `MDI_VERSION` and regenerate together when upgrading the font. MDI licensing is recorded in [`MDI-LICENSE`](./esphome/components/wallpanel/MDI-LICENSE). The one-bit icon font keeps the complete library within flash without loading every icon bitmap into RAM.
 
-The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks startup widget/refresh-work bounds, independent per-page appearance retention, display idle/wake handling, rendered background/header/footer pixels, layout bounds, menu and swipe navigation, live page changes, dots, state labels, offline controls and rejection of invalid snapshots:
+The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks startup widget/refresh-work bounds, independent per-page appearance retention, display idle/wake handling, screensaver timing/rollover/date formatting/wake-only gestures, rendered background/header/footer pixels, layout bounds, menu and swipe navigation, live page changes, dots, state labels, offline controls and rejection of invalid snapshots:
 
 ```sh
 esphome compile scripts/runtime_tests/runtime.yaml
@@ -168,7 +178,7 @@ The generator requires PyYAML; blueprint template tests also use Jinja2 (both ar
 
 The new blueprint appends `_chunk` to the discovered endpoint and sends ordered `set_dashboard_chunk` calls with a transfer ID, zero-based index, total and string payload. Each payload has a `~` text prefix followed by at most 4096 bytes of ASCII JSON; the complete snapshot is capped at 256 KiB/64 chunks. Incomplete transfers expire after 30 seconds of inactivity. Only a complete, validated snapshot replaces the UI. Chunking avoids ESPHome's 32 KiB native API message limit without modifying ESPHome internals.
 
-Automated validation includes a 167,781-byte Unicode snapshot across 41 native API chunks. The eight-page shared-widget startup regression records 1,433 host LVGL refresh requests, below the unchanged 1,500-request limit used for the six-page build. The six-page shared-widget firmware and layouts have been confirmed on the panel; the restored eight-page build still needs device confirmation. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility and touch responsiveness, particularly with all 144 controls configured.
+Automated validation includes a 167,811-byte Unicode snapshot across 41 native API chunks. The eight-page shared-widget startup regression records 1,446 host LVGL refresh requests including the screensaver, below the unchanged 1,500-request limit used for the six-page build. The six-page shared-widget firmware and layouts have been confirmed on the panel; the restored eight-page build and screensaver still need device confirmation. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility and touch responsiveness, particularly with all 144 controls configured.
 
 For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
 

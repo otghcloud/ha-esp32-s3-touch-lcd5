@@ -57,6 +57,8 @@ esphome:
         id(dashboard).bind_fonts(id(font_icons)->get_lv_font(), id(font_dense_icons)->get_lv_font(), id(font_medium)->get_lv_font(),
         id(font_small)->get_lv_font());
 
+        id(dashboard).bind_screensaver(id(dashboard_screensaver));
+
         id(dashboard).initialize(id(dashboard_waiting), id(dashboard_connection));'
 font:
 - file: gfonts://Roboto
@@ -68,6 +70,23 @@ font:
 - file: gfonts://Roboto
   id: font_small
   size: 16
+- file: gfonts://Roboto
+  id: font_screensaver
+  size: 104
+  glyphsets: []
+  glyphs:
+  - '0'
+  - '1'
+  - '2'
+  - '3'
+  - '4'
+  - '5'
+  - '6'
+  - '7'
+  - '8'
+  - '9'
+  - ':'
+  - '-'
 - file: https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf
   id: font_icons
   size: 72
@@ -15032,6 +15051,42 @@ lvgl:
             text_font: font_ui_icons
             text_color: 1118481
             align: CENTER
+    - obj:
+        id: dashboard_screensaver
+        x: 0
+        y: 0
+        width: 800
+        height: 480
+        bg_color: 1120295
+        bg_opa: COVER
+        bg_image_src: dashboard_background
+        radius: 0
+        border_width: 0
+        pad_all: 0
+        scrollable: false
+        hidden: true
+        widgets:
+        - label:
+            id: screensaver_clock
+            text: --:--
+            text_font: font_screensaver
+            text_color: 15922424
+            x: 20
+            y: 145
+            width: 760
+            height: 128
+            text_align: CENTER
+        - label:
+            id: screensaver_date
+            text: Waiting for time
+            text_font: font_large
+            text_color: 15922424
+            x: 20
+            y: 285
+            width: 760
+            height: 50
+            text_align: CENTER
+            long_mode: DOT
   widgets:
   - obj:
       id: dashboard_header

@@ -125,6 +125,13 @@ class BlueprintTests(unittest.TestCase):
         self.inputs["page_1_button_1"] = []
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["entity"], "")
 
+    def test_screensaver_flag_defaults_off_and_follows_blueprint_toggle(self):
+        self.assertIs(self.snapshot()["screensaver_enabled"], False)
+        self.inputs["screensaver_enabled"] = True
+        self.assertIs(self.snapshot()["screensaver_enabled"], True)
+        self.inputs["screensaver_enabled"] = False
+        self.assertIs(self.snapshot()["screensaver_enabled"], False)
+
     def test_custom_titles_apply_to_every_button_slot(self):
         for page in range(1, 9):
             self.inputs[f"page_{page}_layout"] = "6x3"

@@ -164,12 +164,17 @@ def make_dashboard():
         "id(font_medium)->get_lv_font(), id(font_small)->get_lv_font());"
     )
     bindings.append(
+        "id(dashboard).bind_screensaver(id(dashboard_screensaver));"
+    )
+    bindings.append(
         "id(dashboard).initialize(id(dashboard_waiting), id(dashboard_connection));"
     )
     return {
         "esphome": {"on_boot": {"priority": -100, "then": [{"lambda": "\n".join(bindings)}]}},
         "font": [{"file": "gfonts://Roboto", "id": name, "size": size}
                  for name, size in (("font_large", 38), ("font_medium", 24), ("font_small", 16))]
+                + [{"file": "gfonts://Roboto", "id": "font_screensaver", "size": 104,
+                    "glyphsets": [], "glyphs": list("0123456789:-")}]
                 + [{"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
                     "id": "font_icons", "size": 72, "bpp": 1, "glyphsets": [],
                     "glyphs": [chr(codepoint) for codepoint in
@@ -198,6 +203,17 @@ def make_dashboard():
                     "widgets": [
                         label("dashboard_menu_icon", chr(int(load_icons()["menu"], 16)),
                               "font_ui_icons", align="CENTER", text_color=0x111111),
+                    ],
+                }},
+                {"obj": {
+                    "id": "dashboard_screensaver", "x": 0, "y": 0, "width": 800, "height": 480,
+                    "bg_color": 0x111827, "bg_opa": "COVER", "bg_image_src": "dashboard_background",
+                    "radius": 0, "border_width": 0, "pad_all": 0, "scrollable": False, "hidden": True,
+                    "widgets": [
+                        label("screensaver_clock", "--:--", "font_screensaver",
+                              x=20, y=145, width=760, height=128, text_align="CENTER"),
+                        label("screensaver_date", "Waiting for time", "font_large",
+                              x=20, y=285, width=760, height=50, text_align="CENTER", long_mode="DOT"),
                     ],
                 }},
             ]},

@@ -11,6 +11,7 @@
 #include "esphome/components/lvgl/lvgl_esphome.h"
 #include "esphome/core/component.h"
 #include "esphome/core/log.h"
+#include "esphome/core/time.h"
 #include "mdi_icons.h"
 
 namespace wallpanel {
@@ -84,18 +85,30 @@ struct PageData {
 
 enum class TouchAction { NONE, TAP, NEXT, PREVIOUS };
 
+inline void update_clock(esphome::ESPTime now, lv_obj_t *header, lv_obj_t *clock, lv_obj_t *date) {
+  char time_text[esphome::ESPTime::STRFTIME_BUFFER_SIZE] = "--:--";
+  char date_text[esphome::ESPTime::STRFTIME_BUFFER_SIZE] = "Waiting for time";
+  if (now.is_valid()) {
+    now.strftime_to(time_text, "%H:%M");
+    now.strftime_to(date_text, "%A, %d %B %Y");
+  }
+  lv_label_set_text(header, time_text);
+  lv_label_set_text(clock, time_text);
+  lv_label_set_text(date, date_text);
+}
+
 class DisplayIdle {
  public:
   void set_timeout(uint32_t seconds, uint32_t now) {
-    timeout_ms_ = seconds * 1000;
+    timeout_seconds_ = seconds;
     activity(now);
   }
 
   void activity(uint32_t now) { last_activity_ = now; }
 
-  bool begin_touch(bool backlight_on, uint32_t now) {
+  bool begin_touch(bool awake, uint32_t now) {
     if (!touch_active_)
-      wake_only_ = !backlight_on;
+      wake_only_ = !awake;
     touch_active_ = true;
     activity(now);
     return accepts_touch();
@@ -113,11 +126,15 @@ class DisplayIdle {
   void cancel_touch() { wake_only_ = true; }
 
   bool expired(uint32_t now) const {
-    return timeout_ms_ != 0 && !touch_active_ && uint32_t(now - last_activity_) >= timeout_ms_;
+    return inactive_for(timeout_seconds_, now);
+  }
+
+  bool inactive_for(uint32_t seconds, uint32_t now) const {
+    return seconds != 0 && !touch_active_ && uint32_t(now - last_activity_) >= seconds * 1000;
   }
 
  private:
-  uint32_t timeout_ms_{0};
+  uint32_t timeout_seconds_{0};
   uint32_t last_activity_{0};
   bool touch_active_{false};
   bool wake_only_{false};
@@ -180,6 +197,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     buttons_ = buttons;
   }
   void bind_navigation(const NavigationWidgets &widgets) { navigation_ = widgets; }
+  void bind_screensaver(lv_obj_t *screensaver) { screensaver_ = screensaver; }
   void bind_fonts(const lv_font_t *icons, const lv_font_t *dense_icons,
                   const lv_font_t *medium, const lv_font_t *small) {
     icons_ = icons;
@@ -219,6 +237,11 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       Layout navigation_layout = Layout::TWO_BY_TWO;
       if (version == 2 && !read_layout(root["navigation_layout"], navigation_layout))
         return false;
+      if (!root["screensaver_enabled"].isNull() && !root["screensaver_enabled"].is<bool>()) {
+        ESP_LOGE("dashboard", "Screensaver enabled must be a boolean; configuration unchanged");
+        return false;
+      }
+      const bool screensaver_enabled = root["screensaver_enabled"] | false;
       // The expanded replacement snapshot must not consume the ESP32 task stack.
       auto storage = std::unique_ptr<std::array<PageData, MAX_PAGES>>(
           new (std::nothrow) std::array<PageData, MAX_PAGES>{});
@@ -271,7 +294,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
                  unsigned(page_count));
         return false;
       }
-      bool layout_changed = navigation_layout != navigation_layout_;
+      bool layout_changed = navigation_layout != navigation_layout_ || screensaver_enabled != screensaver_enabled_;
       for (size_t p = 0; p < MAX_PAGES; p++) {
         layout_changed |= next[p].enabled != pages_[p].enabled || next[p].title != pages_[p].title ||
                           next[p].icon != pages_[p].icon || next[p].layout != pages_[p].layout;
@@ -305,10 +328,12 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         layout_revision_++;
       pages_ = std::move(next);
       navigation_layout_ = navigation_layout;
+      const bool dismiss_screensaver = screensaver_active_ && !screensaver_enabled;
+      screensaver_enabled_ = screensaver_enabled;
       configured_ = true;
       last_update_ = esphome::millis();
       online_ = true;
-      if (wake_pending_) {
+      if ((wake_pending_ && !screensaver_active_) || dismiss_screensaver) {
         wake();
       } else {
         ensure_current_page();
@@ -373,7 +398,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   void navigate(int direction) {
-    if (!ready_)
+    if (!ready_ || screensaver_active_)
       return;
     int p = int(current_);
     for (size_t step = 0; step < pages_.size(); step++) {
@@ -394,6 +419,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   void wake() {
+    screensaver_active_ = false;
     navigation_open_ = false;
     layout_revision_++;
     if (!ready_ || !configured_) {
@@ -416,7 +442,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       lv_obj_update_layout(lv_screen_active());
       lv_obj_update_layout(lv_layer_top());
     }
-    touch_target_ = ready_ ? hit_target(x, y) : TouchTarget{};
+    touch_target_ = ready_ && !screensaver_active_ ? hit_target(x, y) : TouchTarget{};
     touch_entity_ = touch_target_.kind == TargetKind::ENTITY
                         ? pages_[current_].buttons[touch_target_.index].entity : "";
   }
@@ -425,7 +451,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
 
   TouchAction end_touch() {
     const auto action = gesture_.finish();
-    if (!ready_ || touch_revision_ != layout_revision_ || touch_page_ != current_)
+    if (!ready_ || screensaver_active_ || touch_revision_ != layout_revision_ || touch_page_ != current_)
       return TouchAction::NONE;
     if (action == TouchAction::NEXT || action == TouchAction::PREVIOUS) {
       if (navigation_open_)
@@ -448,6 +474,10 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
 
   void press(size_t page, size_t button) {
     check_connection();
+    if (screensaver_active_) {
+      ESP_LOGW("dashboard", "Ignoring button press while the screensaver is active");
+      return;
+    }
     if (page >= MAX_PAGES || button >= MAX_BUTTONS || !online_ || !pages_[page].enabled) {
       ESP_LOGW("dashboard", "Ignoring button press without a live Home Assistant configuration");
       return;
@@ -462,6 +492,28 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
                                    ? (data.state == "locked" ? "lock.unlock" : "lock.lock")
                                    : domain + ".toggle";
     call_homeassistant_service(action, {{"entity_id", data.entity}});
+  }
+
+  void set_screensaver_time(uint32_t seconds) {
+    if (seconds > 86400) {
+      ESP_LOGE("dashboard", "Screensaver time must be between 0 and 86400 seconds");
+      return;
+    }
+    screensaver_seconds_ = seconds;
+    if (screensaver_active_)
+      wake();
+  }
+
+  bool screensaver_active() const { return screensaver_active_; }
+
+  void check_screensaver(const DisplayIdle &idle, uint32_t now) {
+    if (!ready_ || !screensaver_enabled_ || screensaver_active_ ||
+        !idle.inactive_for(screensaver_seconds_, now))
+      return;
+    screensaver_active_ = true;
+    navigation_open_ = false;
+    layout_revision_++;
+    render();
   }
 
  private:
@@ -631,6 +683,9 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   void render() {
+    visible(screensaver_, screensaver_active_);
+    if (screensaver_active_)
+      return;
     size_t page_count = 0;
     for (const auto &page : pages_)
       page_count += page.enabled;
@@ -723,6 +778,10 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   std::array<PageWidgets, MAX_PAGES> widgets_{};
+  lv_obj_t *screensaver_{nullptr};
+  uint32_t screensaver_seconds_{60};
+  bool screensaver_enabled_{false};
+  bool screensaver_active_{false};
   lv_obj_t *buttons_container_{nullptr};
   std::array<ButtonWidgets, MAX_BUTTONS> buttons_{};
   NavigationWidgets navigation_{};

@@ -8,17 +8,9 @@ time:
 script:
   - id: update_clock
     then:
-      - if:
-          condition:
-            lambda: return id(homeassistant_time).now().is_valid();
-          then:
-            - lvgl.label.update:
-                id: lbl_time
-                text:
-                  format: "%02d:%02d"
-                  args:
-                    - id(homeassistant_time).now().hour
-                    - id(homeassistant_time).now().minute
+      - lambda: |-
+          wallpanel::update_clock(id(homeassistant_time).now(), id(lbl_time),
+                                 id(screensaver_clock), id(screensaver_date));
 
 interval:
   - interval: 30s

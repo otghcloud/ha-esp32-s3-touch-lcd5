@@ -14,6 +14,25 @@ globals:
 
 number:
   - platform: template
+    id: screensaver_time
+    name: Screensaver time
+    icon: mdi:monitor-screenshot
+    entity_category: config
+    unit_of_measurement: s
+    mode: BOX
+    min_value: 0
+    max_value: 86400
+    step: 1
+    initial_value: 60
+    restore_value: true
+    optimistic: true
+    update_interval: never
+    on_value:
+      then:
+        - lambda: |-
+            id(display_idle).activity(millis());
+            id(dashboard).set_screensaver_time(static_cast<uint32_t>(x));
+  - platform: template
     id: display_timeout
     name: Display timeout
     icon: mdi:timer-outline
@@ -56,8 +75,12 @@ interval:
   - interval: 1s
     then:
       - lambda: |-
-          if (id(display_backlight).state && id(display_idle).expired(millis()))
-            id(display_backlight).turn_off();
+          if (id(display_backlight).state) {
+            if (id(display_idle).expired(millis()))
+              id(display_backlight).turn_off();
+            else
+              id(dashboard).check_screensaver(id(display_idle), millis());
+          }
 
 touchscreen:
   - platform: gt911
@@ -70,8 +93,11 @@ touchscreen:
     on_touch:
       then:
         - lambda: |-
-            const bool accept = id(display_idle).begin_touch(id(display_backlight).state, millis());
+            const bool saver = id(dashboard).screensaver_active();
+            const bool accept = id(display_idle).begin_touch(id(display_backlight).state && !saver, millis());
             id(display_backlight).turn_on();
+            if (id(dashboard).screensaver_active())
+              id(dashboard).wake();
             if (!accept)
               return;
             id(dashboard).begin_touch(touch.id, touch.x, touch.y);

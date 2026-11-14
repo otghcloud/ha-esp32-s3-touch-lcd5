@@ -688,6 +688,106 @@ esphome:
           require(std::string(lv_label_get_text(id(title_0))) == "Modern page 1" &&
                   std::string(lv_label_get_text(id(button_0_17_name))) == "Control 18",
                   "complete ordered chunks apply all 144 controls together");
+          auto saver_snapshot = transform(modern("6x3"), [](JsonObject root) {
+            root["screensaver_enabled"] = true;
+          });
+          wallpanel::DisplayIdle saver_idle;
+          saver_idle.activity(100);
+          id(dashboard).receive(modern("6x3"));
+          id(dashboard).check_screensaver(saver_idle, 60100);
+          require(hidden(id(dashboard_screensaver)), "screensaver defaults off for existing snapshots");
+          id(dashboard).receive(saver_snapshot);
+          id(dashboard).check_screensaver(saver_idle, 60099);
+          require(hidden(id(dashboard_screensaver)), "screensaver waits for the full default 60 seconds");
+          id(dashboard).check_screensaver(saver_idle, 60100);
+          require(!hidden(id(dashboard_screensaver)), "screensaver starts at the inactivity boundary");
+          require(within(id(screensaver_clock), 20, 145, 779, 272) &&
+                  within(id(screensaver_date), 20, 285, 779, 334), "screensaver clock and date fit their centred regions");
+          for (int y : {5, 460}) {
+            auto actual = sample_pixel(5, y);
+            auto expected = id(dashboard_background)->get_pixel(5, y);
+            require((actual.r >> 3) == (expected.r >> 3) && (actual.g >> 2) == (expected.g >> 2) &&
+                    (actual.b >> 3) == (expected.b >> 3),
+                    "screensaver covers header and footer with the full-page background");
+          }
+          esphome::ESPTime clock_time{};
+          clock_time.year = 2026;
+          clock_time.month = 11;
+          clock_time.day_of_month = 14;
+          clock_time.day_of_week = 7;
+          clock_time.day_of_year = 318;
+          clock_time.hour = 18;
+          clock_time.minute = 35;
+          wallpanel::update_clock(clock_time, id(lbl_time), id(screensaver_clock), id(screensaver_date));
+          require(std::string(lv_label_get_text(id(screensaver_clock))) == "18:35" &&
+                  std::string(lv_label_get_text(id(lbl_time))) == "18:35" &&
+                  std::string(lv_label_get_text(id(screensaver_date))) == "Saturday, 14 November 2026",
+                  "header and screensaver use the same local time with a formatted date");
+          wallpanel::update_clock({}, id(lbl_time), id(screensaver_clock), id(screensaver_date));
+          require(std::string(lv_label_get_text(id(screensaver_clock))) == "--:--" &&
+                  std::string(lv_label_get_text(id(screensaver_date))) == "Waiting for time",
+                  "unsynchronized clocks show explicit placeholders");
+          id(dashboard).receive(transform(saver_snapshot, [](JsonObject root) {
+            root["pages"][0]["title"] = "Live while asleep";
+          }));
+          require(!hidden(id(dashboard_screensaver)), "periodic HA updates do not dismiss the screensaver");
+          id(dashboard).check_connection();
+          require(!hidden(id(dashboard_screensaver)), "disconnecting from Home Assistant leaves the screensaver visible");
+          id(dashboard).receive(transform(saver_snapshot, [](JsonObject root) {
+            root["screensaver_enabled"] = "yes";
+          }));
+          require(!hidden(id(dashboard_screensaver)), "invalid screensaver settings reject the whole snapshot");
+          id(dashboard).begin_touch(1, 768, 456);
+          require(id(dashboard).end_touch() == TouchAction::NONE, "covered controls cannot activate");
+          choose_wake_page("Page 3");
+          const bool accepted = saver_idle.begin_touch(!id(dashboard).screensaver_active(), 61000);
+          id(dashboard).wake();
+          require(!accepted && !saver_idle.begin_touch(true, 61001) && !saver_idle.end_touch(61002),
+                  "the complete screensaver wake gesture, including extra fingers, is consumed");
+          require(hidden(id(dashboard_screensaver)) && !hidden(id(page_2)) && hidden(id(navigation)),
+                  "screensaver dismissal applies the saved wake page and closes navigation");
+          require(std::string(lv_label_get_text(id(title_0))) == "Live while asleep",
+                  "valid updates apply behind the screensaver and malformed settings are rejected atomically");
+          id(dashboard).check_screensaver(saver_idle, 121001);
+          require(hidden(id(dashboard_screensaver)), "wake release restarts screensaver inactivity");
+          require(saver_idle.begin_touch(true, 121002), "next touch operates normally");
+          id(dashboard).check_screensaver(saver_idle, 200000);
+          require(hidden(id(dashboard_screensaver)), "held touches suppress screensaver entry");
+          saver_idle.end_touch(200000);
+          id(dashboard).check_screensaver(saver_idle, 260000);
+          require(!hidden(id(dashboard_screensaver)), "screensaver rearms after touch release");
+          id(dashboard).set_screensaver_time(0);
+          id(dashboard).check_screensaver(saver_idle, 360000);
+          require(hidden(id(dashboard_screensaver)), "zero timeout disables and dismisses the screensaver");
+          id(dashboard).set_screensaver_time(2);
+          saver_idle.set_timeout(4, UINT32_MAX - 1000);
+          require(!saver_idle.expired(999), "screensaver does not advance the separate backlight timeout");
+          id(dashboard).check_screensaver(saver_idle, 998);
+          require(hidden(id(dashboard_screensaver)), "screensaver timeout handles millis rollover before boundary");
+          id(dashboard).check_screensaver(saver_idle, 999);
+          require(!hidden(id(dashboard_screensaver)) && !saver_idle.expired(999) && saver_idle.expired(2999),
+                  "screensaver leaves the later backlight-off deadline unchanged across rollover");
+          id(dashboard).receive(modern("6x3"));
+          require(hidden(id(dashboard_screensaver)), "disabling in the blueprint dismisses the screensaver");
+          id(dashboard).receive(saver_snapshot);
+          id(dashboard).set_screensaver_time(86400);
+          saver_idle.activity(0);
+          id(dashboard).check_screensaver(saver_idle, 86399999);
+          require(hidden(id(dashboard_screensaver)), "maximum screensaver timeout waits for 24 hours");
+          id(dashboard).check_screensaver(saver_idle, 86400000);
+          require(!hidden(id(dashboard_screensaver)), "maximum screensaver timeout fires at 24 hours");
+          id(dashboard).set_screensaver_time(60);
+          choose_wake_page("Last used page");
+          auto empty_saver = transform(snapshot(3), [](JsonObject root) {
+            root["screensaver_enabled"] = true;
+          });
+          id(dashboard).receive(empty_saver);
+          id(dashboard).wake();
+          saver_idle.activity(0);
+          id(dashboard).check_screensaver(saver_idle, 60000);
+          id(dashboard).receive(empty_saver);
+          require(!hidden(id(dashboard_screensaver)),
+                  "screensaver stays visible across updates even when no button pages are configured");
           id(dashboard).receive(snapshot(0));
           ESP_LOGI("runtime_test", "All runtime dashboard assertions passed");
           if (std::getenv("WALLPANEL_API_TEST") == nullptr)

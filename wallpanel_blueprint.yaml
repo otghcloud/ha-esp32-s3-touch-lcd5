@@ -32,6 +32,17 @@ blueprint:
           selector: &layout_selector
             select:
               options: [2x2, 4x2, 6x3]
+    screensaver_settings:
+      name: Screensaver
+      icon: mdi:monitor-screenshot
+      collapsed: true
+      input:
+        screensaver_enabled:
+          name: Enable screensaver
+          description: Show a full-screen clock and date after the device's Screensaver time. First touch wakes only.
+          default: false
+          selector:
+            boolean:
     page_1:
       name: Button page 01
       icon: mdi:gesture-tap-button
@@ -1556,6 +1567,7 @@ max_exceeded: silent
 
 variables:
   panel_device: !input panel_device
+  screensaver_enabled: !input screensaver_enabled
   titles:
     - !input page_1_title
     - !input page_2_title
@@ -1745,7 +1757,7 @@ actions:
               {% set title = (titles[p] | trim)[:80] or ('Page ' ~ (p + 1)) %}
               {% set ns.pages = ns.pages + [dict(title=title, icon=page_icons[p], layout=layouts[p], temperature=text[:80], buttons=row.buttons)] %}
             {% endfor %}
-            {{ dict(version=2, navigation_layout=navigation_layout, pages=ns.pages) }}
+            {{ dict(version=2, navigation_layout=navigation_layout, screensaver_enabled=screensaver_enabled, pages=ns.pages) }}
           transfer: "{{ now().isoformat() }}"
       - repeat:
           count: "{{ (((dashboard_snapshot | to_json) | length) + 4095) // 4096 }}"
