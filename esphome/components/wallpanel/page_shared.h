@@ -17,6 +17,8 @@ inline void position_button(lv_obj_t *button, Layout layout, size_t count, size_
   const int left = (800 - in_row * profile.width - (in_row - 1) * profile.gap) / 2;
   lv_obj_set_size(button, profile.width, profile.height);
   lv_obj_set_style_pad_all(button, 0, 0);
+  lv_obj_set_style_border_width(button, 1, 0);
+  lv_obj_set_style_radius(button, 18, 0);
   lv_obj_set_style_border_color(button, lv_color_hex(0x344154), 0);
   lv_obj_set_pos(button, left + int(rank % profile.columns) * (profile.width + profile.gap),
                  65 + row * (profile.height + 10));

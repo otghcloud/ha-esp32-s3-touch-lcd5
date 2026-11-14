@@ -115,11 +115,12 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     automatic_sleep_ = false;
   }
   void bind_fonts(const lv_font_t *icons, const lv_font_t *dense_icons,
-                  const lv_font_t *medium, const lv_font_t *small) {
+                  const lv_font_t *medium, const lv_font_t *small, const lv_font_t *ui_icons) {
     icons_ = icons;
     dense_icons_ = dense_icons;
     medium_ = medium;
     small_ = small;
+    ui_icons_ = ui_icons;
   }
 
   void initialize(lv_obj_t *waiting, lv_obj_t *connection) {
@@ -713,7 +714,9 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       edit_first_ = std::fmod(std::atan2(dy, dx) * 180 / float(M_PI) + 360, 360);
       edit_second_ = std::min(100.0f, std::hypot(dx, dy) / 1.195f);
     } else {
-      const float fraction = std::clamp((371.0f - y) / 241, 0.0f, 1.0f);
+      lv_area_t area;
+      lv_obj_get_coords(detail_widgets_.slider, &area);
+      const float fraction = std::clamp(float(area.y2 - y) / (lv_area_get_height(&area) - 1), 0.0f, 1.0f);
       edit_first_ = std::round(detail_mode_ == DetailMode::BRIGHTNESS ? fraction * 100 :
                        light->min_kelvin + fraction * (light->max_kelvin - light->min_kelvin));
       edit_second_ = 0;
@@ -793,12 +796,13 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     }
   }
 
-  static bool hit_widget(lv_obj_t *widget, int x, int y) {
+  static bool hit_widget(lv_obj_t *widget, int x, int y, int padding = 0) {
     if (!widget || !lv_obj_is_visible(widget) || lv_obj_has_state(widget, LV_STATE_DISABLED))
       return false;
     lv_area_t area;
     lv_obj_get_coords(widget, &area);
-    return x >= area.x1 && x <= area.x2 && y >= area.y1 && y <= area.y2;
+    return x >= area.x1 - padding && x <= area.x2 + padding &&
+           y >= area.y1 - padding && y <= area.y2 + padding;
   }
 
   TouchTarget hit_target(int x, int y) const {
@@ -815,7 +819,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         if (hit_widget(buttons_[5 + i].button, x, y)) return {TargetKind::RELATED, i};
       const auto *primary = primary_detail();
       if (primary && online_ && known_state(*primary) &&
-          ((detail_mode_ != DetailMode::COLOUR && hit_widget(detail_widgets_.slider, x, y)) ||
+          ((detail_mode_ != DetailMode::COLOUR &&
+            hit_widget(detail_widgets_.slider, x, y, DETAIL_SLIDER_TOUCH_PADDING)) ||
            (detail_mode_ == DetailMode::COLOUR && hit_widget(detail_widgets_.wheel, x, y) &&
             std::hypot(x - 239.5f, y - 251.5f) <= 120)))
         return {TargetKind::EDIT, 0};
@@ -908,22 +913,26 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
                                 view_ == View::LIGHT_DETAIL || (view_ == View::BUTTONS && route_enabled(current_)));
     for (const auto &button : buttons_)
       visible(button.button, false);
-    const Fonts fonts{icons_, dense_icons_, medium_, small_};
+    const Fonts fonts{icons_, dense_icons_, medium_, small_, ui_icons_};
     if (view_ == View::LIGHT_DETAIL) {
       const auto *primary = primary_detail();
       if (!primary) return;
       const auto *light = find_light(details_, detail_entity_);
-      render_light_detail(detail_widgets_, buttons_, fonts, *primary, light, details_, detail_mode_, online_);
-      lv_label_set_text(detail_widgets_.status, !online_ ? "Home Assistant disconnected" :
+      render_light_detail(detail_widgets_, buttons_, fonts, page_title(detail_page_) + " - " + primary->name,
+                          *primary, light, details_, detail_mode_, online_);
+      const char *status = !online_ ? "Home Assistant disconnected" :
                           !known_state(*primary) ? "Light unavailable" :
                           detail_error_ ? "Change not confirmed; showing reported state" :
                           detail_pending_ ? "Waiting for light..." :
                           !light || !light->known ? "Light capabilities not provided by Home Assistant" :
-                          light->temperature_issue ? "Temperature range unavailable" : primary->display_state);
+                          light->temperature_issue ? "Temperature range unavailable" : "";
+      lv_label_set_text(detail_widgets_.status, status);
+      visible(detail_widgets_.status, status[0] != '\0');
       const auto reported = reported_detail(light);
       render_detail_value(detail_widgets_, detail_mode_, light,
                             detail_editing_ || detail_pending_ ? edit_first_ : reported.first,
-                            detail_editing_ || detail_pending_ ? edit_second_ : reported.second);
+                            detail_editing_ || detail_pending_ ? edit_second_ : reported.second,
+                            primary->state == "off" && !detail_editing_ && !detail_pending_);
       if ((detail_editing_ || detail_pending_) && detail_mode_ == DetailMode::COLOUR)
         visible(detail_widgets_.marker, true);
       return;
@@ -996,6 +1005,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   const lv_font_t *dense_icons_{nullptr};
   const lv_font_t *medium_{nullptr};
   const lv_font_t *small_{nullptr};
+  const lv_font_t *ui_icons_{nullptr};
   std::string incoming_;
   std::string transfer_id_;
   int transfer_next_{0};

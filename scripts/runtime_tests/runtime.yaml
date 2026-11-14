@@ -1096,6 +1096,9 @@ esphome:
                     "padded icon hold consumes release without toggling");
             lv_obj_remove_state(id(button_0_0), LV_STATE_PRESSED);
             tap(id(button_0_1));
+            require(lv_obj_get_style_border_width(id(button_0_1), LV_PART_MAIN) == 1 &&
+                    lv_obj_get_style_radius(id(button_0_1), LV_PART_MAIN) == 18,
+                    "returning the Back tile to an entity restores its normal border and radius");
             lv_area_t name;
             lv_obj_get_coords(id(button_0_0_name), &name);
             id(dashboard).begin_touch(1, (name.x1 + name.x2) / 2, name.y1 + 1, 2000);
@@ -1201,9 +1204,80 @@ esphome:
           require(!hidden(id(detail_slider)) && hidden(id(detail_wheel)) &&
                   within(id(detail_slider), 0, 94, 599, 431),
                   "capability-aware slider fits the primary three-quarter area");
+          require(within(id(button_0_0), 24, 64, 113, 149) &&
+                  std::string(lv_label_get_text(id(button_0_0_name))) == "State" &&
+                  hidden(id(detail_status)), "State replaces redundant normal ON/OFF status at the top");
+          require(std::string(lv_label_get_text(id(detail_title))) == "Office - Test Light",
+                  "detail header combines the source page and configured item title");
+          receive(transform(detail_snapshot, [](JsonObject root) {
+            root["pages"][0]["title"] = "Study";
+            root["pages"][0]["buttons"][0]["name"] = "Desk Lamp";
+          }));
+          require(std::string(lv_label_get_text(id(detail_title))) == "Study - Desk Lamp",
+                  "detail header follows live parent and item renames");
+          receive(detail_snapshot);
+          require(within(id(button_0_1), 24, 434, 71, 477) && !hidden(id(button_0_1_icon)) &&
+                  std::string(lv_label_get_text(id(button_0_1_name))).empty() &&
+                  lv_obj_get_style_text_font(id(button_0_1_icon), LV_PART_MAIN) == id(font_ui_icons)->get_lv_font() &&
+                  lv_obj_get_style_bg_opa(id(button_0_1), LV_PART_MAIN) == LV_OPA_TRANSP,
+                  "Back is a transparent footer icon matching the menu and settings font");
+          lv_font_glyph_dsc_t back_glyph{};
+          require(lv_font_get_glyph_dsc(id(font_ui_icons)->get_lv_font(), &back_glyph, 0xF004D, 0) &&
+                  !back_glyph.is_placeholder, "the footer font contains the real Back arrow, not a missing-glyph box");
+          for (bool pressed : {false, true}) {
+            if (pressed) lv_obj_add_state(id(detail_slider), LV_STATE_PRESSED);
+            else lv_obj_remove_state(id(detail_slider), LV_STATE_PRESSED);
+            for (int value : {0, 50, 100}) {
+              lv_slider_set_value(id(detail_slider), value, LV_ANIM_OFF);
+              lv_obj_update_layout(lv_screen_active());
+              lv_refr_now(nullptr);
+              require(lv_obj_check_type(id(detail_slider), &lv_slider_class), "detail slider has the expected LVGL type");
+              const auto knob = reinterpret_cast<const lv_slider_t *>(id(detail_slider))->right_knob_area;
+              lv_area_t value_area;
+              lv_obj_get_coords(id(detail_value), &value_area);
+              require(knob.y1 > value_area.y2 + 4 && knob.y2 < 432 &&
+                      lv_area_get_width(&knob) <= 48 && lv_area_get_height(&knob) <= 48,
+                      "drawn slider thumb stays bounded and clear of label/footer at every value and pressed state");
+            }
+          }
+          lv_obj_remove_state(id(detail_slider), LV_STATE_PRESSED);
           tap(id(button_0_4));
           require(!hidden(id(detail_wheel)) && within(id(detail_wheel), 0, 94, 599, 431),
                   "one shared HS wheel fits the primary content area");
+          require(std::string(lv_label_get_text(id(detail_value))) == "#FF0000",
+                  "colour displays a full-value RGB hex code independent of light brightness");
+          const auto missing_readings = transform(detail_snapshot, [](JsonObject root) {
+            root["pages"][0]["buttons"][0]["state"] = "off";
+            auto light = root["light_details"][0];
+            light["brightness"] = light["kelvin"] = light["hue"] = light["saturation"] = -1;
+          });
+          receive(missing_readings);
+          require(hidden(id(detail_value)) && hidden(id(detail_marker)) && hidden(id(detail_status)),
+                  "missing readings on an off light are hidden without hiding the controls");
+          id(dashboard).begin_touch(1, 359, 252);
+          require(!hidden(id(detail_value)) && std::string(lv_label_get_text(id(detail_value))) == "#FF0001",
+                  "an off-light edit immediately reveals its colour preview");
+          id(dashboard).update_touch(2, 359, 252);
+          id(dashboard).end_touch();
+          receive(transform(missing_readings, [](JsonObject root) {
+            root["pages"][0]["buttons"][0]["state"] = "on";
+          }));
+          require(!hidden(id(detail_value)) && std::string(lv_label_get_text(id(detail_value))) == "Choose colour",
+                  "missing colour on an on light has a useful prompt");
+          tap(id(button_0_2));
+          require(std::string(lv_label_get_text(id(detail_value))) == "Choose brightness",
+                  "missing brightness has a useful prompt");
+          tap(id(button_0_3));
+          require(std::string(lv_label_get_text(id(detail_value))) == "Choose temperature",
+                  "missing temperature has a useful prompt");
+          receive(detail_snapshot);
+          tap(id(button_0_4));
+          for (int hue : {120, 240}) {
+            receive(transform(detail_snapshot, [hue](JsonObject root) { root["light_details"][0]["hue"] = hue; }));
+            require(std::string(lv_label_get_text(id(detail_value))) == (hue == 120 ? "#00FF00" : "#0000FF"),
+                    "reported colour changes update the RGB hex label");
+          }
+          receive(detail_snapshot);
           const auto red_wheel_pixel = sample_pixel(340, 252);
           require(red_wheel_pixel.r > 200 && red_wheel_pixel.g < 80 && red_wheel_pixel.b < 80,
                   "HS wheel renders the red sector at the same angle used by touch mapping");

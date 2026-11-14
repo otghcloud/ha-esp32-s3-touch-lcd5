@@ -39,7 +39,7 @@ struct NavigationWidgets {
   lv_obj_t *container, *menu;
 };
 struct Fonts {
-  const lv_font_t *icons, *dense, *medium, *small;
+  const lv_font_t *icons, *dense, *medium, *small, *ui;
 };
 struct ButtonData {
   std::string entity, name, state, icon;

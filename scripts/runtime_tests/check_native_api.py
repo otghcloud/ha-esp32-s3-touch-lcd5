@@ -269,17 +269,17 @@ async def check():
             await wait_probe(lambda value: value["related_white"])
             await tap(695, 168)
             await expect_action("switch.toggle", "switch.outlet")
-            await touch(0, 69, 369)
-            await touch(4, 69, 369)
+            await touch(0, 69, 107)
+            await touch(4, 69, 107)
             await touch(2)
             await expect_action("light.toggle", "light.detail")
             await touch(0, 266, 250)
-            await touch(5, 266, 130)
+            await touch(5, 266, 158)
             await touch(2)
             await asyncio.sleep(.15)
             assert actions.empty(), "Losing the original contact committed a slider edit"
-            await touch(0, 266, 250)
-            await touch(4, 266, 130)
+            await touch(0, 240, 250)
+            await touch(4, 266, 158)
             await wait_probe(lambda value: value["detail_value"] == "100%")
             assert actions.empty(), "Brightness drag sent commands before release"
             details.attributes["light.detail"]["brightness"] = 20
@@ -293,18 +293,19 @@ async def check():
             await asyncio.sleep(.15)
             assert actions.empty(), "Duplicate release repeated the light command"
             details.attributes["light.detail"]["brightness"] = 255
+            pending = await wait_probe(lambda value: value["detail_status"] == "Waiting for light...")
             await send(details.snapshot(), "detail-confirmed")
-            await wait_probe(lambda value: value["detail_status"] == "ON")
-            await touch(0, 266, 130)
+            await wait_probe(lambda value: value["tick"] > pending["tick"] and value["detail_status"] == "")
+            await touch(0, 266, 158)
             await touch(2)
             await expect_action("light.turn_on", "light.detail", {"brightness_pct": 100})
             await wait_probe(lambda value: value["detail_status"] == "Waiting for light...")
             await send(details.snapshot(), "detail-identical-confirmation")
-            await wait_probe(lambda value: value["detail_status"] == "ON")
+            await wait_probe(lambda value: value["detail_status"] == "")
             await tap(505, 247)
             await wait_probe(lambda value: value["detail_value"] == "3000 K")
             await touch(0, 266, 250)
-            await touch(1, 266, 130)
+            await touch(1, 266, 158)
             assert actions.empty(), "Temperature drag sent an intermediate command"
             await touch(2)
             await expect_action("light.turn_on", "light.detail", {"color_temp_kelvin": 6500})
@@ -312,6 +313,7 @@ async def check():
             await wait_probe(lambda value: value["wheel_visible"] and not value["slider_visible"])
             await touch(0, 240, 252)
             await touch(1, 359, 252)
+            await wait_probe(lambda value: value["detail_value"] == "#FF0001")
             await touch(2)
             colour = await expect_action("light.turn_on", "light.detail")
             assert isinstance(colour["hs_color"], list) and len(colour["hs_color"]) == 2, colour
@@ -326,7 +328,7 @@ async def check():
             await wait_probe(lambda value: not value["detail_visible"])
             await hold(478, 142)
             await wait_probe(lambda value: not value["slider_visible"] and not value["wheel_visible"])
-            await tap(69, 369)
+            await tap(69, 107)
             await expect_action("light.toggle", "light.simple")
             await tap(69, 456)
             await hold(78, 307)
@@ -350,7 +352,7 @@ async def check():
             await wait_probe(lambda value: value["detail_status"] == "Light unavailable")
             await touch(0, 266, 250)
             await touch(2)
-            await tap(69, 369)
+            await tap(69, 107)
             await asyncio.sleep(.15)
             assert actions.empty(), "Unavailable details emitted a service command"
             details.inputs["page_1_button_4"] = []

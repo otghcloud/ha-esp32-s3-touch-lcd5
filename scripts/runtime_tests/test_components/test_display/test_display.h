@@ -2,6 +2,7 @@
 #include <malloc.h>
 #include "esphome/components/display/display_buffer.h"
 #include "esphome/components/lvgl/lvgl_esphome.h"
+#include "src/widgets/slider/lv_slider_private.h"
 class TestDisplay : public esphome::display::DisplayBuffer {
  public:
   void setup() override {

@@ -45,7 +45,7 @@ esphome:
         id(dashboard_dot_4), id(dashboard_dot_5), id(dashboard_dot_6), id(dashboard_dot_7), id(dashboard_dot_8)});
 
         id(dashboard).bind_fonts(id(font_icons)->get_lv_font(), id(font_dense_icons)->get_lv_font(), id(font_medium)->get_lv_font(),
-        id(font_small)->get_lv_font());
+        id(font_small)->get_lv_font(), id(font_ui_icons)->get_lv_font());
 
         id(dashboard).bind_screensaver(id(dashboard_screensaver));
 
@@ -15004,6 +15004,7 @@ font:
   glyphs:
   - "\U000F035C"
   - "\U000F0493"
+  - "\U000F004D"
 image:
 - platform: file
   file: ../assets/background_dark.png
@@ -16411,17 +16412,17 @@ lvgl:
           text: ''
           text_font: font_small
           text_color: 15922424
-          x: 24
+          x: 138
           y: 64
-          width: 550
+          width: 438
           height: 28
           long_mode: DOT
       - slider:
           id: detail_slider
-          x: 230
-          y: 130
-          width: 72
-          height: 242
+          x: 254
+          y: 158
+          width: 24
+          height: 214
           min_value: 0
           max_value: 100
           value: 0
@@ -16430,6 +16431,12 @@ lvgl:
             bg_color: 15922424
           knob:
             bg_color: 16765286
+            pad_all: 8
+            radius: 6
+            shadow_width: 0
+            pressed:
+              bg_color: 16765286
+              pad_all: 8
       - label:
           id: detail_value
           text: ''

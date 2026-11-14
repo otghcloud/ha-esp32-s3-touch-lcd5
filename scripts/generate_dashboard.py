@@ -70,7 +70,7 @@ def make_dashboard():
         "id(dashboard).bind_dots({"
         + ", ".join(f"id(dashboard_dot_{d})" for d in range(MAX_PAGES + 1)) + "});",
         "id(dashboard).bind_fonts(id(font_icons)->get_lv_font(), id(font_dense_icons)->get_lv_font(), "
-        "id(font_medium)->get_lv_font(), id(font_small)->get_lv_font());",
+        "id(font_medium)->get_lv_font(), id(font_small)->get_lv_font(), id(font_ui_icons)->get_lv_font());",
         "id(dashboard).bind_screensaver(id(dashboard_screensaver));",
         "id(dashboard).bind_homepage(id(homepage), id(homepage_title));",
         "id(dashboard).bind_settings(id(settings), id(dashboard_settings));",
@@ -92,7 +92,7 @@ def make_dashboard():
                    for name, size in (("font_icons", 72), ("font_dense_icons", 36))]
                 + [{"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
                     "id": "font_ui_icons", "size": 32, "bpp": 1, "glyphsets": [],
-                    "glyphs": [chr(int(load_icons()[name], 16)) for name in ("menu", "cog")]}],
+                    "glyphs": [chr(int(load_icons()[name], 16)) for name in ("menu", "cog", "arrow-left")]}],
         "image": [{"platform": "file", "file": "../assets/background_dark.png",
                    "id": "dashboard_background", "type": "RGB565", "resize": "800x480"},
                   {"platform": "file", "file": "../assets/light_colour_wheel.png",
