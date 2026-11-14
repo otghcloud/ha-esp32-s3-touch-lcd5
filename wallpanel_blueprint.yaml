@@ -7,7 +7,7 @@ blueprint:
     Automation buttons enable/disable automations; they do not trigger them.
     Enable "Allow the device to perform Home Assistant actions" in the ESPHome integration.
     Create only one configuration automation per panel.
-    Install version-2-capable firmware before importing this blueprint.
+    Use the firmware and blueprint from the same project release.
   domain: automation
   source_url: https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/heads/main/wallpanel_blueprint.yaml
   homeassistant:
@@ -37,7 +37,6 @@ blueprint:
           description: >-
             Drag rows to set menu and swipe order. Edit a row to set its page title;
             named rows display the title above the fixed page slot.
-            Existing titles are not copied automatically from the legacy fields below.
             Unlisted pages follow in slot order; empty pages are always skipped.
             Add a Homepage row to reposition it; without one it comes first when enabled.
           default:
@@ -212,12 +211,6 @@ blueprint:
           default: ""
           selector:
             icon:
-        page_1_title:
-          name: Legacy page title
-          description: &legacy_page_title Existing automations only. Edit titles in Navigation > Page order and titles instead. Used when that row has no title field.
-          default: ""
-          selector:
-            text:
         page_1_temperature:
           name: Temperature sensor
           default: []
@@ -415,12 +408,6 @@ blueprint:
           default: ""
           selector:
             icon:
-        page_2_title:
-          name: Legacy page title
-          description: *legacy_page_title
-          default: ""
-          selector:
-            text:
         page_2_temperature:
           name: Temperature sensor
           default: []
@@ -604,12 +591,6 @@ blueprint:
           default: ""
           selector:
             icon:
-        page_3_title:
-          name: Legacy page title
-          description: *legacy_page_title
-          default: ""
-          selector:
-            text:
         page_3_temperature:
           name: Temperature sensor
           default: []
@@ -793,12 +774,6 @@ blueprint:
           default: ""
           selector:
             icon:
-        page_4_title:
-          name: Legacy page title
-          description: *legacy_page_title
-          default: ""
-          selector:
-            text:
         page_4_temperature:
           name: Temperature sensor
           default: []
@@ -982,12 +957,6 @@ blueprint:
           default: ""
           selector:
             icon:
-        page_5_title:
-          name: Legacy page title
-          description: *legacy_page_title
-          default: ""
-          selector:
-            text:
         page_5_temperature:
           name: Temperature sensor
           default: []
@@ -1171,12 +1140,6 @@ blueprint:
           default: ""
           selector:
             icon:
-        page_6_title:
-          name: Legacy page title
-          description: *legacy_page_title
-          default: ""
-          selector:
-            text:
         page_6_temperature:
           name: Temperature sensor
           default: []
@@ -1360,12 +1323,6 @@ blueprint:
           default: ""
           selector:
             icon:
-        page_7_title:
-          name: Legacy page title
-          description: *legacy_page_title
-          default: ""
-          selector:
-            text:
         page_7_temperature:
           name: Temperature sensor
           default: []
@@ -1549,12 +1506,6 @@ blueprint:
           default: ""
           selector:
             icon:
-        page_8_title:
-          name: Legacy page title
-          description: *legacy_page_title
-          default: ""
-          selector:
-            text:
         page_8_temperature:
           name: Temperature sensor
           default: []
@@ -1742,15 +1693,6 @@ variables:
        and trigger.event.data.old_state.state == 'off'
        and trigger.event.data.new_state.state == 'on' }}
   page_order: !input page_order
-  titles:
-    - !input page_1_title
-    - !input page_2_title
-    - !input page_3_title
-    - !input page_4_title
-    - !input page_5_title
-    - !input page_6_title
-    - !input page_7_title
-    - !input page_8_title
   temperatures:
     - !input page_1_temperature
     - !input page_2_temperature
@@ -1801,7 +1743,7 @@ variables:
     {% set ns = namespace(value='') %}
     {% for entity in device_entities(panel_device) %}
       {% set value = states(entity) %}
-      {% if entity.startswith('sensor.') and value.startswith('esphome.') and value.endswith('_set_dashboard') %}
+      {% if entity.startswith('sensor.') and value.startswith('esphome.') and value.endswith('_set_dashboard_chunk') %}
         {% set ns.value = value %}
       {% endif %}
     {% endfor %}
@@ -1932,7 +1874,7 @@ conditions:
 actions:
   - if: "{{ fresh_wake and endpoint != '' and configuration_error == '' }}"
     then:
-      - action: "{{ endpoint[:-14] ~ '_wake_display' }}"
+      - action: "{{ endpoint[:-20] ~ '_wake_display' }}"
   - choose:
       - conditions: "{{ endpoint == '' }}"
         sequence:
@@ -1988,7 +1930,7 @@ actions:
                   {% endif %}
                   {% set row.buttons = row.buttons + [dict(entity=entity, name=name, state=state, icon=icon)] %}
                 {% else %}
-                  {% set row.buttons = row.buttons + [dict(entity='', name='', state='')] %}
+                  {% set row.buttons = row.buttons + [dict(entity='', name='', state='', icon='')] %}
                 {% endif %}
               {% endfor %}
               {% set temp = temperatures[p] %}
@@ -2001,7 +1943,7 @@ actions:
                   {% set text = 'Temperature: UNAVAILABLE' %}
                 {% endif %}
               {% endif %}
-              {% set title_input = namespace(value=titles[p]) %}
+              {% set title_input = namespace(value='') %}
               {% for item in page_order %}
                 {% if item.page == ((p + 1) | string) and item.title is defined %}
                   {% set title_input.value = item.title %}
@@ -2067,7 +2009,7 @@ actions:
       - repeat:
           count: "{{ ((((dashboard_snapshot | to_json(ensure_ascii=True)) | length) + 4095) // 4096) if (dashboard_snapshot | to_json(ensure_ascii=True)) | length <= 262144 else 0 }}"
           sequence:
-            - action: "{{ endpoint ~ '_chunk' }}"
+            - action: "{{ endpoint }}"
               data:
                 transfer: "{{ transfer }}"
                 index: "{{ repeat.index - 1 }}"

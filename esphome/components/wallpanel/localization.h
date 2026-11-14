@@ -20,8 +20,6 @@ struct Localization {
 };
 
 inline bool read_localization(JsonVariant value, Localization &out) {
-  if (value.isNull())
-    return true;
   if (value.is<JsonObject>() && value["time"].is<const char *>() && value["date"].is<const char *>()) {
     const std::string time = value["time"].as<const char *>();
     out.date = value["date"].as<const char *>();

@@ -139,55 +139,47 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       ESP_LOGW("dashboard", "Dashboard is not initialized; Home Assistant should retry");
       return;
     }
-    if (!transfer_id_.empty()) {
-      ESP_LOGW("dashboard", "Full snapshot supersedes incomplete dashboard transfer");
-      clear_transfer();
-    }
     if (payload.size() > MAX_PAYLOAD_BYTES) {
       ESP_LOGE("dashboard", "Dashboard payload exceeds %u bytes", unsigned(MAX_PAYLOAD_BYTES));
       return;
     }
     esphome::json::parse_json(payload, [this](JsonObject root) {
       const int version = root["version"].is<int>() ? root["version"].as<int>() : 0;
-      if ((version != 1 && version != 2) || !root["pages"].is<JsonArray>() ||
-          root["pages"].size() != (version == 1 ? 4 : MAX_PAGES)) {
-        ESP_LOGE("dashboard", "Expected version 1 with four pages or version 2 with %u pages",
-                 unsigned(MAX_PAGES));
+      if (version != 2 || !root["pages"].is<JsonArray>() || root["pages"].size() != MAX_PAGES) {
+        ESP_LOGE("dashboard", "Expected protocol version 2 with %u pages", unsigned(MAX_PAGES));
         return false;
       }
       Layout navigation_layout = Layout::TWO_BY_TWO;
-      if (version == 2 && !read_layout(root["navigation_layout"], navigation_layout))
+      if (!read_layout(root["navigation_layout"], navigation_layout))
         return false;
-      if (!root["screensaver_enabled"].isNull() && !root["screensaver_enabled"].is<bool>()) {
+      if (!root["screensaver_enabled"].is<bool>()) {
         ESP_LOGE("dashboard", "Screensaver enabled must be a boolean; configuration unchanged");
         return false;
       }
-      const bool screensaver_enabled = root["screensaver_enabled"] | false;
+      const bool screensaver_enabled = root["screensaver_enabled"];
       Homepage homepage;
       const auto home = root["homepage"];
-      if (!home.isNull()) {
-        if (!home.is<JsonObject>() || !home["enabled"].is<bool>() || !home["position"].is<int>() ||
-            home["position"].as<int>() < 0 || home["position"].as<int>() > int(MAX_PAGES) ||
-            !read_string(home["title"], homepage.title, 320)) {
-          ESP_LOGE("dashboard", "Invalid Homepage configuration; configuration unchanged");
-          return false;
-        }
-        homepage.enabled = home["enabled"].as<bool>();
-        homepage.position = home["position"].as<int>();
-        if (homepage.title.find_first_not_of(" \t\r\n") == std::string::npos)
-          homepage.title = "Homepage";
+      if (!home.is<JsonObject>() || !home["enabled"].is<bool>() || !home["position"].is<int>() ||
+          home["position"].as<int>() < 0 || home["position"].as<int>() > int(MAX_PAGES) ||
+          !read_string(home["title"], homepage.title, 320)) {
+        ESP_LOGE("dashboard", "Invalid Homepage configuration; configuration unchanged");
+        return false;
       }
+      homepage.enabled = home["enabled"].as<bool>();
+      homepage.position = home["position"].as<int>();
+      if (homepage.title.find_first_not_of(" \t\r\n") == std::string::npos)
+        homepage.title = "Homepage";
       Localization localization;
       if (!read_localization(root["localization"], localization))
         return false;
-      if (!root["wake_hold"].isNull() && !root["wake_hold"].is<bool>()) {
+      if (!root["wake_hold"].is<bool>()) {
         ESP_LOGE("dashboard", "Wake hold must be a boolean; configuration unchanged");
         return false;
       }
-      const bool wake_hold = root["wake_hold"] | false;
+      const bool wake_hold = root["wake_hold"];
       std::vector<std::string> reverse;
       auto reversed = root["reverse_active"];
-      if (!reversed.isNull() && (!reversed.is<JsonArray>() || reversed.size() > MAX_PAGES * MAX_BUTTONS * 3)) {
+      if (!reversed.is<JsonArray>() || reversed.size() > MAX_PAGES * MAX_BUTTONS * 3) {
         ESP_LOGE("dashboard", "Invalid reverse-active entity list");
         return false;
       }
@@ -201,16 +193,13 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         reverse.push_back(std::move(entity));
       }
       const auto order = root["page_order"];
-      if (!order.isNull() && (!order.is<JsonArray>() || order.size() != MAX_PAGES)) {
+      if (!order.is<JsonArray>() || order.size() != MAX_PAGES) {
         ESP_LOGE("dashboard", "Page order must list all eight page slots; configuration unchanged");
         return false;
       }
       std::array<size_t, MAX_PAGES> next_order{};
       std::array<bool, MAX_PAGES> seen{};
       for (size_t rank = 0; rank < MAX_PAGES; rank++) {
-        next_order[rank] = rank;
-        if (order.isNull())
-          continue;
         if (!order[rank].is<int>() || order[rank].as<int>() < 0 ||
             order[rank].as<int>() >= int(MAX_PAGES) || seen[order[rank].as<int>()]) {
           ESP_LOGE("dashboard", "Invalid or duplicate page order slot; configuration unchanged");
@@ -230,8 +219,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       size_t page_count = homepage.enabled;
       for (size_t p = 0; p < root["pages"].size(); p++) {
         JsonObject page = root["pages"][p];
-        if (version == 2 && (!read_layout(page["layout"], next[p].layout) ||
-                            !read_string(page["icon"], next[p].icon, 128))) {
+        if (!read_layout(page["layout"], next[p].layout) ||
+            !read_string(page["icon"], next[p].icon, 128)) {
           ESP_LOGE("dashboard", "Invalid layout or icon on page %u", unsigned(p + 1));
           return false;
         }
@@ -251,7 +240,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
           if (button.isNull() || !read_string(button["entity"], data.entity, 128) ||
               !read_string(button["name"], data.name, 320) ||
               !read_string(button["state"], data.state, 40) ||
-              (!button["icon"].isNull() && !read_string(button["icon"], data.icon, 128)) ||
+              !read_string(button["icon"], data.icon, 128) ||
               (!data.entity.empty() && !valid_entity(data.entity))) {
             ESP_LOGE("dashboard", "Invalid button %u on page %u; configuration unchanged",
                      unsigned(b + 1), unsigned(p + 1));

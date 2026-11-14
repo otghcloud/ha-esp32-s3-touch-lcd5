@@ -137,14 +137,32 @@ esphome:
             check_background();
             lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN);
           }
-          auto snapshot = [](int mode) {
-            return esphome::json::build_json([mode](JsonObject root) {
-              root["version"] = 1;
+          auto initialize_snapshot = [](JsonObject root) {
+            root["version"] = 2;
+            root["navigation_layout"] = "2x2";
+            root["screensaver_enabled"] = false;
+            root["wake_hold"] = false;
+            root["homepage"]["enabled"] = false;
+            root["homepage"]["position"] = 0;
+            root["homepage"]["title"] = "Homepage";
+            root["localization"]["time"] = "24h";
+            root["localization"]["date"] = "long";
+            auto order = root["page_order"].to<JsonArray>();
+            for (size_t p = 0; p < wallpanel::MAX_PAGES; p++) order.add(p);
+            root["reverse_active"].to<JsonArray>();
+            root["light_details"].to<JsonArray>();
+            root["detail_entities"].to<JsonArray>();
+          };
+          auto snapshot = [&](int mode) {
+            return esphome::json::build_json([&](JsonObject root) {
+              initialize_snapshot(root);
               JsonArray pages = root["pages"].to<JsonArray>();
-              for (int p = 0; p < (mode == 4 ? 5 : 4); p++) {
+              for (size_t p = 0; p < wallpanel::MAX_PAGES + (mode == 4); p++) {
                 JsonObject page = pages.add<JsonObject>();
                 page["title"] = p == 0 ? "Office" : "Landing";
                 page["temperature"] = p == 2 ? "Temperature: 21.5 C" : "";
+                page["layout"] = "2x2";
+                page["icon"] = "";
                 JsonArray buttons = page["buttons"].to<JsonArray>();
                 for (int b = 0; b < (mode == 10 ? 5 : 4); b++) {
                   JsonObject button = buttons.add<JsonObject>();
@@ -154,6 +172,7 @@ esphome:
                   button["name"] = populated ? "Test Light" : "";
                   button["state"] = populated ? (mode == 1 ? "unavailable" : mode == 7 ? "locked"
                     : mode == 9 ? "unlocked" : mode == 8 ? "off" : "on") : "";
+                  button["icon"] = "";
                   if (mode >= 11 && populated)
                     button["icon"] = mode == 11 ? "mdi:lightbulb-auto" : mode == 12 ? "mdi:door-open"
                       : mode == 13 ? "mdi:does-not-exist" : mode == 14 ? "custom:icon" : "";
@@ -210,7 +229,7 @@ esphome:
             const auto glyph = wallpanel::mdi_glyph(name);
             return glyph != nullptr && std::string(lv_label_get_text(widget)) == glyph;
           };
-          require(icon_is(id(button_0_0_icon), "mdi:lightbulb"), "legacy snapshot uses HA light default");
+          require(icon_is(id(button_0_0_icon), "mdi:lightbulb"), "blank icon uses HA light default");
           for (const auto &icon : wallpanel::MDI_ICONS) {
             require(wallpanel::mdi_glyph(std::string("mdi:") + icon.name) == icon.glyph,
                     "every MDI name is resolvable");
@@ -489,7 +508,7 @@ esphome:
           };
           auto modern = [&](const char *layout, size_t populated = 18) {
             return build_snapshot([&](JsonObject root) {
-              root["version"] = 2;
+              initialize_snapshot(root);
               root["navigation_layout"] = "4x2";
               auto pages = root["pages"].to<JsonArray>();
               const size_t capacity = std::string(layout) == "2x2" ? 4 : std::string(layout) == "4x2" ? 8 : 18;
@@ -519,6 +538,46 @@ esphome:
               });
             });
           };
+          receive(snapshot(0));
+          for (const char *key : {"version", "pages", "navigation_layout", "screensaver_enabled",
+                                  "homepage", "localization", "wake_hold", "reverse_active",
+                                  "page_order", "light_details", "detail_entities"}) {
+            for (bool null_value : {false, true}) {
+              receive(transform(snapshot(0), [&](JsonObject root) {
+                root["pages"][0]["title"] = "INVALID";
+                if (null_value) root[key] = nullptr;
+                else root.remove(key);
+              }));
+              require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                      "missing or null protocol fields reject the entire snapshot");
+            }
+          }
+          for (int version : {0, 1, 3}) {
+            receive(transform(snapshot(0), [&](JsonObject root) {
+              root["version"] = version;
+              root["pages"][0]["title"] = "INVALID";
+              if (version == 1) {
+                auto pages = root["pages"].as<JsonArray>();
+                while (pages.size() > 4) pages.remove(pages.size() - 1);
+              }
+            }));
+            require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                    "unsupported protocols cannot replace the current dashboard");
+          }
+          for (const char *key : {"layout", "icon"}) {
+            receive(transform(snapshot(0), [&](JsonObject root) {
+              root["pages"][0]["title"] = "INVALID";
+              root["pages"][0].remove(key);
+            }));
+            require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                    "page metadata is required even for the default layout and icon");
+          }
+          receive(transform(snapshot(0), [](JsonObject root) {
+            root["pages"][0]["title"] = "INVALID";
+            root["pages"][0]["buttons"][0].remove("icon");
+          }));
+          require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                  "button icons must be explicit, including an empty default");
           const auto unchanged_snapshot = modern("4x2");
           receive(unchanged_snapshot);
           lv_refr_now(nullptr);
@@ -706,7 +765,7 @@ esphome:
           require(icon_is(id(button_0_7_icon), "mdi:view-dashboard"), "unsupported page icon uses fallback");
           tap(id(dashboard_menu));
           receive(snapshot(0));
-          require(hidden(id(page_7)) && hidden(id(button_0_7)), "legacy snapshots clear additional page slots");
+          require(hidden(id(page_7)) && hidden(id(button_0_7)), "empty slots clear previously populated pages");
           const std::string body = modern("6x3");
           const int total = (body.size() + wallpanel::CHUNK_BYTES - 1) / wallpanel::CHUNK_BYTES;
           id(dashboard).receive_chunk("bad", 0, total, "~" + body.substr(0, wallpanel::CHUNK_BYTES));
@@ -753,7 +812,10 @@ esphome:
           require(!hidden(id(page_2)), "next wraps to the first custom-order page");
           id(dashboard).begin_touch(1, 300, 150);
           id(dashboard).update_touch(1, 100, 150);
-          receive(transform(reordered, [](JsonObject root) { root.remove("page_order"); }));
+          receive(transform(reordered, [](JsonObject root) {
+            auto order = root["page_order"].to<JsonArray>();
+            for (size_t p = 0; p < wallpanel::MAX_PAGES; p++) order.add(p);
+          }));
           require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(page_2)),
                   "order-only configuration changes cancel stale swipes without changing current page");
           auto sparse_order = transform(snapshot(0), [](JsonObject root) {
@@ -788,7 +850,7 @@ esphome:
           receive(snapshot(0));
           choose_wake_page("Page 4");
           id(dashboard).wake();
-          require(!hidden(id(page_0)), "omitted page order restores legacy numeric fallback order");
+          require(!hidden(id(page_0)), "explicit numeric page order restores the first populated page");
           choose_wake_page("Last used page");
           auto saver_snapshot = transform(modern("6x3"), [](JsonObject root) {
             root["screensaver_enabled"] = true;
@@ -1169,7 +1231,7 @@ esphome:
                   "600ms icon hold opens reusable details and hides content identity");
           require(id(dashboard).end_touch() == TouchAction::NONE, "opening hold consumes release");
           require(hidden(id(detail_slider)) && hidden(id(detail_wheel)) &&
-                  !hidden(id(button_0_0)), "legacy snapshots retain power without invented capabilities");
+                  !hidden(id(button_0_0)), "unknown capabilities retain State without invented editors");
           tap(id(button_0_1));
           require(!hidden(id(page_0)) && !hidden(id(button_0_0_icon)),
                   "Back restores source page and pooled icon visibility");
@@ -1187,9 +1249,11 @@ esphome:
             auto light = root["light_details"].to<JsonArray>().add<JsonObject>();
             light["entity"] = "light.test";
             light["known"] = true;
+            light["colour_mode"] = "";
             light["dimmable"] = true;
             light["colour"] = true;
             light["temperature"] = true;
+            light["temperature_issue"] = false;
             light["brightness"] = 128;
             light["hue"] = 0;
             light["saturation"] = 100;
@@ -1197,6 +1261,7 @@ esphome:
             light["min_kelvin"] = 2200;
             light["max_kelvin"] = 6500;
             light["related"].to<JsonArray>();
+            light["related_titles"].to<JsonArray>();
           });
           receive(detail_snapshot);
           hold_icon();
@@ -1303,7 +1368,7 @@ esphome:
           }
           require(count_objects(count_objects, lv_screen_active()) == detail_objects,
                   "reopening details never allocates another widget tree");
-          for (int invalid = 0; invalid < 7; invalid++) {
+          for (int invalid = 0; invalid < 10; invalid++) {
             receive(transform(detail_snapshot, [&](JsonObject root) {
               root["pages"][0]["title"] = "INVALID";
               auto light = root["light_details"][0];
@@ -1314,6 +1379,9 @@ esphome:
               if (invalid == 4) root["light_details"].add(light);
               if (invalid == 5) light["related_titles"] = "bad";
               if (invalid == 6) root["reverse_active"] = "light.test";
+              if (invalid == 7) light.remove("colour_mode");
+              if (invalid == 8) light.remove("temperature_issue");
+              if (invalid == 9) light.remove("related_titles");
             }));
             require(std::string(lv_label_get_text(id(title_0))) == "Office",
                     "malformed detail metadata is rejected atomically");

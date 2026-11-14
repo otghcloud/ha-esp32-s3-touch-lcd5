@@ -170,7 +170,7 @@ class BlueprintTests(unittest.TestCase):
 
     def test_sparse_pages_and_buttons_keep_slots_and_escape_names(self):
         self.inputs.update(
-            page_2_title='Landing "night"',
+            page_order=[{"page": "2", "title": 'Landing "night"'}],
             page_2_button_3="automation.landing",
             page_2_temperature="sensor.landing",
         )
@@ -206,15 +206,14 @@ class BlueprintTests(unittest.TestCase):
         self.inputs["screensaver_enabled"] = False
         self.assertIs(self.snapshot()["screensaver_enabled"], False)
 
-    def test_named_page_order_preserves_slots_and_legacy_titles(self):
-        self.inputs.update(page_1_title="Old office", page_3_title="Old landing",
-                           page_1_button_1="light.office", page_3_button_1="switch.landing")
+    def test_named_page_order_preserves_slots_and_defaults_unnamed_titles(self):
+        self.inputs.update(page_1_button_1="light.office", page_3_button_1="switch.landing")
         self.assertEqual(self.snapshot()["page_order"], list(range(8)))
         self.inputs["page_order"] = [{"page": "3", "title": " Landing "}, {"page": "1"}]
         snapshot = self.snapshot()
         self.assertEqual(snapshot["page_order"], [2, 0, 1, 3, 4, 5, 6, 7])
         self.assertEqual(snapshot["pages"][2]["title"], "Landing")
-        self.assertEqual(snapshot["pages"][0]["title"], "Old office")
+        self.assertEqual(snapshot["pages"][0]["title"], "Page 1")
         self.assertEqual(snapshot["pages"][0]["buttons"][0]["entity"], "light.office")
         self.assertEqual(snapshot["pages"][2]["buttons"][0]["entity"], "switch.landing")
         self.inputs["page_order"][1]["title"] = "  "
@@ -223,7 +222,7 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.snapshot()["pages"][2]["title"], "\U0001f600" * 80)
         self.inputs["page_order"] = []
         self.assertEqual(self.snapshot()["page_order"], list(range(8)))
-        self.assertEqual(self.snapshot()["pages"][2]["title"], "Old landing")
+        self.assertEqual(self.snapshot()["pages"][2]["title"], "Page 3")
 
     def test_invalid_page_order_logs_configuration_error(self):
         for value in (None, "3,1", {"page": "1"}, [None], [{}], [{"page": "9"}],
@@ -259,7 +258,7 @@ class BlueprintTests(unittest.TestCase):
         self.inputs["page_1_button_1"] = []
         self.inputs["page_1_button_1_title"] = "No entity"
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0],
-                         {"entity": "", "name": "", "state": ""})
+                         {"entity": "", "name": "", "state": "", "icon": ""})
 
     def test_custom_title_keeps_existing_label_limit(self):
         self.inputs["page_1_button_1"] = "light.office"
@@ -304,7 +303,7 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.variables()["ignored_slots"], [])
 
     def test_menu_capacity_guard_prevents_dispatch_but_ignored_slots_do_not_enable_pages(self):
-        self.states["sensor.renamed_dashboard_endpoint"] = "esphome.test_set_dashboard"
+        self.states["sensor.renamed_dashboard_endpoint"] = "esphome.test_set_dashboard_chunk"
         for page in range(1, 6):
             self.inputs[f"page_{page}_button_1"] = f"light.page_{page}"
         variables = self.variables()
@@ -323,9 +322,11 @@ class BlueprintTests(unittest.TestCase):
 
     def full_snapshot(self, title="Full control"):
         self.inputs["navigation_layout"] = "4x2"
+        self.inputs["page_order"] = [
+            {"page": str(page), "title": f"API page {page}"} for page in range(1, 9)
+        ]
         for page in range(1, 9):
             self.inputs[f"page_{page}_layout"] = "6x3"
-            self.inputs[f"page_{page}_title"] = f"API page {page}"
             for button in range(1, 19):
                 key = f"page_{page}_button_{button}"
                 self.inputs[key] = "light." + f"p{page}_b{button}_".ljust(122, "x")
@@ -395,14 +396,14 @@ class BlueprintTests(unittest.TestCase):
             self.assertEqual(template.render(trigger=trigger, **self.variables()).strip(), str(expected))
         action = self.blueprint["actions"][0]
         for fresh, endpoint, error, expected in (
-                (True, "esphome.office_set_dashboard", "", "True"),
-                (False, "esphome.office_set_dashboard", "", "False"),
+                (True, "esphome.office_set_dashboard_chunk", "", "True"),
+                (False, "esphome.office_set_dashboard_chunk", "", "False"),
                 (True, "", "", "False"),
-                (True, "esphome.office_set_dashboard", "Invalid configuration", "False")):
+                (True, "esphome.office_set_dashboard_chunk", "Invalid configuration", "False")):
             self.assertEqual(self.env.from_string(action["if"]).render(
                 fresh_wake=fresh, endpoint=endpoint, configuration_error=error), expected)
         self.assertEqual(self.env.from_string(action["then"][0]["action"]).render(
-            endpoint="esphome.office_set_dashboard"), "esphome.office_wake_display")
+            endpoint="esphome.office_set_dashboard_chunk"), "esphome.office_wake_display")
 
     def test_full_unicode_snapshot_round_trips_through_bounded_blueprint_chunks(self):
         snapshot = self.full_snapshot("\U0001f600" * 80)
@@ -442,13 +443,15 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.snapshot()["pages"][0]["temperature"], "")
 
     def test_endpoint_discovery_and_trigger_filtering(self):
-        self.states["sensor.renamed_dashboard_endpoint"] = "esphome.office_panel_set_dashboard"
+        self.states["sensor.renamed_dashboard_endpoint"] = "esphome.office_panel_set_dashboard_chunk"
         variables = self.variables()
-        self.assertEqual(variables["endpoint"], "esphome.office_panel_set_dashboard")
+        self.assertEqual(variables["endpoint"], "esphome.office_panel_set_dashboard_chunk")
+        action = self.blueprint["actions"][-1]["default"][2]["repeat"]["sequence"][0]["action"]
+        self.assertEqual(self.env.from_string(action).render(**variables), variables["endpoint"])
         condition = self.env.from_string(self.blueprint["conditions"][0]["value_template"])
         for endpoint, expected in (
-            ("esphome.office_panel_set_dashboard", "True"),
-            ("esphome.other_panel_set_dashboard", "False"),
+            ("esphome.office_panel_set_dashboard_chunk", "True"),
+            ("esphome.other_panel_set_dashboard_chunk", "False"),
         ):
             trigger = SimpleNamespace(id="ready", event=SimpleNamespace(data={"endpoint": endpoint}))
             self.assertEqual(condition.render(trigger=trigger, **variables).strip(), expected)
@@ -460,6 +463,9 @@ class BlueprintTests(unittest.TestCase):
                 id="state", event=SimpleNamespace(data=SimpleNamespace(entity_id=entity))
             )
             self.assertEqual(condition.render(trigger=trigger, **variables).strip(), expected)
+
+        self.states["sensor.renamed_dashboard_endpoint"] = "esphome.office_panel_set_dashboard"
+        self.assertEqual(self.variables()["endpoint"], "")
 
 
 if __name__ == "__main__":

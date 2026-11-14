@@ -60,6 +60,7 @@ async def check():
             await client.connect(login=True)
             entities, services = await client.list_entities_services()
             service = {item.name: item for item in services}
+            assert "set_dashboard" not in service, "Only chunked dashboard transport is exposed"
             probe = next(item for item in entities if isinstance(item, TextSensorInfo) and item.name == "Transport probe")
             endpoint = next(item for item in entities if isinstance(item, TextSensorInfo) and item.name == "Dashboard endpoint")
             wake = next(item for item in entities if isinstance(item, SelectInfo) and "Page 8" in item.options)
@@ -78,7 +79,7 @@ async def check():
                     actions.put_nowait(action)
 
             client.subscribe_home_assistant_states_and_services(on_state, on_action, lambda entity, attr: None)
-            assert await asyncio.wait_for(endpoint_seen, 5) == "esphome.dynamic_host_set_dashboard"
+            assert await asyncio.wait_for(endpoint_seen, 5) == "esphome.dynamic_host_set_dashboard_chunk"
             endpoint_started = asyncio.get_running_loop().time()
 
             async def wait_probe(predicate=lambda value: True):

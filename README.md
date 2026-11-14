@@ -115,7 +115,6 @@ Choose date/time formats and optional binary wake sensors in the blueprint. Wake
 
 - Install updated firmware first, then re-import the blueprint and reload automations when its inputs change.
 - OTA updates blank the backlight until reboot. If an upload fails or aborts, its previous state is restored.
-- Moving from an old 4 MB firmware layout requires a USB/factory flash; OTA cannot change partitions.
 - **Waiting for Home Assistant:** check the integration, enabled Dashboard endpoint and dashboard automation, then run the automation once.
 - **Controls missing:** check the page layout's capacity and Navigation layout.
 - **Changes not appearing:** allow the package cache to refresh, then clean/rebuild firmware if necessary.

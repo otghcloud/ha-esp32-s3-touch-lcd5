@@ -50,8 +50,8 @@ inline const ButtonData *find_related(const DetailData &details, const std::stri
 inline bool read_detail_data(JsonObject root, DetailData &out, const std::vector<std::string> &reverse) {
   auto entities = root["detail_entities"];
   auto lights = root["light_details"];
-  if ((!entities.isNull() && (!entities.is<JsonArray>() || entities.size() > MAX_PAGES * MAX_BUTTONS * 2)) ||
-      (!lights.isNull() && (!lights.is<JsonArray>() || lights.size() > MAX_PAGES * MAX_BUTTONS)))
+  if (!entities.is<JsonArray>() || entities.size() > MAX_PAGES * MAX_BUTTONS * 2 ||
+      !lights.is<JsonArray>() || lights.size() > MAX_PAGES * MAX_BUTTONS)
     return false;
   for (JsonObject item : entities.as<JsonArray>()) {
     ButtonData data;
@@ -70,7 +70,7 @@ inline bool read_detail_data(JsonObject root, DetailData &out, const std::vector
     LightData data;
     if (!read_text(item["entity"], data.entity, 128) || !valid_entity_id(data.entity) ||
         !data.entity.starts_with("light.") || find_light(out, data.entity)) return false;
-    if (!item["colour_mode"].isNull() && !read_text(item["colour_mode"], data.colour_mode, 24)) return false;
+    if (!read_text(item["colour_mode"], data.colour_mode, 24)) return false;
     if (!data.colour_mode.empty() && data.colour_mode != "onoff" && data.colour_mode != "brightness" &&
         data.colour_mode != "color_temp" && data.colour_mode != "hs" && data.colour_mode != "xy" &&
         data.colour_mode != "rgb" && data.colour_mode != "rgbw" && data.colour_mode != "rgbww" &&
@@ -81,8 +81,8 @@ inline bool read_detail_data(JsonObject root, DetailData &out, const std::vector
     data.dimmable = item["dimmable"];
     data.colour = item["colour"];
     data.temperature = item["temperature"];
-    if (!item["temperature_issue"].isNull() && !item["temperature_issue"].is<bool>()) return false;
-    data.temperature_issue = item["temperature_issue"] | false;
+    if (!item["temperature_issue"].is<bool>()) return false;
+    data.temperature_issue = item["temperature_issue"];
     for (const auto *key : {"brightness", "kelvin", "min_kelvin", "max_kelvin"})
       if (!item[key].is<int>()) return false;
     data.brightness = item["brightness"];
@@ -104,13 +104,11 @@ inline bool read_detail_data(JsonObject root, DetailData &out, const std::vector
                               data.min_kelvin >= data.max_kelvin))) return false;
     auto related = item["related"];
     if (!related.is<JsonArray>() || related.size() > 2) return false;
-    if (!item["related_titles"].isNull() &&
-        (!item["related_titles"].is<JsonArray>() || item["related_titles"].size() != related.size())) return false;
+    if (!item["related_titles"].is<JsonArray>() || item["related_titles"].size() != related.size()) return false;
     for (size_t i = 0; i < related.size(); i++) {
       if (!read_text(related[i], data.related[i], 128) || !find_related(out, data.related[i]) ||
           data.related[i] == data.entity || (i == 1 && data.related[0] == data.related[1])) return false;
-      if (!item["related_titles"].isNull() &&
-          !read_text(item["related_titles"][i], data.related_titles[i], 320)) return false;
+      if (!read_text(item["related_titles"][i], data.related_titles[i], 320)) return false;
     }
     out.lights.push_back(std::move(data));
   }

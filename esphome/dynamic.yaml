@@ -46,11 +46,6 @@ api:
     - action: wake_display
       then:
         - lambda: id(dashboard).sensor_wake();
-    - action: set_dashboard
-      variables:
-        payload: string
-      then:
-        - lambda: id(dashboard).receive(payload);
     - action: set_dashboard_chunk
       variables:
         transfer: string
@@ -68,7 +63,7 @@ api:
             endpoint: !lambda |-
               std::string name = App.get_name();
               std::replace(name.begin(), name.end(), '-', '_');
-              return "esphome." + name + "_set_dashboard";
+              return "esphome." + name + "_set_dashboard_chunk";
 
 text_sensor:
   - platform: template
@@ -79,7 +74,7 @@ text_sensor:
     lambda: |-
       std::string name = App.get_name();
       std::replace(name.begin(), name.end(), '-', '_');
-      return "esphome." + name + "_set_dashboard";
+      return "esphome." + name + "_set_dashboard_chunk";
 
 script:
   - id: dashboard_next

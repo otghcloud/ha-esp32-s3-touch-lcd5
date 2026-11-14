@@ -152,7 +152,7 @@ display:
       width: 800
       height: 480
 
-    # Preserve the legacy driver's BGR data-bit mapping.
+    # The panel wiring uses BGR data-bit mapping.
     data_pins:
       - GPIO48
       - GPIO47

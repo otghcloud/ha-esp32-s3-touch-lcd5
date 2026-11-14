@@ -3,7 +3,7 @@ esphome:
   friendly_name: ${friendly_name}
   project:
     name: "OTGH Cloud.HA Panel LCD5"
-    version: "dev"
+    version: "0.0.1"
   on_boot:
     - priority: -200
       then:
@@ -60,7 +60,7 @@ script:
             endpoint: !lambda |-
               std::string name = App.get_name();
               std::replace(name.begin(), name.end(), '-', '_');
-              return "esphome." + name + "_set_dashboard";
+              return "esphome." + name + "_set_dashboard_chunk";
 
 substitutions:
   ota_blank_display: "true"
