@@ -58,12 +58,19 @@ def label(widget_id, text, font, **properties):
 
 
 def make_dashboard():
-    widgets = []
+    widgets = [{"obj": {
+        "id": name, "x": 0, "y": y, "width": 800, "height": height,
+        "bg_color": color, "bg_opa": "COVER", "radius": 0,
+        "pad_all": 0, "border_width": 0, "clickable": False, "scrollable": False,
+    }} for name, y, height, color in (
+        ("dashboard_header", 0, 56, 0x000000), ("dashboard_footer", 432, 48, 0x999999)
+    )]
     bindings = []
     for p in range(4):
         children = [
-            label(f"title_{p}", "", "font_medium", x=24, y=10),
-            label(f"temperature_{p}", "", "font_small", align="BOTTOM_LEFT", x=24, y=-14),
+            label(f"title_{p}", "", "font_medium", x=24, y=14, width=560, height=32, long_mode="DOT"),
+            label(f"temperature_{p}", "", "font_small", align="BOTTOM_LEFT", x=24, y=-14,
+                  width=300, height=20, long_mode="DOT", text_color=0x111111),
         ]
         button_bindings = []
         for b in range(4):
@@ -92,9 +99,9 @@ def make_dashboard():
         for d in range(4):
             children.append({"obj": {
                 "id": f"dot_{p}_{d}", "x": 364 + d * 20, "align": "BOTTOM_LEFT",
-                "y": -14, "width": 12, "height": 12, "radius": 6,
-                "pad_all": 0, "border_width": 2, "border_color": 0xB9C2D0,
-                "bg_color": 0xB9C2D0, "bg_opa": "TRANSP",
+                "y": -18, "width": 12, "height": 12, "radius": 6,
+                "pad_all": 0, "border_width": 2, "border_color": 0x111111,
+                "bg_color": 0x111111, "bg_opa": "TRANSP",
                 "clickable": False, "scrollable": False,
             }})
         widgets.append({"obj": {
@@ -109,6 +116,31 @@ def make_dashboard():
             + f"id(page_{p}), id(title_{p}), id(temperature_{p}), "
             + "{" + dots + "}, {{" + ", ".join(button_bindings) + "}}});"
         )
+    navigation_buttons = [{"button": {
+        "id": f"navigation_{p}", "x": 20 if p % 2 == 0 else 420,
+        "y": 65 if p < 2 else 230, "width": 360, "height": 155,
+        "bg_color": 0x171F2C, "bg_opa": "90%", "border_color": 0x344154,
+        "border_width": 1, "radius": 18, "scrollable": False,
+        "widgets": [
+            label(f"navigation_{p}_title", "", "font_medium", align="CENTER",
+                  width=316, height=32, long_mode="DOT", text_align="CENTER"),
+        ],
+    }} for p in range(4)]
+    widgets.append({"obj": {
+        "id": "navigation", "x": 0, "y": 0, "width": 800, "height": 480,
+        "pad_all": 0, "border_width": 0, "bg_opa": "TRANSP",
+        "scrollable": False, "hidden": True,
+        "widgets": [
+            label("navigation_title", "Pages", "font_medium",
+                  x=24, y=14, width=560, height=32, long_mode="DOT"),
+            *navigation_buttons,
+        ],
+    }})
+    bindings.append(
+        "id(dashboard).bind_navigation({id(navigation), id(dashboard_menu), {"
+        + ", ".join(f"id(navigation_{p})" for p in range(4)) + "}, {"
+        + ", ".join(f"id(navigation_{p}_title)" for p in range(4)) + "}});"
+    )
     widgets.append(label("dashboard_waiting", "Waiting for Home Assistant", "font_medium",
                          align="CENTER"))
     bindings.append(
@@ -121,16 +153,29 @@ def make_dashboard():
                 + [{"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
                     "id": "font_icons", "size": 72, "bpp": 1, "glyphsets": [],
                     "glyphs": [chr(codepoint) for codepoint in
-                               sorted({int(value, 16) for value in load_icons().values()})]}],
+                               sorted({int(value, 16) for value in load_icons().values()})]},
+                   {"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
+                    "id": "font_ui_icons", "size": 32, "bpp": 1, "glyphsets": [],
+                    "glyphs": [chr(int(load_icons()["menu"], 16))]}],
         "image": [{"platform": "file", "file": "../assets/background_dark.png",
                    "id": "dashboard_background", "type": "RGB565", "resize": "800x480"}],
         "lvgl": {
             "bg_color": 0x111827, "bg_image_src": "dashboard_background",
             "pad_all": 0, "scrollable": False,
             "top_layer": {"widgets": [
-                label("lbl_time", "--:--", "font_large", align="TOP_RIGHT", x=-24, y=4),
+                label("lbl_time", "--:--", "font_large", align="TOP_RIGHT", x=-24, y=4,
+                      width=160, text_align="RIGHT"),
                 label("dashboard_connection", "HOME ASSISTANT UNAVAILABLE", "font_small",
-                      align="BOTTOM_RIGHT", x=-24, y=-36, text_color=0xF2A65A, hidden=True),
+                      align="BOTTOM_RIGHT", x=-24, y=-52, text_color=0xF2A65A, hidden=True),
+                {"button": {
+                    "id": "dashboard_menu", "x": 744, "y": 434, "width": 48, "height": 44,
+                    "bg_opa": "TRANSP", "border_width": 0, "shadow_width": 0,
+                    "radius": 0, "pad_all": 0, "scrollable": False,
+                    "widgets": [
+                        label("dashboard_menu_icon", chr(int(load_icons()["menu"], 16)),
+                              "font_ui_icons", align="CENTER", text_color=0x111111),
+                    ],
+                }},
             ]},
             "widgets": widgets,
         },

@@ -68,15 +68,51 @@ esphome:
           gesture.update(2, 450, 150);
           require(gesture.finish() == TouchAction::NONE, "multi-touch cannot activate controls");
           require(!hidden(id(dashboard_waiting)), "waiting on reboot");
-          auto check_background = [&]() {
+          auto sample_pixel = [&](int x, int y) {
+            id(test_lcd).sample_x = x;
+            id(test_lcd).sample_y = y;
             id(test_lcd).sample_pixel = esphome::Color(255, 0, 0);
             lv_obj_invalidate(lv_screen_active());
             lv_refr_now(nullptr);
-            auto actual = id(test_lcd).sample_pixel;
+            return id(test_lcd).sample_pixel;
+          };
+          auto check_background = [&]() {
+            auto actual = sample_pixel(5, 400);
             auto expected = id(dashboard_background)->get_pixel(5, 400);
             require(actual.r == expected.r && actual.g == expected.g && actual.b == expected.b,
                     "background image rendered at expected position");
           };
+          auto check_chrome = [&]() {
+            auto header = sample_pixel(5, 5);
+            auto footer = sample_pixel(5, 460);
+            require(header.r == 0 && header.g == 0 && header.b == 0, "black header rendered");
+            require((footer.r >> 3) == (153 >> 3) && (footer.g >> 2) == (153 >> 2) &&
+                    (footer.b >> 3) == (153 >> 3), "grey footer rendered in RGB565");
+            check_background();
+          };
+          auto within = [&](lv_obj_t *widget, int left, int top, int right, int bottom) {
+            lv_obj_update_layout(lv_screen_active());
+            lv_obj_update_layout(lv_layer_top());
+            lv_area_t area;
+            lv_obj_get_coords(widget, &area);
+            const bool fits = area.x1 >= left && area.y1 >= top && area.x2 <= right && area.y2 <= bottom;
+            if (!fits)
+              ESP_LOGE("runtime_test", "Bounds (%d,%d)-(%d,%d) exceed (%d,%d)-(%d,%d)",
+                       area.x1, area.y1, area.x2, area.y2, left, top, right, bottom);
+            return fits;
+          };
+          auto tap = [&](lv_obj_t *widget) {
+            lv_obj_update_layout(lv_screen_active());
+            lv_obj_update_layout(lv_layer_top());
+            lv_area_t area;
+            lv_obj_get_coords(widget, &area);
+            id(dashboard).begin_touch(1, (area.x1 + area.x2) / 2, (area.y1 + area.y2) / 2);
+            return id(dashboard).end_touch();
+          };
+          check_chrome();
+          require(lv_obj_has_state(id(dashboard_menu), LV_STATE_DISABLED), "waiting menu disabled");
+          tap(id(dashboard_menu));
+          require(hidden(id(navigation)), "waiting menu cannot open");
           check_background();
           for (auto *page : {id(page_0), id(page_1), id(page_2), id(page_3)}) {
             lv_obj_remove_flag(page, LV_OBJ_FLAG_HIDDEN);
@@ -157,6 +193,145 @@ esphome:
                     "every MDI glyph exists in the compiled font");
           }
           require(!lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "available control enabled");
+          check_chrome();
+          require(within(id(title_0), 0, 0, 599, 55) && within(id(lbl_time), 600, 0, 799, 55),
+                  "page title and clock fit within separate header regions");
+          require(within(id(dashboard_menu), 0, 432, 799, 479) &&
+                  lv_obj_get_width(id(dashboard_menu)) >= 44 && lv_obj_get_height(id(dashboard_menu)) >= 44,
+                  "menu has a footer-contained accessible touch target");
+          require(within(id(button_0_0), 0, 56, 799, 431), "entity tile fits between bars");
+          require(tap(id(dashboard_menu)) == TouchAction::TAP &&
+                  !hidden(id(navigation)) && hidden(id(page_0)), "menu opens on release");
+          require(hidden(id(dashboard_connection)), "menu tap does not invoke an HA entity action");
+          require(!hidden(id(navigation_0)) && hidden(id(navigation_1)) &&
+                  !hidden(id(navigation_2)) && hidden(id(navigation_3)), "menu omits empty slots");
+          require(std::string(lv_label_get_text(id(navigation_0_title))) == "Office" &&
+                  std::string(lv_label_get_text(id(navigation_2_title))) == "Landing", "menu uses page titles");
+          require(lv_obj_get_x(id(navigation_0)) == 20 && lv_obj_get_y(id(navigation_0)) == 65 &&
+                  lv_obj_get_x(id(navigation_2)) == 420 && lv_obj_get_y(id(navigation_2)) == 65,
+                  "nonadjacent page slots compact into first row");
+          require(!lv_obj_is_visible(id(temperature_2)) && !lv_obj_is_visible(id(dot_0_0)),
+                  "navigation hides page-specific footer data");
+          require(within(id(navigation_title), 0, 0, 599, 55) &&
+                  within(id(navigation_2), 0, 56, 799, 431), "navigation fits header and content bounds");
+          check_chrome();
+          id(dashboard).begin_touch(1, 300, 150);
+          id(dashboard).update_touch(1, 180, 150);
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(navigation)),
+                  "navigation swipes do not select a page");
+          id(dashboard).begin_touch(1, 768, 456);
+          id(dashboard).update_touch(1, 790, 456);
+          id(dashboard).update_touch(1, 768, 456);
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(navigation)),
+                  "menu drag returning to origin does not close navigation");
+          id(dashboard).begin_touch(1, 768, 456);
+          id(dashboard).update_touch(2, 768, 456);
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(navigation)),
+                  "multitouch cannot operate the menu");
+          id(dashboard).begin_touch(1, 200, 150);
+          id(dashboard).update_touch(2, 200, 150);
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(navigation)),
+                  "multitouch cannot select a page");
+          id(dashboard).begin_touch(1, 200, 150);
+          id(dashboard).update_touch(1, 200, 172);
+          id(dashboard).update_touch(1, 200, 150);
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(navigation)),
+                  "page-button drag cannot become a tap");
+          id(dashboard).begin_touch(1, 743, 456);
+          id(dashboard).update_touch(1, 750, 456);
+          id(dashboard).end_touch();
+          require(!hidden(id(navigation)), "tap must start and finish on the same menu target");
+          tap(id(navigation_2));
+          require(hidden(id(navigation)) && !hidden(id(page_2)), "menu selects original third slot");
+          require(within(id(temperature_2), 0, 432, 323, 479) &&
+                  within(id(dot_2_1), 324, 432, 743, 479), "temperature and dots fit footer regions");
+          tap(id(dashboard_menu));
+          tap(id(dashboard_menu));
+          require(hidden(id(navigation)) && !hidden(id(page_2)), "menu toggle preserves current page");
+          tap(id(dashboard_menu));
+          id(dashboard).wake();
+          require(hidden(id(navigation)) && !hidden(id(page_2)), "last-used wake closes navigation");
+          tap(id(dashboard_menu));
+          choose_wake_page("Page 1");
+          id(dashboard).wake();
+          require(hidden(id(navigation)) && !hidden(id(page_0)), "explicit wake closes navigation and selects page");
+          choose_wake_page("Last used page");
+          for (bool menu_open : {false, true}) {
+            if (menu_open)
+              tap(id(dashboard_menu));
+            const int x = menu_open ? 600 : 768;
+            const int y = menu_open ? 150 : 456;
+            if (idle.begin_touch(false, 22000))
+              id(dashboard).begin_touch(1, x, y);
+            id(dashboard).wake();
+            if (idle.accepts_touch())
+              id(dashboard).update_touch(1, x, y);
+            if (idle.end_touch(22001))
+              id(dashboard).end_touch();
+            require(hidden(id(navigation)) && !hidden(id(page_0)),
+                    "waking touch cannot open menu or select a navigation page");
+          }
+          auto edit_snapshot = [&](auto edit) {
+            return esphome::json::build_json([&](JsonObject root) {
+              esphome::json::parse_json(snapshot(0), [&](JsonObject source) {
+                root.set(source);
+                edit(root);
+                return true;
+              });
+            });
+          };
+          tap(id(dashboard_menu));
+          id(dashboard).begin_touch(1, 600, 150);
+          id(dashboard).receive(edit_snapshot([](JsonObject root) {
+            root["pages"][0]["title"] = " \t\r\n";
+            root["pages"][2]["title"] = "Upstairs";
+          }));
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(navigation)),
+                  "live title changes cancel stale navigation gestures");
+          require(std::string(lv_label_get_text(id(navigation_0_title))) == "Page 1" &&
+                  std::string(lv_label_get_text(id(navigation_2_title))) == "Upstairs",
+                  "menu updates renamed pages and whitespace fallback titles");
+          tap(id(navigation_0));
+          require(std::string(lv_label_get_text(id(title_0))) == "Page 1", "header shares fallback page title");
+          tap(id(dashboard_menu));
+          id(dashboard).receive(edit_snapshot([](JsonObject root) {
+            root["pages"][1]["buttons"].set(root["pages"][0]["buttons"]);
+            root["pages"][1]["title"] = "Office";
+            root["pages"][3]["buttons"].set(root["pages"][0]["buttons"]);
+            root["pages"][3]["title"] = "A very long page title that must not overlap any adjacent controls";
+            root["pages"][3]["temperature"] = "A long temperature value that must not overlap dots or tiles";
+          }));
+          require(!hidden(id(navigation_1)) && !hidden(id(navigation_3)) &&
+                  lv_obj_get_y(id(navigation_3)) == 230, "new page slots appear in second menu row");
+          require(within(id(navigation_3_title), 440, 230, 759, 384) &&
+                  lv_obj_get_height(id(navigation_3_title)) <= 32, "long menu title remains a single clipped line");
+          tap(id(navigation_1));
+          require(!hidden(id(page_1)), "duplicate title still selects its own fixed slot");
+          tap(id(dashboard_menu));
+          tap(id(navigation_3));
+          require(!hidden(id(page_3)), "menu selects fourth page");
+          require(within(id(title_3), 0, 0, 599, 55), "long page title stays out of clock region");
+          require(within(id(temperature_3), 0, 432, 323, 479), "long temperature stays within footer region");
+          tap(id(dashboard_menu));
+          id(dashboard).begin_touch(1, 600, 300);
+          id(dashboard).receive(snapshot(0));
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(navigation)) &&
+                  hidden(id(navigation_3)), "removing current and touched page cancels selection");
+          tap(id(dashboard_menu));
+          require(!hidden(id(page_0)), "removed current page falls back after closing menu");
+          tap(id(dashboard_menu));
+          id(dashboard).begin_touch(1, 600, 150);
+          id(dashboard).receive(snapshot(0));
+          require(id(dashboard).end_touch() == TouchAction::TAP && !hidden(id(page_2)),
+                  "unchanged periodic snapshots do not cancel navigation taps");
+          tap(id(dashboard_menu));
+          id(dashboard).begin_touch(1, 200, 150);
+          id(dashboard).receive(edit_snapshot([](JsonObject root) {
+            root["pages"][0]["buttons"][0]["state"] = "off";
+          }));
+          require(id(dashboard).end_touch() == TouchAction::TAP && !hidden(id(page_0)),
+                  "entity state-only updates do not cancel local page selection");
+          id(dashboard).receive(snapshot(0));
           id(dashboard).navigate(1);
           require(hidden(id(page_0)) && !hidden(id(page_2)), "swipe skips empty page");
           require(lv_obj_get_style_bg_opa(id(dot_2_1), LV_PART_MAIN) == LV_OPA_COVER &&
@@ -184,8 +359,23 @@ esphome:
           id(dashboard).check_connection();
           require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "disconnection disables controls");
           require(!hidden(id(dashboard_connection)), "offline indicator");
+          require(within(id(dashboard_connection), 0, 56, 799, 431), "offline indicator stays above footer");
+          tap(id(dashboard_menu));
+          require(!hidden(id(navigation)) && !lv_obj_has_state(id(navigation_2), LV_STATE_DISABLED),
+                  "offline navigation remains available");
+          tap(id(navigation_2));
+          require(!hidden(id(page_2)) && lv_obj_has_state(id(button_2_3), LV_STATE_DISABLED),
+                  "offline page selection preserves disabled entity controls");
+          tap(id(dashboard_menu));
+          id(dashboard).begin_touch(1, 200, 150);
           id(dashboard).receive(snapshot(2));
-          require(hidden(id(page_0)) && !hidden(id(page_2)), "removed selected page falls back");
+          require(id(dashboard).end_touch() == TouchAction::NONE && !hidden(id(navigation)) &&
+                  hidden(id(navigation_0)), "removed navigation target cannot be selected");
+          lv_obj_update_layout(id(navigation));
+          require(lv_obj_get_x(id(navigation_2)) == 220 && lv_obj_get_y(id(navigation_2)) == 65,
+                  "single navigation page is centred");
+          tap(id(navigation_2));
+          require(hidden(id(page_0)) && !hidden(id(page_2)), "single page menu selects remaining slot");
           require(hidden(id(dot_2_0)) && hidden(id(dot_2_1)), "single page has no dots");
           id(dashboard).navigate(1);
           id(dashboard).navigate(-1);
@@ -244,10 +434,14 @@ esphome:
             require(icon_is(id(button_2_3_icon), entry.second), "lock transition icon");
             require(lv_obj_has_state(id(button_2_3), LV_STATE_DISABLED), "lock transition stays non-actionable");
           }
+          tap(id(dashboard_menu));
           id(dashboard).receive(snapshot(3));
           id(dashboard).navigate(1);
           id(dashboard).navigate(-1);
           require(!hidden(id(dashboard_waiting)) && hidden(id(page_2)), "all pages cleared");
+          require(hidden(id(navigation)) && lv_obj_has_state(id(dashboard_menu), LV_STATE_DISABLED),
+                  "clearing all pages closes navigation and disables menu");
+          check_chrome();
           choose_wake_page("Page 3");
           id(dashboard).wake();
           require(!hidden(id(dashboard_waiting)), "wake with no pages retains waiting screen");

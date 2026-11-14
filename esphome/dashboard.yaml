@@ -31,6 +31,10 @@ esphome:
         id(button_3_2_icon)}, {id(button_3_3), id(button_3_3_name), id(button_3_3_state), id(button_3_3_unavailable),
         id(button_3_3_icon)}}}});
 
+        id(dashboard).bind_navigation({id(navigation), id(dashboard_menu), {id(navigation_0), id(navigation_1),
+        id(navigation_2), id(navigation_3)}, {id(navigation_0_title), id(navigation_1_title), id(navigation_2_title),
+        id(navigation_3_title)}});
+
         id(dashboard).initialize(id(dashboard_waiting), id(dashboard_connection));'
 font:
 - file: gfonts://Roboto
@@ -7495,6 +7499,13 @@ font:
   - "\U000F1D15"
   - "\U000F1D16"
   - "\U000F1D17"
+- file: https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf
+  id: font_ui_icons
+  size: 32
+  bpp: 1
+  glyphsets: []
+  glyphs:
+  - "\U000F035C"
 image:
 - platform: file
   file: ../assets/background_dark.png
@@ -7516,6 +7527,8 @@ lvgl:
         align: TOP_RIGHT
         x: -24
         y: 4
+        width: 160
+        text_align: RIGHT
     - label:
         id: dashboard_connection
         text: HOME ASSISTANT UNAVAILABLE
@@ -7523,9 +7536,54 @@ lvgl:
         text_color: 15902298
         align: BOTTOM_RIGHT
         x: -24
-        y: -36
+        y: -52
         hidden: true
+    - button:
+        id: dashboard_menu
+        x: 744
+        y: 434
+        width: 48
+        height: 44
+        bg_opa: TRANSP
+        border_width: 0
+        shadow_width: 0
+        radius: 0
+        pad_all: 0
+        scrollable: false
+        widgets:
+        - label:
+            id: dashboard_menu_icon
+            text: "\U000F035C"
+            text_font: font_ui_icons
+            text_color: 1118481
+            align: CENTER
   widgets:
+  - obj:
+      id: dashboard_header
+      x: 0
+      y: 0
+      width: 800
+      height: 56
+      bg_color: 0
+      bg_opa: COVER
+      radius: 0
+      pad_all: 0
+      border_width: 0
+      clickable: false
+      scrollable: false
+  - obj:
+      id: dashboard_footer
+      x: 0
+      y: 432
+      width: 800
+      height: 48
+      bg_color: 10066329
+      bg_opa: COVER
+      radius: 0
+      pad_all: 0
+      border_width: 0
+      clickable: false
+      scrollable: false
   - obj:
       id: page_0
       width: 800
@@ -7544,15 +7602,21 @@ lvgl:
           text_font: font_medium
           text_color: 15922424
           x: 24
-          y: 10
+          y: 14
+          width: 560
+          height: 32
+          long_mode: DOT
       - label:
           id: temperature_0
           text: ''
           text_font: font_small
-          text_color: 15922424
+          text_color: 1118481
           align: BOTTOM_LEFT
           x: 24
           y: -14
+          width: 300
+          height: 20
+          long_mode: DOT
       - button:
           id: button_0_0
           x: 20
@@ -7745,14 +7809,14 @@ lvgl:
           id: dot_0_0
           x: 364
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -7760,14 +7824,14 @@ lvgl:
           id: dot_0_1
           x: 384
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -7775,14 +7839,14 @@ lvgl:
           id: dot_0_2
           x: 404
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -7790,14 +7854,14 @@ lvgl:
           id: dot_0_3
           x: 424
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -7819,15 +7883,21 @@ lvgl:
           text_font: font_medium
           text_color: 15922424
           x: 24
-          y: 10
+          y: 14
+          width: 560
+          height: 32
+          long_mode: DOT
       - label:
           id: temperature_1
           text: ''
           text_font: font_small
-          text_color: 15922424
+          text_color: 1118481
           align: BOTTOM_LEFT
           x: 24
           y: -14
+          width: 300
+          height: 20
+          long_mode: DOT
       - button:
           id: button_1_0
           x: 20
@@ -8020,14 +8090,14 @@ lvgl:
           id: dot_1_0
           x: 364
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8035,14 +8105,14 @@ lvgl:
           id: dot_1_1
           x: 384
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8050,14 +8120,14 @@ lvgl:
           id: dot_1_2
           x: 404
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8065,14 +8135,14 @@ lvgl:
           id: dot_1_3
           x: 424
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8094,15 +8164,21 @@ lvgl:
           text_font: font_medium
           text_color: 15922424
           x: 24
-          y: 10
+          y: 14
+          width: 560
+          height: 32
+          long_mode: DOT
       - label:
           id: temperature_2
           text: ''
           text_font: font_small
-          text_color: 15922424
+          text_color: 1118481
           align: BOTTOM_LEFT
           x: 24
           y: -14
+          width: 300
+          height: 20
+          long_mode: DOT
       - button:
           id: button_2_0
           x: 20
@@ -8295,14 +8371,14 @@ lvgl:
           id: dot_2_0
           x: 364
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8310,14 +8386,14 @@ lvgl:
           id: dot_2_1
           x: 384
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8325,14 +8401,14 @@ lvgl:
           id: dot_2_2
           x: 404
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8340,14 +8416,14 @@ lvgl:
           id: dot_2_3
           x: 424
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8369,15 +8445,21 @@ lvgl:
           text_font: font_medium
           text_color: 15922424
           x: 24
-          y: 10
+          y: 14
+          width: 560
+          height: 32
+          long_mode: DOT
       - label:
           id: temperature_3
           text: ''
           text_font: font_small
-          text_color: 15922424
+          text_color: 1118481
           align: BOTTOM_LEFT
           x: 24
           y: -14
+          width: 300
+          height: 20
+          long_mode: DOT
       - button:
           id: button_3_0
           x: 20
@@ -8570,14 +8652,14 @@ lvgl:
           id: dot_3_0
           x: 364
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8585,14 +8667,14 @@ lvgl:
           id: dot_3_1
           x: 384
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8600,14 +8682,14 @@ lvgl:
           id: dot_3_2
           x: 404
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
@@ -8615,17 +8697,131 @@ lvgl:
           id: dot_3_3
           x: 424
           align: BOTTOM_LEFT
-          y: -14
+          y: -18
           width: 12
           height: 12
           radius: 6
           pad_all: 0
           border_width: 2
-          border_color: 12174032
-          bg_color: 12174032
+          border_color: 1118481
+          bg_color: 1118481
           bg_opa: TRANSP
           clickable: false
           scrollable: false
+  - obj:
+      id: navigation
+      x: 0
+      y: 0
+      width: 800
+      height: 480
+      pad_all: 0
+      border_width: 0
+      bg_opa: TRANSP
+      scrollable: false
+      hidden: true
+      widgets:
+      - label:
+          id: navigation_title
+          text: Pages
+          text_font: font_medium
+          text_color: 15922424
+          x: 24
+          y: 14
+          width: 560
+          height: 32
+          long_mode: DOT
+      - button:
+          id: navigation_0
+          x: 20
+          y: 65
+          width: 360
+          height: 155
+          bg_color: 1515308
+          bg_opa: 90%
+          border_color: 3424596
+          border_width: 1
+          radius: 18
+          scrollable: false
+          widgets:
+          - label:
+              id: navigation_0_title
+              text: ''
+              text_font: font_medium
+              text_color: 15922424
+              align: CENTER
+              width: 316
+              height: 32
+              long_mode: DOT
+              text_align: CENTER
+      - button:
+          id: navigation_1
+          x: 420
+          y: 65
+          width: 360
+          height: 155
+          bg_color: 1515308
+          bg_opa: 90%
+          border_color: 3424596
+          border_width: 1
+          radius: 18
+          scrollable: false
+          widgets:
+          - label:
+              id: navigation_1_title
+              text: ''
+              text_font: font_medium
+              text_color: 15922424
+              align: CENTER
+              width: 316
+              height: 32
+              long_mode: DOT
+              text_align: CENTER
+      - button:
+          id: navigation_2
+          x: 20
+          y: 230
+          width: 360
+          height: 155
+          bg_color: 1515308
+          bg_opa: 90%
+          border_color: 3424596
+          border_width: 1
+          radius: 18
+          scrollable: false
+          widgets:
+          - label:
+              id: navigation_2_title
+              text: ''
+              text_font: font_medium
+              text_color: 15922424
+              align: CENTER
+              width: 316
+              height: 32
+              long_mode: DOT
+              text_align: CENTER
+      - button:
+          id: navigation_3
+          x: 420
+          y: 230
+          width: 360
+          height: 155
+          bg_color: 1515308
+          bg_opa: 90%
+          border_color: 3424596
+          border_width: 1
+          radius: 18
+          scrollable: false
+          widgets:
+          - label:
+              id: navigation_3_title
+              text: ''
+              text_font: font_medium
+              text_color: 15922424
+              align: CENTER
+              width: 316
+              height: 32
+              long_mode: DOT
+              text_align: CENTER
   - label:
       id: dashboard_waiting
       text: Waiting for Home Assistant

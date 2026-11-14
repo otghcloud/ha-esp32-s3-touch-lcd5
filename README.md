@@ -83,11 +83,21 @@ This matches entity icons, not icon overrides defined only in individual Lovelac
 
 **Updating an existing panel:** re-import the blueprint, reload automations and install the updated firmware. The full icon library requires the board's 16 MB flash layout; existing installations built with the old default 4 MB layout need a **USB/manual factory flash**, because OTA cannot replace the partition table. Subsequent updates can use OTA. Icons are included during compilation; the panel does not download them at runtime.
 
-Swipe left/right anywhere on the screen, including over buttons. Navigation wraps at both ends and skips empty pages. A horizontal movement of at least 100 pixels changes page when you lift your finger. Buttons activate only on release after a tap with no movement beyond 20 pixels; drags and multi-touch gestures do not activate controls. Bottom-centred dots highlight the current page; they are hidden for a single page. Temperature values use the sensor's unit of measurement.
+### Layout and page navigation
+
+Each button page has a 56-pixel black header with its title on the left and the clock on the right. A 48-pixel grey (`#999999`) footer contains the optional page temperature, centred page dots and a bottom-right menu icon. Long titles and temperature values are truncated to avoid overlapping neighbouring controls. Blank or whitespace-only page titles display as **Page N**, using the blueprint slot number.
+
+Tap the menu icon to open **Pages**, then tap a page button to select it. Only populated pages appear, in blueprint-slot order, compacted into a two-column layout. Page buttons use the configured titles; duplicate titles still select their separate slots. Tap the menu icon again to return without changing the current page. Navigation hides page-specific temperatures and dots, and ignores swipes.
+
+Swipe left/right anywhere on a button page, including over buttons. Navigation wraps at both ends and skips empty pages. A horizontal movement of at least 100 pixels changes page when you lift your finger. Buttons activate only on release after a tap with no movement beyond 20 pixels; drags and multi-touch gestures do not activate controls. Bottom-centred dots highlight the current page; they are hidden for a single page. Temperature values use the sensor's unit of measurement.
 
 After reboot the panel shows **Waiting for Home Assistant** until it receives configuration. During a disconnection it retains its layout and displays unavailable indicators with disabled controls. No configuration is saved to flash. The blueprint sends current configuration/states on selected entity changes, reconnect events and every 30 seconds; the panel also disables controls if updates stop for 65 seconds.
 
-The static 800 × 480 background in [`assets/background_dark.png`](./assets/background_dark.png) is embedded in the firmware and displayed on every page, including the waiting screen.
+Page navigation remains available offline using the last known configuration. Renamed, added or removed pages update the menu automatically. With no populated pages, the menu is disabled and the panel shows its waiting/no-pages message. The header and footer remain visible on these screens.
+
+The static 800 × 480 background in [`assets/background_dark.png`](./assets/background_dark.png) is embedded in the firmware and visible behind the content area of every view, including waiting and navigation.
+
+**Updating an existing panel:** install the updated firmware to add the header, footer and menu. No blueprint re-import or automation changes are required for these layout/navigation features.
 
 ### Display backlight
 
@@ -99,7 +109,7 @@ Touching a dark screen turns the backlight on. That entire first gesture is wake
 
 Turning the backlight off does not stop the dashboard or Home Assistant connection. A timeout of 0 still permits manual switch-off, with touch-to-wake available.
 
-The saved **Wake-up page** dropdown defaults to **Last used page**, or can select **Page 1** through **Page 4** (the blueprint's fixed page slots). It applies whenever the backlight turns on, whether by touch, Home Assistant or reboot. An empty selected page falls back to the first populated page. If no pages have arrived yet, the preference is applied when Home Assistant sends them. Changing the dropdown does not immediately navigate, and normal touches while the backlight is on do not change pages.
+The saved **Wake-up page** dropdown defaults to **Last used page**, or can select **Page 1** through **Page 4** (the blueprint's fixed page slots). It applies whenever the backlight turns on, whether by touch, Home Assistant or reboot. Waking closes navigation before applying the preference; **Last used page** means the last button page, not the navigation screen. An empty selected page falls back to the first populated page. If no pages have arrived yet, the preference is applied when Home Assistant sends them. Changing the dropdown does not immediately navigate, and normal touches while the backlight is on do not change pages.
 
 The **Restart** button in **Configuration** reboots the panel. The timeout and wake-up page settings are retained; the dashboard waits for Home Assistant to resend its configuration as usual.
 
@@ -128,7 +138,7 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 
 The generator also maintains the MDI lookup header from the pinned [`scripts/mdi-icons.json`](./scripts/mdi-icons.json) catalogue. Use `python3 scripts/generate_dashboard.py --update-icons` to refresh that catalogue from the pinned upstream stylesheet. Change `MDI_VERSION` and regenerate together when upgrading the font. MDI licensing is recorded in [`MDI-LICENSE`](./esphome/components/wallpanel/MDI-LICENSE). The one-bit icon font keeps the complete library within flash without loading every icon bitmap into RAM.
 
-The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks display idle/wake handling, background rendering, page navigation, dots, state labels, offline controls and rejection of invalid snapshots:
+The headless runtime test uses real ESPHome/LVGL with a no-output display driver. It checks display idle/wake handling, rendered background/header/footer pixels, layout bounds, menu and swipe navigation, live page changes, dots, state labels, offline controls and rejection of invalid snapshots:
 
 ```sh
 esphome compile scripts/runtime_tests/runtime.yaml

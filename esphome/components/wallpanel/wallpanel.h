@@ -29,6 +29,13 @@ struct PageWidgets {
   std::array<ButtonWidgets, 4> buttons;
 };
 
+struct NavigationWidgets {
+  lv_obj_t *container;
+  lv_obj_t *menu;
+  std::array<lv_obj_t *, 4> buttons;
+  std::array<lv_obj_t *, 4> titles;
+};
+
 struct ButtonData {
   std::string entity;
   std::string name;
@@ -136,6 +143,7 @@ class TouchGesture {
 class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevice {
  public:
   void bind_page(size_t index, const PageWidgets &widgets) { widgets_[index] = widgets; }
+  void bind_navigation(const NavigationWidgets &widgets) { navigation_ = widgets; }
 
   void initialize(lv_obj_t *waiting, lv_obj_t *connection) {
     waiting_ = waiting;
@@ -188,15 +196,20 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
           next[p].enabled |= !data.entity.empty();
         }
       }
+      bool layout_changed = false;
       for (size_t p = 0; p < 4; p++) {
+        layout_changed |= next[p].enabled != pages_[p].enabled || next[p].title != pages_[p].title;
         for (size_t b = 0; b < 4; b++) {
           if (next[p].buttons[b].entity != pages_[p].buttons[b].entity) {
+            layout_changed = true;
             lv_label_set_text(widgets_[p].buttons[b].state, "UNKNOWN");
             lv_obj_set_style_text_color(widgets_[p].buttons[b].state, lv_color_hex(0xAAB4C5), 0);
             lv_label_set_text(widgets_[p].buttons[b].icon, mdi_glyph(default_icon(next[p].buttons[b])));
           }
         }
       }
+      if (layout_changed)
+        layout_revision_++;
       pages_ = std::move(next);
       configured_ = true;
       last_update_ = esphome::millis();
@@ -230,8 +243,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     for (size_t step = 0; step < pages_.size(); step++) {
       p = (p + direction + int(pages_.size())) % int(pages_.size());
       if (pages_[p].enabled) {
-        current_ = p;
-        render();
+        select_page(p);
         return;
       }
     }
@@ -246,6 +258,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   void wake() {
+    navigation_open_ = false;
+    layout_revision_++;
     if (!ready_ || !configured_) {
       wake_pending_ = true;
       return;
@@ -261,26 +275,38 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   void begin_touch(int id, int x, int y) {
     gesture_.begin(id, x, y);
     touch_page_ = current_;
-    if (ready_)
-      lv_obj_update_layout(widgets_[current_].container);
-    touch_button_ = ready_ ? hit_button(current_, x, y) : -1;
-    touch_entity_ = touch_button_ >= 0 ? pages_[current_].buttons[touch_button_].entity : "";
+    touch_revision_ = layout_revision_;
+    if (ready_) {
+      lv_obj_update_layout(lv_screen_active());
+      lv_obj_update_layout(lv_layer_top());
+    }
+    touch_target_ = ready_ ? hit_target(x, y) : TouchTarget{};
+    touch_entity_ = touch_target_.kind == TargetKind::ENTITY
+                        ? pages_[current_].buttons[touch_target_.index].entity : "";
   }
 
   void update_touch(int id, int x, int y) { gesture_.update(id, x, y); }
 
   TouchAction end_touch() {
     const auto action = gesture_.finish();
-    if (!ready_)
+    if (!ready_ || touch_revision_ != layout_revision_ || touch_page_ != current_)
       return TouchAction::NONE;
-    if (action == TouchAction::NEXT)
-      navigate(1);
-    else if (action == TouchAction::PREVIOUS)
-      navigate(-1);
-    else if (action == TouchAction::TAP && touch_button_ >= 0 && touch_page_ == current_ &&
-             hit_button(current_, gesture_.x(), gesture_.y()) == touch_button_ &&
-             pages_[current_].buttons[touch_button_].entity == touch_entity_)
-      press(current_, touch_button_);
+    if (action == TouchAction::NEXT || action == TouchAction::PREVIOUS) {
+      if (navigation_open_)
+        return TouchAction::NONE;
+      navigate(action == TouchAction::NEXT ? 1 : -1);
+    } else if (action == TouchAction::TAP && touch_target_ == hit_target(gesture_.x(), gesture_.y())) {
+      if (touch_target_.kind == TargetKind::MENU) {
+        navigation_open_ = !navigation_open_;
+        layout_revision_++;
+        render();
+      } else if (touch_target_.kind == TargetKind::PAGE) {
+        select_page(touch_target_.index);
+      } else if (touch_target_.kind == TargetKind::ENTITY &&
+                 pages_[current_].buttons[touch_target_.index].entity == touch_entity_) {
+        press(current_, touch_target_.index);
+      }
+    }
     return action;
   }
 
@@ -303,6 +329,23 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
  private:
+  enum class TargetKind { NONE, ENTITY, MENU, PAGE };
+
+  struct TouchTarget {
+    TargetKind kind{TargetKind::NONE};
+    size_t index{0};
+    bool operator==(const TouchTarget &other) const {
+      return kind == other.kind && index == other.index;
+    }
+  };
+
+  void select_page(size_t page) {
+    current_ = page;
+    navigation_open_ = false;
+    layout_revision_++;
+    render();
+  }
+
   void ensure_current_page() {
     if (pages_[current_].enabled)
       return;
@@ -315,19 +358,42 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     }
   }
 
-  int hit_button(size_t page, int x, int y) const {
-    if (!pages_[page].enabled)
-      return -1;
-    for (size_t b = 0; b < 4; b++) {
-      auto *button = widgets_[page].buttons[b].button;
-      if (lv_obj_has_flag(button, LV_OBJ_FLAG_HIDDEN) || lv_obj_has_state(button, LV_STATE_DISABLED))
-        continue;
-      lv_area_t area;
-      lv_obj_get_coords(button, &area);
-      if (x >= area.x1 && x <= area.x2 && y >= area.y1 && y <= area.y2)
-        return int(b);
+  static bool hit_widget(lv_obj_t *widget, int x, int y) {
+    if (!lv_obj_is_visible(widget) || lv_obj_has_state(widget, LV_STATE_DISABLED))
+      return false;
+    lv_area_t area;
+    lv_obj_get_coords(widget, &area);
+    return x >= area.x1 && x <= area.x2 && y >= area.y1 && y <= area.y2;
+  }
+
+  TouchTarget hit_target(int x, int y) const {
+    if (hit_widget(navigation_.menu, x, y))
+      return {TargetKind::MENU, 0};
+    if (navigation_open_) {
+      for (size_t p = 0; p < pages_.size(); p++) {
+        if (pages_[p].enabled && hit_widget(navigation_.buttons[p], x, y))
+          return {TargetKind::PAGE, p};
+      }
+      return {};
     }
-    return -1;
+    if (!pages_[current_].enabled)
+      return {};
+    for (size_t b = 0; b < 4; b++) {
+      if (hit_widget(widgets_[current_].buttons[b].button, x, y))
+        return {TargetKind::ENTITY, b};
+    }
+    return {};
+  }
+
+  static void position_button(lv_obj_t *button, size_t count, size_t rank) {
+    const int x = count == 1 || (count == 3 && rank == 2) ? 220 : (rank % 2 == 0 ? 20 : 420);
+    lv_obj_set_pos(button, x, rank < 2 ? 65 : 230);
+  }
+
+  std::string page_title(size_t page) const {
+    const auto &title = pages_[page].title;
+    return title.find_first_not_of(" \t\r\n") == std::string::npos
+               ? "Page " + std::to_string(page + 1) : title;
   }
 
   static bool read_string(JsonVariant value, std::string &out, size_t limit) {
@@ -384,6 +450,22 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     size_t page_count = 0;
     for (const auto &page : pages_)
       page_count += page.enabled;
+    if (page_count == 0 && navigation_open_) {
+      navigation_open_ = false;
+      layout_revision_++;
+    }
+    visible(navigation_.container, navigation_open_ && page_count > 0);
+    if (page_count > 0)
+      lv_obj_remove_state(navigation_.menu, LV_STATE_DISABLED);
+    else
+      lv_obj_add_state(navigation_.menu, LV_STATE_DISABLED);
+    size_t navigation_rank = 0;
+    for (size_t p = 0; p < pages_.size(); p++) {
+      visible(navigation_.buttons[p], pages_[p].enabled);
+      lv_label_set_text(navigation_.titles[p], page_title(p).c_str());
+      if (pages_[p].enabled)
+        position_button(navigation_.buttons[p], page_count, navigation_rank++);
+    }
     visible(waiting_, page_count == 0);
     lv_label_set_text(waiting_, configured_ ? "No button pages configured" : "Waiting for Home Assistant");
     visible(connection_, configured_ && !online_ && page_count > 0);
@@ -391,8 +473,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     for (size_t p = 0; p < 4; p++) {
       auto &widgets = widgets_[p];
       const auto &page = pages_[p];
-      visible(widgets.container, page.enabled && p == current_);
-      lv_label_set_text(widgets.title, page.title.c_str());
+      visible(widgets.container, !navigation_open_ && page.enabled && p == current_);
+      lv_label_set_text(widgets.title, page_title(p).c_str());
       visible(widgets.temperature, !page.temperature.empty());
       lv_label_set_text(widgets.temperature,
                         online_ ? page.temperature.c_str() : "Temperature: UNAVAILABLE");
@@ -412,11 +494,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         visible(button.button, !data.entity.empty());
         if (data.entity.empty())
           continue;
-        const int x = button_count == 1 || (button_count == 3 && button_rank == 2)
-                          ? 220
-                          : (button_rank % 2 == 0 ? 20 : 420);
-        lv_obj_set_pos(button.button, x, button_rank < 2 ? 65 : 230);
-        button_rank++;
+        position_button(button.button, button_count, button_rank++);
         lv_label_set_text(button.name, data.name.c_str());
         const bool available = online_ && known_state(data);
         visible(button.unavailable, !available);
@@ -447,19 +525,23 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   std::array<PageWidgets, 4> widgets_{};
+  NavigationWidgets navigation_{};
   std::array<PageData, 4> pages_{};
   lv_obj_t *waiting_{nullptr};
   lv_obj_t *connection_{nullptr};
   size_t current_{0};
   size_t wake_page_{0};
   uint32_t last_update_{0};
+  uint32_t layout_revision_{0};
+  uint32_t touch_revision_{0};
+  bool navigation_open_{false};
   bool wake_pending_{false};
   bool ready_{false};
   bool configured_{false};
   bool online_{false};
   TouchGesture gesture_;
   size_t touch_page_{0};
-  int touch_button_{-1};
+  TouchTarget touch_target_;
   std::string touch_entity_;
 };
 
