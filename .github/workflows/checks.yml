@@ -53,6 +53,30 @@ jobs:
           git add -- VERSION esphome/project_version.yaml esphome/components/wallpanel/release_version.h wallpanel_blueprint.yaml
       - run: python scripts/release.py check
       - run: python scripts/generate_dashboard.py --check
+      - name: Install pinned actionlint
+        shell: bash
+        run: |
+          version=1.7.12
+          case "$RUNNER_ARCH" in
+            X64)
+              arch=amd64
+              checksum=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+              ;;
+            ARM64)
+              arch=arm64
+              checksum=325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6
+              ;;
+            *) echo "::error::Unsupported runner architecture: $RUNNER_ARCH"; exit 1 ;;
+          esac
+          install_dir="$RUNNER_TEMP/wallpanel-actionlint-$GITHUB_RUN_ID-$GITHUB_JOB"
+          mkdir -p "$install_dir"
+          archive="$install_dir/actionlint.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/rhysd/actionlint/releases/download/v$version/actionlint_${version}_linux_${arch}.tar.gz" \
+            --output "$archive"
+          printf '%s  %s\n' "$checksum" "$archive" | sha256sum --check
+          tar -xzf "$archive" -C "$install_dir" actionlint
+          echo "$install_dir" >> "$GITHUB_PATH"
       - run: actionlint -color
       - run: python -m unittest discover -s scripts -p 'test_*.py'
       - run: ruff check --select E9,F63,F7,F82 --exclude .esphome scripts esphome/components
