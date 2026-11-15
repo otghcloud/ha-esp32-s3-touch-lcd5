@@ -74,12 +74,8 @@ class BlueprintTests(unittest.TestCase):
         result["endpoint"] = self.env.from_string(result["endpoint"]).render(**result).strip()
         for key in ("firmware_release", "latest_release", "release_notice"):
             result[key] = self.env.from_string(result[key]).render(**result).strip()
-        result["watched_entities"] = ast.literal_eval(
-            self.env.from_string(result["watched_entities"]).render(**result).strip()
-        )
-        result["ignored_slots"] = ast.literal_eval(
-            self.env.from_string(result["ignored_slots"]).render(**result).strip()
-        )
+        for key in ("effective_pages", "watched_entities", "ignored_slots"):
+            result[key] = ast.literal_eval(self.env.from_string(result[key]).render(**result).strip())
         result["configuration_error"] = self.env.from_string(result["configuration_error"]).render(**result).strip()
         return result
 
@@ -137,6 +133,7 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(len(result["detail_entities"]), 2, "shared related entities are transmitted once")
         self.assertEqual(result["light_details"][1]["related_titles"], ["Other Auto"])
         self.inputs["page_1_button_18"] = "light.hidden"
+        self.inputs["page_1_layout"] = "2x2"
         self.inputs["light_details"].append(dict(light="light.hidden", related_1="switch.hidden"))
         self.assertNotIn("switch.hidden", self.variables()["watched_entities"])
         self.assertNotIn("light.hidden", [light["entity"] for light in self.snapshot()["light_details"]])
@@ -229,9 +226,10 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(snapshot["pages"][0]["buttons"][0]["entity"], "")
         page = snapshot["pages"][1]
         self.assertEqual(page["title"], 'Landing "night"')
-        self.assertEqual(page["temperature"], "Temperature: 21.2 C")
+        self.assertEqual(page["temperature"], "21.2 C")
         self.assertEqual(page["buttons"][2], {
             "entity": "automation.landing", "name": 'Lighting "auto" %', "state": "off", "icon": "",
+            "tap_action": "default",
         })
 
     def test_changes_and_removals_replace_old_entities(self):
@@ -303,7 +301,7 @@ class BlueprintTests(unittest.TestCase):
         self.inputs["page_1_button_1"] = []
         self.inputs["page_1_button_1_title"] = "No entity"
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0],
-                         {"entity": "", "name": "", "state": "", "icon": ""})
+                         {"entity": "", "name": "", "state": "", "icon": "", "tap_action": "default"})
 
     def test_custom_title_keeps_existing_label_limit(self):
         self.inputs["page_1_button_1"] = "light.office"
@@ -333,9 +331,9 @@ class BlueprintTests(unittest.TestCase):
             navigation_layout="6x3",
         )
         snapshot = self.snapshot()
-        self.assertEqual(snapshot["version"], 2)
+        self.assertEqual(snapshot["version"], 3)
         self.assertEqual(snapshot["navigation_layout"], "6x3")
-        self.assertEqual([len(page["buttons"]) for page in snapshot["pages"][:3]], [4, 8, 18])
+        self.assertEqual([len(page["buttons"]) for page in snapshot["pages"][:3]], [18, 18, 18])
         self.assertEqual(snapshot["pages"][2]["icon"], "mdi:door-open")
         self.assertEqual(snapshot["pages"][2]["buttons"][17]["entity"], "lock.eighteen")
         variables = self.variables()
@@ -358,12 +356,82 @@ class BlueprintTests(unittest.TestCase):
         for layout in ("4x2", "6x3"):
             self.inputs["navigation_layout"] = layout
             self.assertEqual(self.variables()["configuration_error"], "")
-        self.inputs.update(navigation_layout="2x2", page_5_button_1=[], page_5_button_18="light.ignored")
+        self.inputs.update(navigation_layout="2x2", page_5_layout="2x2",
+                           page_5_button_1=[], page_5_button_18="light.ignored")
         self.assertEqual(self.variables()["configuration_error"], "")
         warning = self.blueprint["actions"][-1]["default"][0]
         self.assertEqual(self.env.from_string(warning["if"]).render(**self.variables()), "True")
         message = self.env.from_string(warning["then"][0]["data"]["message"]).render(**self.variables())
         self.assertIn("Page 5 button 18", message)
+
+    def test_auto_layout_thresholds_and_numbered_slot_identity(self):
+        for count, layout in ((0, "2x2"), (1, "2x2"), (4, "2x2"), (5, "4x2"),
+                              (8, "4x2"), (9, "6x3"), (18, "6x3")):
+            with self.subTest(count=count):
+                for slot in range(1, 19):
+                    self.inputs[f"page_1_button_{slot}"] = "light.test" if slot > 18 - count else []
+                self.inputs["page_1_button_18_title"] = "Last slot"
+                self.inputs["page_1_button_18_tap_action"] = "details"
+                page = self.snapshot()["pages"][0]
+                self.assertEqual(page["layout"], layout)
+                self.assertEqual(sum(bool(button["entity"]) for button in page["buttons"]), count)
+                if count:
+                    self.assertEqual(page["buttons"][17]["name"], "Last slot")
+                    self.assertEqual(page["buttons"][17]["tap_action"], "details")
+                    self.assertIn("light.test", self.variables()["watched_entities"])
+                self.assertEqual(self.variables()["ignored_slots"], [])
+        self.inputs["page_1_compact"] = False
+        for slot, layout in ((1, "2x2"), (4, "2x2"), (5, "4x2"), (8, "4x2"),
+                             (9, "6x3"), (18, "6x3")):
+            for b in range(1, 19):
+                self.inputs[f"page_1_button_{b}"] = "light.test" if b == slot else []
+            page = self.snapshot()["pages"][0]
+            self.assertEqual(page["layout"], layout)
+            self.assertIs(page["compact"], False)
+            self.assertEqual(page["buttons"][slot - 1]["entity"], "light.test")
+
+    def test_disabled_page_preserves_inputs_and_removes_only_inactive_subscriptions(self):
+        self.inputs.update(
+            page_1_button_18="light.disabled", page_1_button_18_title="Saved",
+            page_1_button_18_tap_action="details", page_1_temperature="sensor.disabled",
+            page_1_icon="mdi:home", page_1_enabled=False,
+            page_2_button_1="light.shared", wake_sensors=["binary_sensor.wake"],
+            light_details=[dict(light="light.disabled", related_1="switch.disabled"),
+                           dict(light="light.shared", related_1="switch.shared")],
+        )
+        original = copy.deepcopy(self.inputs)
+        variables = self.variables()
+        for entity in ("light.disabled", "sensor.disabled", "switch.disabled"):
+            self.assertNotIn(entity, variables["watched_entities"])
+        for entity in ("light.shared", "switch.shared", "binary_sensor.wake"):
+            self.assertIn(entity, variables["watched_entities"])
+        self.assertFalse(any(b["entity"] for b in self.snapshot()["pages"][0]["buttons"]))
+        self.assertEqual(self.snapshot()["pages"][0]["temperature"], "")
+        self.assertEqual(self.inputs, original)
+        self.inputs["page_1_enabled"] = True
+        page = self.snapshot()["pages"][0]
+        self.assertEqual(page["buttons"][17]["name"], "Saved")
+        self.assertEqual(page["buttons"][17]["tap_action"], "details")
+        self.assertIn("switch.disabled", self.variables()["watched_entities"])
+        self.inputs.update(page_1_enabled=False, page_2_button_2="light.disabled")
+        self.assertIn("switch.disabled", self.variables()["watched_entities"])
+
+    def test_tap_actions_are_per_slot_and_invalid_active_choices_fail(self):
+        self.inputs.update(page_1_button_1="light.same", page_1_button_2="light.same",
+                           page_1_button_2_tap_action="details", page_2_button_1="light.same")
+        pages = self.snapshot()["pages"]
+        self.assertEqual([b["tap_action"] for b in pages[0]["buttons"][:2]], ["default", "details"])
+        self.assertEqual(pages[1]["buttons"][0]["tap_action"], "default")
+        for entity, action in (("switch.bad", "details"), ("lock.bad", "details"), ("light.same", "bad")):
+            self.inputs.update(page_1_button_2=entity, page_1_button_2_tap_action=action)
+            self.assertTrue(self.variables()["configuration_error"])
+        self.inputs["page_1_enabled"] = False
+        self.assertEqual(self.variables()["configuration_error"], "")
+        for key, value in (("page_1_enabled", "false"), ("page_1_compact", 1), ("page_1_layout", "bad")):
+            self.inputs.update(page_1_enabled=True, page_1_compact=True, page_1_layout="auto",
+                               page_1_button_2=[])
+            self.inputs[key] = value
+            self.assertTrue(self.variables()["configuration_error"])
 
     def full_snapshot(self, title="Full control"):
         self.inputs["navigation_layout"] = "4x2"
@@ -466,7 +534,7 @@ class BlueprintTests(unittest.TestCase):
         # A small snapshot is also framed as text, not a native HA dictionary.
         self.setUp()
         small = self.chunks(self.snapshot())
-        self.assertEqual(len(small), 1)
+        self.assertEqual(json.loads("".join(chunk["payload"][1:] for chunk in small)), self.snapshot())
         self.assertTrue(small[0]["payload"].startswith("~{"))
 
     def test_outlet_icons_follow_state_and_respect_custom_icon(self):
@@ -481,9 +549,10 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0]["icon"], "mdi:desk-lamp")
 
     def test_temperature_unknown_and_optional_sensor(self):
+        self.inputs["page_1_button_1"] = "light.test"
         self.inputs["page_1_temperature"] = "sensor.temperature"
         self.states["sensor.temperature"] = "unavailable"
-        self.assertEqual(self.snapshot()["pages"][0]["temperature"], "Temperature: UNAVAILABLE")
+        self.assertEqual(self.snapshot()["pages"][0]["temperature"], "UNAVAILABLE")
         self.inputs["page_1_temperature"] = []
         self.assertEqual(self.snapshot()["pages"][0]["temperature"], "")
 

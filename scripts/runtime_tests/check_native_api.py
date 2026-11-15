@@ -156,8 +156,10 @@ async def check():
             await expect_release_status("Firmware/blueprint mismatch: 0.0.0")
 
             mixed = json.loads(json.dumps(snapshot))
-            mixed["pages"][0].update(layout="2x2", buttons=mixed["pages"][0]["buttons"][:4])
-            mixed["pages"][1].update(layout="4x2", buttons=mixed["pages"][1]["buttons"][:8])
+            for page, layout, capacity in ((0, "2x2", 4), (1, "4x2", 8)):
+                mixed["pages"][page]["layout"] = layout
+                for button in mixed["pages"][page]["buttons"][capacity:]:
+                    button.update(entity="", name="", state="", icon="", tap_action="default")
             active_entities = {button["entity"] for page in mixed["pages"] for button in page["buttons"]}
             mixed["light_details"] = [light for light in mixed["light_details"] if light["entity"] in active_entities]
             previous = await wait_probe()
@@ -165,6 +167,24 @@ async def check():
             await wait_probe(lambda value: value["tick"] > previous["tick"] + 250)
             await tap(600, 307)
             await expect_entity(mixed["pages"][0]["buttons"][3]["entity"])
+            reserved = json.loads(json.dumps(mixed))
+            reserved["pages"][0].update(layout="4x2", compact=False)
+            reserved["pages"][0]["buttons"][2]["entity"] = ""
+            active_entities = {button["entity"] for page in reserved["pages"] for button in page["buttons"]}
+            reserved["light_details"] = [
+                light for light in reserved["light_details"] if light["entity"] in active_entities
+            ]
+            previous = await wait_probe()
+            await send(reserved, "reserved-gaps")
+            await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
+            await tap(497, 142)
+            await asyncio.sleep(.15)
+            assert actions.empty(), "Reserved empty slot dispatched an entity action"
+            await tap(692, 142)
+            await expect_entity(reserved["pages"][0]["buttons"][3]["entity"])
+            previous = await wait_probe()
+            await send(mixed, "restore-mixed")
+            await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
             await tap(768, 456)
             await wait_probe(lambda value: value["menu_visible"])
             await tap(302, 142)
@@ -203,7 +223,7 @@ async def check():
                 localization={"time": "12h", "date": "iso"}, wake_hold=True,
             )
             await send(home_snapshot, "home-hold")
-            await wait_probe(lambda value: value["sensor_hold"] and value["compact_clock"])
+            await wait_probe(lambda value: value["sensor_hold"] and value["twelve_hour"])
             client.select_command(wake.key, "Homepage")
             await client.execute_service(service["test_wake"], {})
             await wait_probe(lambda value: value["homepage_visible"])
@@ -211,7 +231,7 @@ async def check():
             settings = await wait_probe(lambda value: value["settings_visible"])
             await tap(200, 142)
             await wait_probe(lambda value: value["restarts"] == settings["restarts"] + 1)
-            await tap(600, 142)
+            await tap(140, 307)
             asleep = await wait_probe(lambda value: not value["backlight"] and not value["sensor_hold"])
             await send(home_snapshot, "manual-sleep-refresh")
             still_asleep = await wait_probe(lambda value: value["tick"] > asleep["tick"] + 250)
@@ -276,6 +296,28 @@ async def check():
             previous = await wait_probe()
             await send(details.snapshot(), "detail-model")
             await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
+            details.inputs["page_1_button_1_tap_action"] = "details"
+            previous = await wait_probe()
+            await send(details.snapshot(), "detail-short-tap")
+            await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
+            await tap(200, 100)
+            await wait_probe(lambda value: value["detail_visible"])
+            await touch(2)
+            assert actions.empty(), "Details tap leaked a toggle or duplicate release"
+            await tap(69, 107)
+            await expect_action("light.toggle", "light.detail")
+            await tap(664, 456)
+            await wait_probe(lambda value: not value["detail_visible"])
+            details.inputs["page_1_button_1_tap_action"] = "default"
+            previous = await wait_probe()
+            await send(details.snapshot(), "detail-default-tap")
+            await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
+            await tap(200, 100)
+            await expect_action("light.toggle", "light.detail")
+            for x, y in ((200, 100), (200, 180), (375, 210)):
+                await hold(x, y)
+                await tap(664, 456)
+                await wait_probe(lambda value: not value["detail_visible"])
             before_owner_loss = await wait_probe()
             await touch(0, 78, 142)
             await touch(5, 78, 142)
@@ -349,19 +391,19 @@ async def check():
             await touch(2)
             await expect_action("light.turn_off", "light.detail")
             await wait_probe(lambda value: "not confirmed" in value["detail_status"])
-            await tap(69, 456)
+            await tap(664, 456)
             await wait_probe(lambda value: not value["detail_visible"])
             await hold(478, 142)
             await wait_probe(lambda value: not value["slider_visible"] and not value["wheel_visible"])
             await tap(69, 107)
             await expect_action("light.toggle", "light.simple")
-            await tap(69, 456)
+            await tap(664, 456)
             await hold(78, 307)
             await wait_probe(lambda value: value["slider_visible"] and not value["wheel_visible"])
-            await tap(69, 456)
+            await tap(664, 456)
             await hold(478, 307)
             await wait_probe(lambda value: value["slider_visible"] and not value["wheel_visible"])
-            await tap(69, 456)
+            await tap(664, 456)
             details.inputs["page_1_layout"] = "4x2"
             previous = await wait_probe()
             await send(details.snapshot(), "detail-dense-holds")
@@ -371,7 +413,7 @@ async def check():
                 await hold(x, 127, drift=(35, 25), extra_contacts=True)
                 await wait_probe(lambda value: value["slider_visible"])
                 if x != 692:
-                    await tap(69, 456)
+                    await tap(664, 456)
             details.states["light.temp"] = "unavailable"
             await send(details.snapshot(), "detail-unavailable")
             await wait_probe(lambda value: value["detail_status"] == "Light unavailable")
@@ -394,7 +436,7 @@ async def check():
                 await expect_action(command, "lock.test")
             await send(snapshot, "restore")
             await expect_release_status("Latest release unavailable")
-            warm = await wait_probe(lambda value: value["last_name"] == "X" * 80 and not value["compact_clock"])
+            warm = await wait_probe(lambda value: value["last_name"] == "X" * 80 and not value["twelve_hour"])
             await asyncio.sleep(5.2)
             quiet = await wait_probe(lambda value: value["tick"] > warm["tick"] + 5100)
             assert quiet["release_updates"] == warm["release_updates"], "Unchanged release status was republished"
@@ -408,7 +450,8 @@ async def check():
             endpoint_probe = await wait_probe(lambda value: value["tick"] >= baseline["tick"] + 31000)
             assert endpoint_probe["endpoint_updates"] == 1, "Constant endpoint was republished after boot"
             size = len(json.dumps(unicode_snapshot).encode())
-            print(f"Native API passed: 144 controls, light details and typed release-only commands, "
+            print(f"Native API passed: 144 controls, reserved gaps, configurable taps, whole-tile holds, "
+                  f"light details and typed release-only commands, "
                   f"Homepage, Settings, sensor wake/hold, "
                   f"{size} bytes, {len(unicode_chunks)} chunks.")
             print(f"128 KiB host stack; retained host heap {warm['heap_bytes']} bytes "

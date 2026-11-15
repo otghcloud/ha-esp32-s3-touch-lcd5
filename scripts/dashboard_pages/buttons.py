@@ -5,13 +5,16 @@ def build():
     widgets, bindings = [], []
     for p in range(MAX_PAGES):
         widgets.append(container(f"page_{p}", [
-            label(f"title_{p}", "", "font_medium", x=24, y=14, width=560, height=32, long_mode="DOT"),
-            label(f"temperature_{p}", "", "font_small", align="BOTTOM_LEFT", x=24, y=-14,
-                  width=280, height=20, long_mode="DOT", text_color=0x111111),
+            label(f"title_{p}", "", "font_medium", x=24, y=14, width=546, height=32, long_mode="DOT"),
+            label(f"page_icon_{p}", "", "font_dense_icons", x=24, y=10, width=36, height=36, hidden=True),
+            label(f"thermometer_{p}", "\U000F050F", "font_temperature_icon", x=592, y=18,
+                  width=20, height=24, hidden=True),
+            label(f"temperature_{p}", "", "font_temperature", x=620, y=17,
+                  width=156, height=26, long_mode="DOT"),
         ]))
         bindings.append(
             f"id(dashboard).bind_page({p}, "
-            + f"{{id(page_{p}), id(title_{p}), id(temperature_{p})}});"
+            + f"{{id(page_{p}), id(title_{p}), id(temperature_{p}), id(page_icon_{p}), id(thermometer_{p})}});"
         )
     tiles, tile_bindings = [], []
     for b in range(MAX_BUTTONS):

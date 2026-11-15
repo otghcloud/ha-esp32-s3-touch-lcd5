@@ -6,7 +6,7 @@ For the short installation guide and everyday controls, start with [README.md](.
 
 The [installation guide](./README.md#1-install-the-firmware) uses matching published release assets. The release's example pins both the package and separately fetched dashboard component to the same immutable tag. Initial builds need internet access for dependencies, Roboto and Material Design icons. Keep Wi-Fi/API credentials in private ESPHome secrets.
 
-Home Assistant's **Device info** identifies the panel as **HA Panel LCD5** by **OTGH Cloud**, using `esphome.project` in [`esphome/core.yaml`](./esphome/core.yaml). The initial release baseline is **0.0.1**. Keep the firmware project version aligned with its release tag (for example, `0.0.1` for `v0.0.1`). Firmware and blueprint belong to the same release; the dashboard protocol's independent version number is **2**.
+Home Assistant's **Device info** identifies the panel as **HA Panel LCD5** by **OTGH Cloud**, using `esphome.project` in [`esphome/core.yaml`](./esphome/core.yaml). The initial release baseline is **0.0.1**. Keep the firmware project version aligned with its release tag (for example, `0.0.1` for `v0.0.1`). Firmware and blueprint belong to the same release; the dashboard protocol's independent version number is **3**.
 
 ### Release process and CI
 
@@ -76,7 +76,7 @@ Pages and entities are configured at runtime by the [Home Assistant blueprint](.
    Use the `source_url` from the blueprint in your chosen release. Before publication, copy the local `wallpanel_blueprint.yaml` to `/config/blueprints/automation/otghcloud/wallpanel_blueprint.yaml` and reload automations.
 
 4. Create an automation from **Waveshare Touch LCD HA-Panel** and select your panel device.
-5. Expand **Button page 01** through **Button page 08**. Each provides a layout, page icon, optional temperature sensor and up to eighteen entity selectors with optional **Title** overrides. Choose **2x2**, **4x2** or **6x3** for 4, 8 or 18 controls respectively. Leave all active button slots empty to hide a page.
+5. Expand **Button page 01** through **Button page 08**. Each provides Enabled, layout, Compact and center buttons, page icon, optional temperature sensor and eighteen entity selectors with optional **Title** and **Tap action** settings. Auto is the default; manual grids remain available. Disable a page to hide it without clearing its inputs, or leave all active slots empty.
 6. Under **Navigation > Page order and titles**, edit each row to set its page title, then drag the rows into the desired display order. Page slots still identify the corresponding numbered configuration sections.
 7. Save and enable the automation. Run its actions once for an immediate update; future entity changes and reconnects update automatically. Keep only one configuration automation enabled per panel.
 
@@ -86,6 +86,8 @@ Buttons use HA friendly names unless their **Title** field is filled in. Blank o
 
 The maximum is **eight button pages / 144 controls**, plus an optional Homepage, using the shared-widget renderer. Use firmware and blueprint from the same release. Install firmware first, then import the matching blueprint and reload automations.
 
+Protocol 3 requires a coordinated firmware/blueprint update: protocol-2 payloads are rejected, and older firmware rejects protocol 3 rather than ignoring tap choices. Replace the blueprint at the existing automation's path, retain its inputs, reload automations and run it once. New Enabled/Compact settings default on and Tap action defaults to the existing action. Explicit saved layouts remain unchanged; omitted layouts now use Auto, which can activate previously ignored high-numbered slots. Check Navigation capacity when upgrading.
+
 ### Home Assistant icons
 
 The firmware includes the complete **Material Design Icons 7.4.47** font at 72 pixels for 2x2 tiles and 36 pixels for denser tiles. The blueprint sends each entity's `icon` attribute, so custom `mdi:` icons (including light, door, lock and automation variants) display on the panel. Without an explicit icon, buttons use Home Assistant's state-aware defaults: lightbulb/lightbulb-off, robot/robot-off, toggle-switch-variant/toggle-switch-variant-off, and locked/unlocked/jammed/transition lock icons. Outlet switches use power-plug/power-plug-off. Explicit glyphs take precedence, but their colours still follow entity state.
@@ -94,7 +96,7 @@ Active entity tiles are white with contrasting dark text; inactive tiles stay da
 
 Icons retain amber for on/enabled and grey for off/disabled, with darker shades on white. Locks retain green for locked, red for unlocked/open/jammed and amber for transitions. Unknown/unavailable entities and disconnected controls are grey and dimmed. Lock transitions, jammed and open states remain non-actionable.
 
-Each page's **Page icon** selector controls its icon beside the page name in navigation. Blank or unsupported page icons use `mdi:view-dashboard`; unsupported icons also log a warning.
+Each page's **Page icon** selector controls its icon beside the header title and navigation name. Blank or unsupported icons are omitted from the header; Navigation uses `mdi:view-dashboard` instead. Unsupported icons also log a warning.
 
 This matches entity icons, not icon overrides defined only in individual Lovelace cards. Non-MDI icon packs and icons added after 7.4.47 are not supported; the panel logs a warning and uses a default instead. Door icons are available for existing controls; this does not add door sensors or cover controls.
 
@@ -102,17 +104,23 @@ The full icon library requires the board's 16 MB flash layout. Use a **USB/manua
 
 ### Layout and page navigation
 
-Each button page has a 56-pixel black header with its title on the left and the clock on the right. A 48-pixel grey (`#999999`) footer contains the optional page temperature, centred page dots, a Settings cog and a bottom-right menu icon. Long titles and temperature values are truncated to avoid overlapping neighbouring controls. Blank or whitespace-only page titles display as **Page N**, using the blueprint slot number.
+Each button page has a 56-pixel black header with its optional icon/title on the left and configured temperature on the right. Temperature uses a thermometer icon instead of a text prefix, with 20-pixel text/icon smaller than the 24-pixel title. A 48-pixel grey (`#999999`) footer contains the 16-pixel bold clock at bottom-left, centred page dots, a Settings cog and bottom-right menu icon. The footer clock is shared by all normal views; screensaver/OTA presentation is unchanged. Long titles and temperatures are truncated into separate regions. Blank or whitespace-only page titles display as **Page N**, using the blueprint slot number.
 
 Each button page independently selects its grid:
 
-| Layout (columns x rows) | Active input slots | Tile content |
+**Auto** defaults to 2x2 for 1-4 configured controls, 4x2 for 5-8, and 6x3 for 9-18. Empty pages remain hidden. Count configured slots, including duplicate entities, rather than current on/off/availability states. Navigation's layout remains an independent manual selection.
+
+| Manual layout (columns x rows) | Active input slots | Tile content |
 | --- | --- | --- |
 | 2x2 | 1-4 | Icon, title and state |
 | 4x2 | 1-8 | Icon, title and state |
 | 6x3 | 1-18 | Icon and title; unavailable controls are dimmed/disabled |
 
-Populated slots compact in configured order, with incomplete rows centred. A smaller layout does **not** delete higher-numbered settings: they are ignored with a Home Assistant warning until a larger layout is selected again. Ignored slots do not enable a page or generate watched-entity updates.
+**Compact and center buttons** defaults on: populated slots compact in configured order, with incomplete rows centred. Auto can display a light from slot 18 in a centered 2x2 grid without changing its numbered identity, title or tap choice. Turn compaction off to retain exact numbered positions, including non-interactive gaps. Auto then uses the highest occupied slot: slot 5 requires 4x2 and slot 18 requires 6x3, even if it is the only control.
+
+A manually selected smaller layout does **not** delete higher-numbered settings: they are ignored with a Home Assistant warning until a larger layout is selected again. Ignored slots do not enable a page or generate watched-entity updates. With manual 4x2 and compaction off, slots 1/2/4 appear as `[x x - x]` on the first row.
+
+Each page's **Enabled** switch defaults on. Disabled pages retain all saved inputs but disappear from Navigation, swipes and dots. Their inactive-only entities/temperatures/related controls are not watched or transmitted. Shared entities still used elsewhere remain watched. Disabling the current/detail-source page safely selects another available content page and cancels pending gestures; a disabled wake target uses the same fallback.
 
 Use **Navigation > Page order and titles** to reorder pages with Home Assistant's native drag handles. Edit a row with its pencil button to set **Page title**; the row displays that title with its fixed page slot underneath. Keep the **Page slot** unchanged when moving a row: it links to the original page's entities, layout, icon and temperature. Menu positions, swipe order and page dots follow the row order, while wake selections retain their original slot identities. Reordering does not jump away from the currently displayed page. Unlisted pages follow in numeric slot order; removing a row does not hide or delete its page. Empty pages are always skipped. Duplicate or invalid slots log an error and retain the previous dashboard.
 
@@ -135,13 +143,13 @@ Changing layouts, page icons or controls does not require recompilation.
 
 ### Light details and related controls
 
-Short taps toggle. **Hold a light's icon for 600 ms** to open its details; finger drift up to 40 pixels per axis is accepted. Exceeding that allowance at any point cancels the hold. Short-tap tolerance remains 20 pixels and horizontal swipes require 100 pixels. Opening details consumes that entire gesture, so release before using a control. Holding the title/body does not open details.
+Each numbered button has **Tap action**: **Default action** preserves its existing toggle/lock operation; **Open light details** opens the selected light without toggling. The choice is specific to that button and page, even when the same entity appears elsewhere. Selecting Open light details for an active non-light is an explicit configuration error.
 
-The small icons in 4x2/6x3 layouts have a padded hold region targeting at least 72 pixels per axis, clipped by the tile and excluding its title. A tile's pressed/hover appearance alone does not mean the separate icon hold is armed. If a hold does not open details, DEBUG logs distinguish **Light hold armed**, **outside icon area**, cancellation by movement/owner loss/layout changes, release before opening, and **Opening light details**. A first gesture after sleep/screensaver is wake-only and logs **Touch reserved for wake**: release before operating controls. Bulb capability metadata controls which editors appear, not whether an available light can open its detail page.
+**Hold anywhere on a light tile for 600 ms**, including its name/state/body, to open details independently of the tap option. Finger drift up to 40 pixels per axis is accepted; exceeding that allowance at any point cancels the hold. Short-tap tolerance remains 20 pixels and horizontal swipes require 100 pixels. Opening details consumes the entire gesture, so release before using another control; it never also toggles. DEBUG logs retain movement/owner/layout cancellation, early release and **Opening light details** diagnostics. A first gesture after sleep/screensaver is wake-only and logs **Touch reserved for wake**. Bulb capability metadata controls which editors appear, not whether an available light can open details.
 
 Input is deliberately **single-touch**: the first reported contact owns the entire gesture, and additional contacts are ignored while it remains down. Broad finger presses reporting extra contacts do not cancel a hold, tap or slider drag. Only ESPHome's PRESSED/UPDATED states count as active; nonzero releasing states are not live fingers. If the owner disappears while another contact remains, the gesture is cancelled until all contacts release, rather than handed to another finger. This prevents a different contact from completing a hold or committing a command. Owner-loss diagnostics include the original/remaining IDs, state and coordinates.
 
-The detail header combines the source page and configured item title, for example **Office - Lamp**, and follows live renames without changing slot identity. The upper-left **State** tile toggles the primary light; its appearance/icon conveys state without a second ON/OFF label. Back is a footer arrow matching the menu/cog font and touch area. The reusable tile's border/radius are reset when it returns to another view.
+The detail header combines the source page and configured item title, for example **Office - Lamp**, and follows live renames using the exact source page/slot. Removing that source closes details even if the same entity remains elsewhere. The upper-left **State** tile always toggles the primary light, regardless of its main-page tap choice; its appearance/icon conveys state without a second ON/OFF label. Back is a footer arrow immediately left of the cog/menu, matching their font and touch area. The reusable tile's border/radius are reset when it returns to another view.
 
 The left three quarters contain State and supported brightness, temperature and colour controls. Select a mode at the right of that area. The HS wheel changes hue/saturation; colour-capable RGB/XY lights use Home Assistant's conversion. Its label is an RGB hex code for the selected hue/saturation at full value, independent of brightness; it is not a measured physical colour. The conversion retains fractional hue instead of LVGL's intermediate 8-bit hue approximation. Missing readings are hidden while the light is off; while it is on, **Choose brightness/temperature/colour** invites a selection. Editing an off light immediately shows the preview. No missing reading is invented in the model.
 
@@ -153,7 +161,7 @@ Drag to preview locally; **one command is sent on release**, not continuously. B
 
 Under **Light details > Related controls**, add a structured row for a primary light and select up to two related **light, switch or automation** entities, with optional titles. They occupy the right-hand quarter and behave as ordinary toggles. Related entities need no main-page tile and are watched for updates automatically. Shared entities are transmitted once; title overrides remain specific to each binding. No row is required merely to enable normal light details. Existing automation tiles are not removed automatically: clear them yourself if replaced by related controls. Rows for lights outside the active layouts are retained but inactive.
 
-Back returns to the source content page. Details never enter page ordering, dots, wake choices or last-used content identity. The footer menu/cog remain available. Configurable short-tap actions, continuous/throttled drag commands, related sensors/energy readings, HA `button` entities, four related controls and non-light detail pages are deferred.
+Back returns to the source content page. Details never enter page ordering, dots, wake choices or last-used content identity. The footer menu/cog remain available. Related tiles retain normal toggles. Continuous/throttled drag commands, related sensors/energy readings, HA `button` entities, four related controls and non-light detail pages remain deferred.
 
 ### Firmware updates
 
@@ -177,6 +185,8 @@ Enable **Homepage > Enable Homepage** in the blueprint to add a placeholder view
 Homepage participates in the menu, swipes and page dots. It comes first unless a **Homepage** row in **Navigation > Page order and titles** places it elsewhere. Its optional title changes the header/menu label, not the placeholder text. Disabling Homepage retains its ordering input and safely returns to another available page.
 
 Tap the footer cog for **Settings**. **Restart** immediately reboots the panel, without confirmation; **Sleep** immediately turns the backlight off. These are local actions and work without Home Assistant, including before any pages arrive. Settings has no page dots, is excluded from swipes/order/wake choices, and never replaces the last content page. The menu icon opens Navigation from Settings; touching a sleeping panel wakes only, as below.
+
+Restart/Sleep are stacked in the left third. The right-hand **Overview** shows the actual ESPHome device name/hostname, CI-generated firmware project version and current local IPv4 address. A disconnected/unset network shows **Unavailable**, not a stale or zero address. IP changes refresh while Settings is visible, without HA sensors or internet polling; unchanged values do not redraw labels.
 
 ### Display backlight
 
@@ -264,7 +274,7 @@ packages:
 
 Replace both checkout paths. Compile that private configuration and copy the matching local blueprint into HA; do not use an unpublished tag URL.
 
-The firmware stores eight page models with eighteen button slots each, but shares one eighteen-tile LVGL pool between entity pages, Navigation, Settings and light details, plus one nine-dot strip and a single detail editor. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. The tree has 155 actual screen/top-layer objects, below the 220-object limit, with 1016 measured startup refresh requests below the 1500-request limit. Watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
+The firmware stores eight page models with eighteen button slots each, but shares one eighteen-tile LVGL pool between entity pages, Navigation, Settings and light details, plus one nine-dot strip and a single detail editor. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. The tree has 178 actual screen/top-layer objects, below the 220-object limit, with 1158 measured startup refresh requests below the 1500-request limit. Watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
 
 ```sh
 python3 scripts/generate_dashboard.py
@@ -286,7 +296,7 @@ python3 scripts/runtime_tests/check_native_api.py
 
 The connected native API check also requires `aioesphomeapi` (included with ESPHome). It starts/stops its own local host process, requires port 16053 to be unused, and tests blueprint-generated 144-control snapshots, Unicode, partial-transfer atomicity, real entity actions through all three layouts, Homepage, local Settings actions, clock format changes, sensor wake/manual precedence and hold expiry. Batch 3 checks also cover hold consumption/cancellation, reusable detail geometry, white/reversed appearance, atomic metadata rejection, OTA gates/recovery, typed numeric/HS-list service envelopes, release-only edits, confirmation timeout, related toggles and primary-entity removal. Host Restart/backlight actions are test callbacks, not real restarts or hardware output. It runs with a 128 KiB host stack and checks bounded retained heap after repeated transfers.
 
-The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). Protocol version 2 uses exactly eight page slots with per-page layout/icon metadata and 4, 8 or 18 button slots per page. Every button includes an `icon` string; an empty string selects its state-aware default. The required root `page_order` is a permutation of zero-based slot indices 0-7, separate from the `pages` array. The blueprint expands partial user orders to a complete permutation. The runtime validates the entire snapshot before changing the UI; unsupported protocols/entities and malformed payloads are logged and rejected without replacing the previous configuration.
+The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). Protocol version 3 uses exactly eight page slots, each with layout/icon/compaction metadata and eighteen fixed numbered button slots regardless of grid size. Each page requires boolean `compact`; each button requires `tap_action` (`default` or `details`) and an `icon` string, empty for its state-aware default. Populated counts must fit the resolved grid; noncompact positions must also fit its capacity. Empty slots use the default tap action. This preserves high-slot identity in small Auto grids. The required root `page_order` is a permutation of zero-based slot indices 0-7, separate from the `pages` array. The blueprint expands partial user orders to a complete permutation. The runtime validates the entire snapshot before changing the UI; unsupported protocols/entities and malformed payloads are logged and rejected without replacing the previous configuration.
 
 All root fields are required: `version`, `blueprint_release`, `latest_release`, `pages`, `navigation_layout`, `page_order`, `screensaver_enabled`, `homepage`, `localization`, `wake_hold`, `reverse_active`, `light_details` and `detail_entities`. `blueprint_release` is a stable SemVer string; `latest_release` is another stable version or an empty string when unavailable/unconfigured. `homepage: {enabled, position, title}` uses insertion position 0-8 among ordered entity slots; `localization: {time, date}` uses allowlisted presets. Disabled features are represented explicitly with false flags and empty arrays, not missing fields. The separate `esphome.<device_name>_wake_display` action represents a fresh sensor activation; the blueprint sends it before the snapshot transfer so a later attribute/periodic update cannot cancel it mid-transfer. Local manual-sleep precedence is not stored in HA snapshots.
 
@@ -296,7 +306,7 @@ The Dashboard endpoint sensor and ready events advertise `esphome.<device_name>_
 
 The blueprint explicitly uses `to_json(ensure_ascii=True)`: HA otherwise preserves Unicode, so a 4096-character fragment containing degree signs, accents or emoji can exceed the firmware's 4096-byte JSON limit. Escaping preserves the original displayed text while keeping character and byte counts equal. Do not remove it or raise the transfer limits to mask invalid chunks.
 
-Automated validation includes a 225,272-byte Unicode snapshot with light metadata across 55 native API chunks, within the 256 KiB cap. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light controls and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
+Automated validation includes a 229,008-byte Unicode snapshot with light metadata across 56 native API chunks, within the 256 KiB cap. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light controls and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
 
 For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
 

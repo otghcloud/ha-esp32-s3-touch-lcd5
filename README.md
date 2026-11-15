@@ -57,24 +57,28 @@ same immutable release tag as the firmware example.
 Create an automation from **Waveshare Touch LCD HA-Panel**:
 
 1. Select the panel device.
-2. Fill in the button pages you want. Choose **2x2**, **4x2** or **6x3** for 4, 8 or 18 controls.
-3. Choose entities, optional title overrides, page icons and temperature sensors. Empty pages are hidden.
+2. Fill in the button pages you want. **Auto** chooses 2x2, 4x2 or 6x3 for up to 4, 8 or 18 controls; manual layouts are also available.
+3. Choose entities, optional titles, tap actions, page icons and temperature sensors. Turn off a page's **Enabled** switch to hide it without clearing its settings. Empty pages are hidden too.
 4. Under **Navigation > Page order and titles**, set page titles and drag rows into order. Keep each row's page slot unchanged.
 5. Save and enable the automation, then run its actions once.
 
 Keep **one dashboard automation per panel** enabled. Future state changes and reconnects update it automatically.
+
+**Compact and center buttons** is on by default. Turn it off to retain numbered positions and leave gaps. Auto then sizes the grid using the highest occupied slot.
 
 ## Using the panel
 
 - **Tap** a control to operate it. Automations enable/disable rather than run their actions. Locks operate immediately, without confirmation.
 - **Swipe left/right** to move between pages.
 - Tap the **menu** icon for Navigation or the **cog** for Settings.
-- **Hold a light icon for 600 ms** to open details, headed with its parent page and item title, such as **Office - Lamp**.
+- **Hold anywhere on a light tile for 600 ms** to open details, headed with its parent page and item title, such as **Office - Lamp**. Each button can instead use **Open light details** for its short tap; the default tap action is unchanged.
 - In details, use **State** to toggle the light and choose an available adjustment mode. Drag to preview; release to send one command. The footer arrow returns to the parent page.
 - Missing light readings are hidden while off, or replaced with a “Choose…” prompt while on. Colour is shown as an RGB hex code. Connection and command errors remain visible.
 - In **Light details > Related controls**, optionally add up to two lights, switches or automations beside a primary light.
 
 Active controls are normally white. **Appearance > Reverse active state** changes that visual rule, not the action. Locks are normally active when unlocked.
+
+The clock is bottom-left; optional page icons and temperatures appear in the header. Settings stacks Restart/Sleep on the left and shows the device name, firmware version and IP on the right. Detail Back sits beside the footer cog and menu.
 
 ## Display settings
 
@@ -94,12 +98,12 @@ Choose date/time formats and optional binary wake sensors in the blueprint. Wake
 
 ## Updating and troubleshooting
 
-- Use firmware and blueprint from the same release. Install updated firmware first, then import its blueprint and reload automations.
+- Use firmware and blueprint from the same release. Install updated firmware first, then replace the existing blueprint and reload automations. This batch uses protocol **3**, so earlier firmware/blueprints cannot be mixed; saved automation inputs remain, with defaults for the new options.
 - The device's diagnostic **Firmware release** and **Release status** identify version mismatches.
 - Optional [release notifications](./DEVELOPER.md#release-notifications) warn about newer stable releases. Nothing installs automatically.
 - OTA updates blank the backlight until reboot. If an upload fails or aborts, its previous state is restored.
 - **Waiting for Home Assistant:** check the integration, enabled Dashboard endpoint and dashboard automation, then run the automation once.
-- **Controls missing:** check the page layout's capacity and Navigation layout.
+- **Controls missing:** check page Enabled switches and layout capacities, including Navigation. Manual layouts ignore higher slots; Auto uses all configured slots.
 - **Changes not appearing:** allow the package cache to refresh, then clean/rebuild firmware if necessary.
 - **Frequent Activity entries:** dashboard automation runs are normal. See the [Activity filter instructions](./DEVELOPER.md#activity-and-diagnostic-logging) to hide just that automation.
 

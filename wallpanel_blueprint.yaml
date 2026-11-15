@@ -213,14 +213,32 @@ blueprint:
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_1_enabled:
+          name: Enabled
+          description: Hide this page without clearing its saved configuration.
+          default: true
+          selector:
+            boolean:
+        page_1_compact:
+          name: Compact and center buttons
+          description: Turn off to preserve numbered positions and leave empty spaces.
+          default: true
+          selector:
+            boolean:
         page_1_layout:
           name: Layout (columns x rows)
-          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
-          default: 2x2
-          selector: *layout_selector
+          description: Auto sizes the grid to populated controls (or highest slot when not compact). Manual layouts ignore higher slots with a warning.
+          default: auto
+          selector: &page_layout_selector
+            select:
+              options:
+                - auto
+                - 2x2
+                - 4x2
+                - 6x3
         page_1_icon:
           name: Page icon
-          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          description: MDI icon beside the page title and navigation name. Blank omits the header icon; navigation uses a dashboard icon.
           default: ""
           selector:
             icon:
@@ -251,6 +269,16 @@ blueprint:
           default: ""
           selector: &title_selector
             text:
+        page_1_button_1_tap_action:
+          name: Button 1 - Tap action
+          default: default
+          selector: &tap_action_selector
+            select:
+              options:
+                - label: Default action
+                  value: default
+                - label: Open light details (lights only)
+                  value: details
         page_1_button_2:
           name: Button 2 - Entity
           default: []
@@ -260,6 +288,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_2_tap_action:
+          name: Button 2 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_3:
           name: Button 3 - Entity
           default: []
@@ -269,6 +301,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_3_tap_action:
+          name: Button 3 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_4:
           name: Button 4 - Entity
           default: []
@@ -278,8 +314,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_4_tap_action:
+          name: Button 4 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_5:
-          name: Button 5 - Entity (4x2 / 6x3)
+          name: Button 5 - Entity
           default: []
           selector: *button_selector
         page_1_button_5_title:
@@ -287,8 +327,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_5_tap_action:
+          name: Button 5 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_6:
-          name: Button 6 - Entity (4x2 / 6x3)
+          name: Button 6 - Entity
           default: []
           selector: *button_selector
         page_1_button_6_title:
@@ -296,8 +340,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_6_tap_action:
+          name: Button 6 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_7:
-          name: Button 7 - Entity (4x2 / 6x3)
+          name: Button 7 - Entity
           default: []
           selector: *button_selector
         page_1_button_7_title:
@@ -305,8 +353,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_7_tap_action:
+          name: Button 7 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_8:
-          name: Button 8 - Entity (4x2 / 6x3)
+          name: Button 8 - Entity
           default: []
           selector: *button_selector
         page_1_button_8_title:
@@ -314,8 +366,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_8_tap_action:
+          name: Button 8 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_9:
-          name: Button 9 - Entity (6x3)
+          name: Button 9 - Entity
           default: []
           selector: *button_selector
         page_1_button_9_title:
@@ -323,8 +379,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_9_tap_action:
+          name: Button 9 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_10:
-          name: Button 10 - Entity (6x3)
+          name: Button 10 - Entity
           default: []
           selector: *button_selector
         page_1_button_10_title:
@@ -332,8 +392,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_10_tap_action:
+          name: Button 10 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_11:
-          name: Button 11 - Entity (6x3)
+          name: Button 11 - Entity
           default: []
           selector: *button_selector
         page_1_button_11_title:
@@ -341,8 +405,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_11_tap_action:
+          name: Button 11 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_12:
-          name: Button 12 - Entity (6x3)
+          name: Button 12 - Entity
           default: []
           selector: *button_selector
         page_1_button_12_title:
@@ -350,8 +418,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_12_tap_action:
+          name: Button 12 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_13:
-          name: Button 13 - Entity (6x3)
+          name: Button 13 - Entity
           default: []
           selector: *button_selector
         page_1_button_13_title:
@@ -359,8 +431,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_13_tap_action:
+          name: Button 13 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_14:
-          name: Button 14 - Entity (6x3)
+          name: Button 14 - Entity
           default: []
           selector: *button_selector
         page_1_button_14_title:
@@ -368,8 +444,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_14_tap_action:
+          name: Button 14 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_15:
-          name: Button 15 - Entity (6x3)
+          name: Button 15 - Entity
           default: []
           selector: *button_selector
         page_1_button_15_title:
@@ -377,8 +457,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_15_tap_action:
+          name: Button 15 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_16:
-          name: Button 16 - Entity (6x3)
+          name: Button 16 - Entity
           default: []
           selector: *button_selector
         page_1_button_16_title:
@@ -386,8 +470,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_16_tap_action:
+          name: Button 16 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_17:
-          name: Button 17 - Entity (6x3)
+          name: Button 17 - Entity
           default: []
           selector: *button_selector
         page_1_button_17_title:
@@ -395,8 +483,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_17_tap_action:
+          name: Button 17 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_1_button_18:
-          name: Button 18 - Entity (6x3)
+          name: Button 18 - Entity
           default: []
           selector: *button_selector
         page_1_button_18_title:
@@ -404,20 +496,36 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_18_tap_action:
+          name: Button 18 - Tap action
+          default: default
+          selector: *tap_action_selector
     page_2:
       name: Button page 02
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_2_enabled:
+          name: Enabled
+          description: Hide this page without clearing its saved configuration.
+          default: true
+          selector:
+            boolean:
+        page_2_compact:
+          name: Compact and center buttons
+          description: Turn off to preserve numbered positions and leave empty spaces.
+          default: true
+          selector:
+            boolean:
         page_2_layout:
           name: Layout (columns x rows)
-          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
-          default: 2x2
-          selector: *layout_selector
+          description: Auto sizes the grid to populated controls (or highest slot when not compact). Manual layouts ignore higher slots with a warning.
+          default: auto
+          selector: *page_layout_selector
         page_2_icon:
           name: Page icon
-          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          description: MDI icon beside the page title and navigation name. Blank omits the header icon; navigation uses a dashboard icon.
           default: ""
           selector:
             icon:
@@ -434,6 +542,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_1_tap_action:
+          name: Button 1 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_2:
           name: Button 2 - Entity
           default: []
@@ -443,6 +555,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_2_tap_action:
+          name: Button 2 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_3:
           name: Button 3 - Entity
           default: []
@@ -452,6 +568,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_3_tap_action:
+          name: Button 3 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_4:
           name: Button 4 - Entity
           default: []
@@ -461,8 +581,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_4_tap_action:
+          name: Button 4 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_5:
-          name: Button 5 - Entity (4x2 / 6x3)
+          name: Button 5 - Entity
           default: []
           selector: *button_selector
         page_2_button_5_title:
@@ -470,8 +594,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_5_tap_action:
+          name: Button 5 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_6:
-          name: Button 6 - Entity (4x2 / 6x3)
+          name: Button 6 - Entity
           default: []
           selector: *button_selector
         page_2_button_6_title:
@@ -479,8 +607,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_6_tap_action:
+          name: Button 6 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_7:
-          name: Button 7 - Entity (4x2 / 6x3)
+          name: Button 7 - Entity
           default: []
           selector: *button_selector
         page_2_button_7_title:
@@ -488,8 +620,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_7_tap_action:
+          name: Button 7 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_8:
-          name: Button 8 - Entity (4x2 / 6x3)
+          name: Button 8 - Entity
           default: []
           selector: *button_selector
         page_2_button_8_title:
@@ -497,8 +633,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_8_tap_action:
+          name: Button 8 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_9:
-          name: Button 9 - Entity (6x3)
+          name: Button 9 - Entity
           default: []
           selector: *button_selector
         page_2_button_9_title:
@@ -506,8 +646,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_9_tap_action:
+          name: Button 9 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_10:
-          name: Button 10 - Entity (6x3)
+          name: Button 10 - Entity
           default: []
           selector: *button_selector
         page_2_button_10_title:
@@ -515,8 +659,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_10_tap_action:
+          name: Button 10 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_11:
-          name: Button 11 - Entity (6x3)
+          name: Button 11 - Entity
           default: []
           selector: *button_selector
         page_2_button_11_title:
@@ -524,8 +672,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_11_tap_action:
+          name: Button 11 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_12:
-          name: Button 12 - Entity (6x3)
+          name: Button 12 - Entity
           default: []
           selector: *button_selector
         page_2_button_12_title:
@@ -533,8 +685,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_12_tap_action:
+          name: Button 12 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_13:
-          name: Button 13 - Entity (6x3)
+          name: Button 13 - Entity
           default: []
           selector: *button_selector
         page_2_button_13_title:
@@ -542,8 +698,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_13_tap_action:
+          name: Button 13 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_14:
-          name: Button 14 - Entity (6x3)
+          name: Button 14 - Entity
           default: []
           selector: *button_selector
         page_2_button_14_title:
@@ -551,8 +711,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_14_tap_action:
+          name: Button 14 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_15:
-          name: Button 15 - Entity (6x3)
+          name: Button 15 - Entity
           default: []
           selector: *button_selector
         page_2_button_15_title:
@@ -560,8 +724,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_15_tap_action:
+          name: Button 15 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_16:
-          name: Button 16 - Entity (6x3)
+          name: Button 16 - Entity
           default: []
           selector: *button_selector
         page_2_button_16_title:
@@ -569,8 +737,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_16_tap_action:
+          name: Button 16 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_17:
-          name: Button 17 - Entity (6x3)
+          name: Button 17 - Entity
           default: []
           selector: *button_selector
         page_2_button_17_title:
@@ -578,8 +750,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_17_tap_action:
+          name: Button 17 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_2_button_18:
-          name: Button 18 - Entity (6x3)
+          name: Button 18 - Entity
           default: []
           selector: *button_selector
         page_2_button_18_title:
@@ -587,20 +763,36 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_18_tap_action:
+          name: Button 18 - Tap action
+          default: default
+          selector: *tap_action_selector
     page_3:
       name: Button page 03
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_3_enabled:
+          name: Enabled
+          description: Hide this page without clearing its saved configuration.
+          default: true
+          selector:
+            boolean:
+        page_3_compact:
+          name: Compact and center buttons
+          description: Turn off to preserve numbered positions and leave empty spaces.
+          default: true
+          selector:
+            boolean:
         page_3_layout:
           name: Layout (columns x rows)
-          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
-          default: 2x2
-          selector: *layout_selector
+          description: Auto sizes the grid to populated controls (or highest slot when not compact). Manual layouts ignore higher slots with a warning.
+          default: auto
+          selector: *page_layout_selector
         page_3_icon:
           name: Page icon
-          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          description: MDI icon beside the page title and navigation name. Blank omits the header icon; navigation uses a dashboard icon.
           default: ""
           selector:
             icon:
@@ -617,6 +809,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_1_tap_action:
+          name: Button 1 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_2:
           name: Button 2 - Entity
           default: []
@@ -626,6 +822,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_2_tap_action:
+          name: Button 2 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_3:
           name: Button 3 - Entity
           default: []
@@ -635,6 +835,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_3_tap_action:
+          name: Button 3 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_4:
           name: Button 4 - Entity
           default: []
@@ -644,8 +848,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_4_tap_action:
+          name: Button 4 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_5:
-          name: Button 5 - Entity (4x2 / 6x3)
+          name: Button 5 - Entity
           default: []
           selector: *button_selector
         page_3_button_5_title:
@@ -653,8 +861,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_5_tap_action:
+          name: Button 5 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_6:
-          name: Button 6 - Entity (4x2 / 6x3)
+          name: Button 6 - Entity
           default: []
           selector: *button_selector
         page_3_button_6_title:
@@ -662,8 +874,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_6_tap_action:
+          name: Button 6 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_7:
-          name: Button 7 - Entity (4x2 / 6x3)
+          name: Button 7 - Entity
           default: []
           selector: *button_selector
         page_3_button_7_title:
@@ -671,8 +887,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_7_tap_action:
+          name: Button 7 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_8:
-          name: Button 8 - Entity (4x2 / 6x3)
+          name: Button 8 - Entity
           default: []
           selector: *button_selector
         page_3_button_8_title:
@@ -680,8 +900,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_8_tap_action:
+          name: Button 8 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_9:
-          name: Button 9 - Entity (6x3)
+          name: Button 9 - Entity
           default: []
           selector: *button_selector
         page_3_button_9_title:
@@ -689,8 +913,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_9_tap_action:
+          name: Button 9 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_10:
-          name: Button 10 - Entity (6x3)
+          name: Button 10 - Entity
           default: []
           selector: *button_selector
         page_3_button_10_title:
@@ -698,8 +926,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_10_tap_action:
+          name: Button 10 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_11:
-          name: Button 11 - Entity (6x3)
+          name: Button 11 - Entity
           default: []
           selector: *button_selector
         page_3_button_11_title:
@@ -707,8 +939,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_11_tap_action:
+          name: Button 11 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_12:
-          name: Button 12 - Entity (6x3)
+          name: Button 12 - Entity
           default: []
           selector: *button_selector
         page_3_button_12_title:
@@ -716,8 +952,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_12_tap_action:
+          name: Button 12 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_13:
-          name: Button 13 - Entity (6x3)
+          name: Button 13 - Entity
           default: []
           selector: *button_selector
         page_3_button_13_title:
@@ -725,8 +965,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_13_tap_action:
+          name: Button 13 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_14:
-          name: Button 14 - Entity (6x3)
+          name: Button 14 - Entity
           default: []
           selector: *button_selector
         page_3_button_14_title:
@@ -734,8 +978,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_14_tap_action:
+          name: Button 14 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_15:
-          name: Button 15 - Entity (6x3)
+          name: Button 15 - Entity
           default: []
           selector: *button_selector
         page_3_button_15_title:
@@ -743,8 +991,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_15_tap_action:
+          name: Button 15 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_16:
-          name: Button 16 - Entity (6x3)
+          name: Button 16 - Entity
           default: []
           selector: *button_selector
         page_3_button_16_title:
@@ -752,8 +1004,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_16_tap_action:
+          name: Button 16 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_17:
-          name: Button 17 - Entity (6x3)
+          name: Button 17 - Entity
           default: []
           selector: *button_selector
         page_3_button_17_title:
@@ -761,8 +1017,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_17_tap_action:
+          name: Button 17 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_3_button_18:
-          name: Button 18 - Entity (6x3)
+          name: Button 18 - Entity
           default: []
           selector: *button_selector
         page_3_button_18_title:
@@ -770,20 +1030,36 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_18_tap_action:
+          name: Button 18 - Tap action
+          default: default
+          selector: *tap_action_selector
     page_4:
       name: Button page 04
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_4_enabled:
+          name: Enabled
+          description: Hide this page without clearing its saved configuration.
+          default: true
+          selector:
+            boolean:
+        page_4_compact:
+          name: Compact and center buttons
+          description: Turn off to preserve numbered positions and leave empty spaces.
+          default: true
+          selector:
+            boolean:
         page_4_layout:
           name: Layout (columns x rows)
-          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
-          default: 2x2
-          selector: *layout_selector
+          description: Auto sizes the grid to populated controls (or highest slot when not compact). Manual layouts ignore higher slots with a warning.
+          default: auto
+          selector: *page_layout_selector
         page_4_icon:
           name: Page icon
-          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          description: MDI icon beside the page title and navigation name. Blank omits the header icon; navigation uses a dashboard icon.
           default: ""
           selector:
             icon:
@@ -800,6 +1076,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_1_tap_action:
+          name: Button 1 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_2:
           name: Button 2 - Entity
           default: []
@@ -809,6 +1089,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_2_tap_action:
+          name: Button 2 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_3:
           name: Button 3 - Entity
           default: []
@@ -818,6 +1102,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_3_tap_action:
+          name: Button 3 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_4:
           name: Button 4 - Entity
           default: []
@@ -827,8 +1115,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_4_tap_action:
+          name: Button 4 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_5:
-          name: Button 5 - Entity (4x2 / 6x3)
+          name: Button 5 - Entity
           default: []
           selector: *button_selector
         page_4_button_5_title:
@@ -836,8 +1128,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_5_tap_action:
+          name: Button 5 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_6:
-          name: Button 6 - Entity (4x2 / 6x3)
+          name: Button 6 - Entity
           default: []
           selector: *button_selector
         page_4_button_6_title:
@@ -845,8 +1141,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_6_tap_action:
+          name: Button 6 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_7:
-          name: Button 7 - Entity (4x2 / 6x3)
+          name: Button 7 - Entity
           default: []
           selector: *button_selector
         page_4_button_7_title:
@@ -854,8 +1154,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_7_tap_action:
+          name: Button 7 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_8:
-          name: Button 8 - Entity (4x2 / 6x3)
+          name: Button 8 - Entity
           default: []
           selector: *button_selector
         page_4_button_8_title:
@@ -863,8 +1167,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_8_tap_action:
+          name: Button 8 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_9:
-          name: Button 9 - Entity (6x3)
+          name: Button 9 - Entity
           default: []
           selector: *button_selector
         page_4_button_9_title:
@@ -872,8 +1180,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_9_tap_action:
+          name: Button 9 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_10:
-          name: Button 10 - Entity (6x3)
+          name: Button 10 - Entity
           default: []
           selector: *button_selector
         page_4_button_10_title:
@@ -881,8 +1193,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_10_tap_action:
+          name: Button 10 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_11:
-          name: Button 11 - Entity (6x3)
+          name: Button 11 - Entity
           default: []
           selector: *button_selector
         page_4_button_11_title:
@@ -890,8 +1206,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_11_tap_action:
+          name: Button 11 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_12:
-          name: Button 12 - Entity (6x3)
+          name: Button 12 - Entity
           default: []
           selector: *button_selector
         page_4_button_12_title:
@@ -899,8 +1219,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_12_tap_action:
+          name: Button 12 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_13:
-          name: Button 13 - Entity (6x3)
+          name: Button 13 - Entity
           default: []
           selector: *button_selector
         page_4_button_13_title:
@@ -908,8 +1232,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_13_tap_action:
+          name: Button 13 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_14:
-          name: Button 14 - Entity (6x3)
+          name: Button 14 - Entity
           default: []
           selector: *button_selector
         page_4_button_14_title:
@@ -917,8 +1245,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_14_tap_action:
+          name: Button 14 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_15:
-          name: Button 15 - Entity (6x3)
+          name: Button 15 - Entity
           default: []
           selector: *button_selector
         page_4_button_15_title:
@@ -926,8 +1258,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_15_tap_action:
+          name: Button 15 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_16:
-          name: Button 16 - Entity (6x3)
+          name: Button 16 - Entity
           default: []
           selector: *button_selector
         page_4_button_16_title:
@@ -935,8 +1271,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_16_tap_action:
+          name: Button 16 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_17:
-          name: Button 17 - Entity (6x3)
+          name: Button 17 - Entity
           default: []
           selector: *button_selector
         page_4_button_17_title:
@@ -944,8 +1284,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_17_tap_action:
+          name: Button 17 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_4_button_18:
-          name: Button 18 - Entity (6x3)
+          name: Button 18 - Entity
           default: []
           selector: *button_selector
         page_4_button_18_title:
@@ -953,20 +1297,36 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_18_tap_action:
+          name: Button 18 - Tap action
+          default: default
+          selector: *tap_action_selector
     page_5:
       name: Button page 05
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_5_enabled:
+          name: Enabled
+          description: Hide this page without clearing its saved configuration.
+          default: true
+          selector:
+            boolean:
+        page_5_compact:
+          name: Compact and center buttons
+          description: Turn off to preserve numbered positions and leave empty spaces.
+          default: true
+          selector:
+            boolean:
         page_5_layout:
           name: Layout (columns x rows)
-          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
-          default: 2x2
-          selector: *layout_selector
+          description: Auto sizes the grid to populated controls (or highest slot when not compact). Manual layouts ignore higher slots with a warning.
+          default: auto
+          selector: *page_layout_selector
         page_5_icon:
           name: Page icon
-          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          description: MDI icon beside the page title and navigation name. Blank omits the header icon; navigation uses a dashboard icon.
           default: ""
           selector:
             icon:
@@ -983,6 +1343,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_1_tap_action:
+          name: Button 1 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_2:
           name: Button 2 - Entity
           default: []
@@ -992,6 +1356,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_2_tap_action:
+          name: Button 2 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_3:
           name: Button 3 - Entity
           default: []
@@ -1001,6 +1369,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_3_tap_action:
+          name: Button 3 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_4:
           name: Button 4 - Entity
           default: []
@@ -1010,8 +1382,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_4_tap_action:
+          name: Button 4 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_5:
-          name: Button 5 - Entity (4x2 / 6x3)
+          name: Button 5 - Entity
           default: []
           selector: *button_selector
         page_5_button_5_title:
@@ -1019,8 +1395,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_5_tap_action:
+          name: Button 5 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_6:
-          name: Button 6 - Entity (4x2 / 6x3)
+          name: Button 6 - Entity
           default: []
           selector: *button_selector
         page_5_button_6_title:
@@ -1028,8 +1408,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_6_tap_action:
+          name: Button 6 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_7:
-          name: Button 7 - Entity (4x2 / 6x3)
+          name: Button 7 - Entity
           default: []
           selector: *button_selector
         page_5_button_7_title:
@@ -1037,8 +1421,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_7_tap_action:
+          name: Button 7 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_8:
-          name: Button 8 - Entity (4x2 / 6x3)
+          name: Button 8 - Entity
           default: []
           selector: *button_selector
         page_5_button_8_title:
@@ -1046,8 +1434,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_8_tap_action:
+          name: Button 8 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_9:
-          name: Button 9 - Entity (6x3)
+          name: Button 9 - Entity
           default: []
           selector: *button_selector
         page_5_button_9_title:
@@ -1055,8 +1447,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_9_tap_action:
+          name: Button 9 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_10:
-          name: Button 10 - Entity (6x3)
+          name: Button 10 - Entity
           default: []
           selector: *button_selector
         page_5_button_10_title:
@@ -1064,8 +1460,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_10_tap_action:
+          name: Button 10 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_11:
-          name: Button 11 - Entity (6x3)
+          name: Button 11 - Entity
           default: []
           selector: *button_selector
         page_5_button_11_title:
@@ -1073,8 +1473,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_11_tap_action:
+          name: Button 11 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_12:
-          name: Button 12 - Entity (6x3)
+          name: Button 12 - Entity
           default: []
           selector: *button_selector
         page_5_button_12_title:
@@ -1082,8 +1486,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_12_tap_action:
+          name: Button 12 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_13:
-          name: Button 13 - Entity (6x3)
+          name: Button 13 - Entity
           default: []
           selector: *button_selector
         page_5_button_13_title:
@@ -1091,8 +1499,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_13_tap_action:
+          name: Button 13 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_14:
-          name: Button 14 - Entity (6x3)
+          name: Button 14 - Entity
           default: []
           selector: *button_selector
         page_5_button_14_title:
@@ -1100,8 +1512,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_14_tap_action:
+          name: Button 14 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_15:
-          name: Button 15 - Entity (6x3)
+          name: Button 15 - Entity
           default: []
           selector: *button_selector
         page_5_button_15_title:
@@ -1109,8 +1525,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_15_tap_action:
+          name: Button 15 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_16:
-          name: Button 16 - Entity (6x3)
+          name: Button 16 - Entity
           default: []
           selector: *button_selector
         page_5_button_16_title:
@@ -1118,8 +1538,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_16_tap_action:
+          name: Button 16 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_17:
-          name: Button 17 - Entity (6x3)
+          name: Button 17 - Entity
           default: []
           selector: *button_selector
         page_5_button_17_title:
@@ -1127,8 +1551,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_17_tap_action:
+          name: Button 17 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_5_button_18:
-          name: Button 18 - Entity (6x3)
+          name: Button 18 - Entity
           default: []
           selector: *button_selector
         page_5_button_18_title:
@@ -1136,20 +1564,36 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_18_tap_action:
+          name: Button 18 - Tap action
+          default: default
+          selector: *tap_action_selector
     page_6:
       name: Button page 06
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_6_enabled:
+          name: Enabled
+          description: Hide this page without clearing its saved configuration.
+          default: true
+          selector:
+            boolean:
+        page_6_compact:
+          name: Compact and center buttons
+          description: Turn off to preserve numbered positions and leave empty spaces.
+          default: true
+          selector:
+            boolean:
         page_6_layout:
           name: Layout (columns x rows)
-          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
-          default: 2x2
-          selector: *layout_selector
+          description: Auto sizes the grid to populated controls (or highest slot when not compact). Manual layouts ignore higher slots with a warning.
+          default: auto
+          selector: *page_layout_selector
         page_6_icon:
           name: Page icon
-          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          description: MDI icon beside the page title and navigation name. Blank omits the header icon; navigation uses a dashboard icon.
           default: ""
           selector:
             icon:
@@ -1166,6 +1610,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_1_tap_action:
+          name: Button 1 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_2:
           name: Button 2 - Entity
           default: []
@@ -1175,6 +1623,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_2_tap_action:
+          name: Button 2 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_3:
           name: Button 3 - Entity
           default: []
@@ -1184,6 +1636,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_3_tap_action:
+          name: Button 3 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_4:
           name: Button 4 - Entity
           default: []
@@ -1193,8 +1649,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_4_tap_action:
+          name: Button 4 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_5:
-          name: Button 5 - Entity (4x2 / 6x3)
+          name: Button 5 - Entity
           default: []
           selector: *button_selector
         page_6_button_5_title:
@@ -1202,8 +1662,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_5_tap_action:
+          name: Button 5 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_6:
-          name: Button 6 - Entity (4x2 / 6x3)
+          name: Button 6 - Entity
           default: []
           selector: *button_selector
         page_6_button_6_title:
@@ -1211,8 +1675,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_6_tap_action:
+          name: Button 6 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_7:
-          name: Button 7 - Entity (4x2 / 6x3)
+          name: Button 7 - Entity
           default: []
           selector: *button_selector
         page_6_button_7_title:
@@ -1220,8 +1688,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_7_tap_action:
+          name: Button 7 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_8:
-          name: Button 8 - Entity (4x2 / 6x3)
+          name: Button 8 - Entity
           default: []
           selector: *button_selector
         page_6_button_8_title:
@@ -1229,8 +1701,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_8_tap_action:
+          name: Button 8 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_9:
-          name: Button 9 - Entity (6x3)
+          name: Button 9 - Entity
           default: []
           selector: *button_selector
         page_6_button_9_title:
@@ -1238,8 +1714,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_9_tap_action:
+          name: Button 9 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_10:
-          name: Button 10 - Entity (6x3)
+          name: Button 10 - Entity
           default: []
           selector: *button_selector
         page_6_button_10_title:
@@ -1247,8 +1727,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_10_tap_action:
+          name: Button 10 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_11:
-          name: Button 11 - Entity (6x3)
+          name: Button 11 - Entity
           default: []
           selector: *button_selector
         page_6_button_11_title:
@@ -1256,8 +1740,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_11_tap_action:
+          name: Button 11 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_12:
-          name: Button 12 - Entity (6x3)
+          name: Button 12 - Entity
           default: []
           selector: *button_selector
         page_6_button_12_title:
@@ -1265,8 +1753,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_12_tap_action:
+          name: Button 12 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_13:
-          name: Button 13 - Entity (6x3)
+          name: Button 13 - Entity
           default: []
           selector: *button_selector
         page_6_button_13_title:
@@ -1274,8 +1766,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_13_tap_action:
+          name: Button 13 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_14:
-          name: Button 14 - Entity (6x3)
+          name: Button 14 - Entity
           default: []
           selector: *button_selector
         page_6_button_14_title:
@@ -1283,8 +1779,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_14_tap_action:
+          name: Button 14 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_15:
-          name: Button 15 - Entity (6x3)
+          name: Button 15 - Entity
           default: []
           selector: *button_selector
         page_6_button_15_title:
@@ -1292,8 +1792,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_15_tap_action:
+          name: Button 15 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_16:
-          name: Button 16 - Entity (6x3)
+          name: Button 16 - Entity
           default: []
           selector: *button_selector
         page_6_button_16_title:
@@ -1301,8 +1805,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_16_tap_action:
+          name: Button 16 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_17:
-          name: Button 17 - Entity (6x3)
+          name: Button 17 - Entity
           default: []
           selector: *button_selector
         page_6_button_17_title:
@@ -1310,8 +1818,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_17_tap_action:
+          name: Button 17 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_6_button_18:
-          name: Button 18 - Entity (6x3)
+          name: Button 18 - Entity
           default: []
           selector: *button_selector
         page_6_button_18_title:
@@ -1319,20 +1831,36 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_18_tap_action:
+          name: Button 18 - Tap action
+          default: default
+          selector: *tap_action_selector
     page_7:
       name: Button page 07
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_7_enabled:
+          name: Enabled
+          description: Hide this page without clearing its saved configuration.
+          default: true
+          selector:
+            boolean:
+        page_7_compact:
+          name: Compact and center buttons
+          description: Turn off to preserve numbered positions and leave empty spaces.
+          default: true
+          selector:
+            boolean:
         page_7_layout:
           name: Layout (columns x rows)
-          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
-          default: 2x2
-          selector: *layout_selector
+          description: Auto sizes the grid to populated controls (or highest slot when not compact). Manual layouts ignore higher slots with a warning.
+          default: auto
+          selector: *page_layout_selector
         page_7_icon:
           name: Page icon
-          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          description: MDI icon beside the page title and navigation name. Blank omits the header icon; navigation uses a dashboard icon.
           default: ""
           selector:
             icon:
@@ -1349,6 +1877,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_1_tap_action:
+          name: Button 1 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_2:
           name: Button 2 - Entity
           default: []
@@ -1358,6 +1890,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_2_tap_action:
+          name: Button 2 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_3:
           name: Button 3 - Entity
           default: []
@@ -1367,6 +1903,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_3_tap_action:
+          name: Button 3 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_4:
           name: Button 4 - Entity
           default: []
@@ -1376,8 +1916,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_4_tap_action:
+          name: Button 4 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_5:
-          name: Button 5 - Entity (4x2 / 6x3)
+          name: Button 5 - Entity
           default: []
           selector: *button_selector
         page_7_button_5_title:
@@ -1385,8 +1929,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_5_tap_action:
+          name: Button 5 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_6:
-          name: Button 6 - Entity (4x2 / 6x3)
+          name: Button 6 - Entity
           default: []
           selector: *button_selector
         page_7_button_6_title:
@@ -1394,8 +1942,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_6_tap_action:
+          name: Button 6 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_7:
-          name: Button 7 - Entity (4x2 / 6x3)
+          name: Button 7 - Entity
           default: []
           selector: *button_selector
         page_7_button_7_title:
@@ -1403,8 +1955,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_7_tap_action:
+          name: Button 7 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_8:
-          name: Button 8 - Entity (4x2 / 6x3)
+          name: Button 8 - Entity
           default: []
           selector: *button_selector
         page_7_button_8_title:
@@ -1412,8 +1968,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_8_tap_action:
+          name: Button 8 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_9:
-          name: Button 9 - Entity (6x3)
+          name: Button 9 - Entity
           default: []
           selector: *button_selector
         page_7_button_9_title:
@@ -1421,8 +1981,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_9_tap_action:
+          name: Button 9 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_10:
-          name: Button 10 - Entity (6x3)
+          name: Button 10 - Entity
           default: []
           selector: *button_selector
         page_7_button_10_title:
@@ -1430,8 +1994,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_10_tap_action:
+          name: Button 10 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_11:
-          name: Button 11 - Entity (6x3)
+          name: Button 11 - Entity
           default: []
           selector: *button_selector
         page_7_button_11_title:
@@ -1439,8 +2007,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_11_tap_action:
+          name: Button 11 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_12:
-          name: Button 12 - Entity (6x3)
+          name: Button 12 - Entity
           default: []
           selector: *button_selector
         page_7_button_12_title:
@@ -1448,8 +2020,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_12_tap_action:
+          name: Button 12 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_13:
-          name: Button 13 - Entity (6x3)
+          name: Button 13 - Entity
           default: []
           selector: *button_selector
         page_7_button_13_title:
@@ -1457,8 +2033,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_13_tap_action:
+          name: Button 13 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_14:
-          name: Button 14 - Entity (6x3)
+          name: Button 14 - Entity
           default: []
           selector: *button_selector
         page_7_button_14_title:
@@ -1466,8 +2046,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_14_tap_action:
+          name: Button 14 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_15:
-          name: Button 15 - Entity (6x3)
+          name: Button 15 - Entity
           default: []
           selector: *button_selector
         page_7_button_15_title:
@@ -1475,8 +2059,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_15_tap_action:
+          name: Button 15 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_16:
-          name: Button 16 - Entity (6x3)
+          name: Button 16 - Entity
           default: []
           selector: *button_selector
         page_7_button_16_title:
@@ -1484,8 +2072,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_16_tap_action:
+          name: Button 16 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_17:
-          name: Button 17 - Entity (6x3)
+          name: Button 17 - Entity
           default: []
           selector: *button_selector
         page_7_button_17_title:
@@ -1493,8 +2085,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_17_tap_action:
+          name: Button 17 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_7_button_18:
-          name: Button 18 - Entity (6x3)
+          name: Button 18 - Entity
           default: []
           selector: *button_selector
         page_7_button_18_title:
@@ -1502,20 +2098,36 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_18_tap_action:
+          name: Button 18 - Tap action
+          default: default
+          selector: *tap_action_selector
     page_8:
       name: Button page 08
       icon: mdi:gesture-tap-button
       description: Leave all button entities empty to hide this page.
       collapsed: true
       input:
+        page_8_enabled:
+          name: Enabled
+          description: Hide this page without clearing its saved configuration.
+          default: true
+          selector:
+            boolean:
+        page_8_compact:
+          name: Compact and center buttons
+          description: Turn off to preserve numbered positions and leave empty spaces.
+          default: true
+          selector:
+            boolean:
         page_8_layout:
           name: Layout (columns x rows)
-          description: Select capacity. Higher-numbered inputs remain saved but are ignored with a warning.
-          default: 2x2
-          selector: *layout_selector
+          description: Auto sizes the grid to populated controls (or highest slot when not compact). Manual layouts ignore higher slots with a warning.
+          default: auto
+          selector: *page_layout_selector
         page_8_icon:
           name: Page icon
-          description: MDI icon shown beside the page name in navigation. Blank uses a dashboard icon.
+          description: MDI icon beside the page title and navigation name. Blank omits the header icon; navigation uses a dashboard icon.
           default: ""
           selector:
             icon:
@@ -1532,6 +2144,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_1_tap_action:
+          name: Button 1 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_2:
           name: Button 2 - Entity
           default: []
@@ -1541,6 +2157,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_2_tap_action:
+          name: Button 2 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_3:
           name: Button 3 - Entity
           default: []
@@ -1550,6 +2170,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_3_tap_action:
+          name: Button 3 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_4:
           name: Button 4 - Entity
           default: []
@@ -1559,8 +2183,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_4_tap_action:
+          name: Button 4 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_5:
-          name: Button 5 - Entity (4x2 / 6x3)
+          name: Button 5 - Entity
           default: []
           selector: *button_selector
         page_8_button_5_title:
@@ -1568,8 +2196,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_5_tap_action:
+          name: Button 5 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_6:
-          name: Button 6 - Entity (4x2 / 6x3)
+          name: Button 6 - Entity
           default: []
           selector: *button_selector
         page_8_button_6_title:
@@ -1577,8 +2209,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_6_tap_action:
+          name: Button 6 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_7:
-          name: Button 7 - Entity (4x2 / 6x3)
+          name: Button 7 - Entity
           default: []
           selector: *button_selector
         page_8_button_7_title:
@@ -1586,8 +2222,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_7_tap_action:
+          name: Button 7 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_8:
-          name: Button 8 - Entity (4x2 / 6x3)
+          name: Button 8 - Entity
           default: []
           selector: *button_selector
         page_8_button_8_title:
@@ -1595,8 +2235,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_8_tap_action:
+          name: Button 8 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_9:
-          name: Button 9 - Entity (6x3)
+          name: Button 9 - Entity
           default: []
           selector: *button_selector
         page_8_button_9_title:
@@ -1604,8 +2248,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_9_tap_action:
+          name: Button 9 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_10:
-          name: Button 10 - Entity (6x3)
+          name: Button 10 - Entity
           default: []
           selector: *button_selector
         page_8_button_10_title:
@@ -1613,8 +2261,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_10_tap_action:
+          name: Button 10 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_11:
-          name: Button 11 - Entity (6x3)
+          name: Button 11 - Entity
           default: []
           selector: *button_selector
         page_8_button_11_title:
@@ -1622,8 +2274,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_11_tap_action:
+          name: Button 11 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_12:
-          name: Button 12 - Entity (6x3)
+          name: Button 12 - Entity
           default: []
           selector: *button_selector
         page_8_button_12_title:
@@ -1631,8 +2287,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_12_tap_action:
+          name: Button 12 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_13:
-          name: Button 13 - Entity (6x3)
+          name: Button 13 - Entity
           default: []
           selector: *button_selector
         page_8_button_13_title:
@@ -1640,8 +2300,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_13_tap_action:
+          name: Button 13 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_14:
-          name: Button 14 - Entity (6x3)
+          name: Button 14 - Entity
           default: []
           selector: *button_selector
         page_8_button_14_title:
@@ -1649,8 +2313,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_14_tap_action:
+          name: Button 14 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_15:
-          name: Button 15 - Entity (6x3)
+          name: Button 15 - Entity
           default: []
           selector: *button_selector
         page_8_button_15_title:
@@ -1658,8 +2326,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_15_tap_action:
+          name: Button 15 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_16:
-          name: Button 16 - Entity (6x3)
+          name: Button 16 - Entity
           default: []
           selector: *button_selector
         page_8_button_16_title:
@@ -1667,8 +2339,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_16_tap_action:
+          name: Button 16 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_17:
-          name: Button 17 - Entity (6x3)
+          name: Button 17 - Entity
           default: []
           selector: *button_selector
         page_8_button_17_title:
@@ -1676,8 +2352,12 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_17_tap_action:
+          name: Button 17 - Tap action
+          default: default
+          selector: *tap_action_selector
         page_8_button_18:
-          name: Button 18 - Entity (6x3)
+          name: Button 18 - Entity
           default: []
           selector: *button_selector
         page_8_button_18_title:
@@ -1685,6 +2365,10 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_18_tap_action:
+          name: Button 18 - Tap action
+          default: default
+          selector: *tap_action_selector
 
 mode: restart
 max_exceeded: silent
@@ -1740,6 +2424,24 @@ variables:
     - !input page_7_temperature
     - !input page_8_temperature
   navigation_layout: !input navigation_layout
+  page_enabled:
+    - !input page_1_enabled
+    - !input page_2_enabled
+    - !input page_3_enabled
+    - !input page_4_enabled
+    - !input page_5_enabled
+    - !input page_6_enabled
+    - !input page_7_enabled
+    - !input page_8_enabled
+  page_compact:
+    - !input page_1_compact
+    - !input page_2_compact
+    - !input page_3_compact
+    - !input page_4_compact
+    - !input page_5_compact
+    - !input page_6_compact
+    - !input page_7_compact
+    - !input page_8_compact
   layouts:
     - !input page_1_layout
     - !input page_2_layout
@@ -1767,6 +2469,15 @@ variables:
     - [!input page_6_button_1, !input page_6_button_2, !input page_6_button_3, !input page_6_button_4, !input page_6_button_5, !input page_6_button_6, !input page_6_button_7, !input page_6_button_8, !input page_6_button_9, !input page_6_button_10, !input page_6_button_11, !input page_6_button_12, !input page_6_button_13, !input page_6_button_14, !input page_6_button_15, !input page_6_button_16, !input page_6_button_17, !input page_6_button_18]
     - [!input page_7_button_1, !input page_7_button_2, !input page_7_button_3, !input page_7_button_4, !input page_7_button_5, !input page_7_button_6, !input page_7_button_7, !input page_7_button_8, !input page_7_button_9, !input page_7_button_10, !input page_7_button_11, !input page_7_button_12, !input page_7_button_13, !input page_7_button_14, !input page_7_button_15, !input page_7_button_16, !input page_7_button_17, !input page_7_button_18]
     - [!input page_8_button_1, !input page_8_button_2, !input page_8_button_3, !input page_8_button_4, !input page_8_button_5, !input page_8_button_6, !input page_8_button_7, !input page_8_button_8, !input page_8_button_9, !input page_8_button_10, !input page_8_button_11, !input page_8_button_12, !input page_8_button_13, !input page_8_button_14, !input page_8_button_15, !input page_8_button_16, !input page_8_button_17, !input page_8_button_18]
+  button_tap_actions:
+    - [!input page_1_button_1_tap_action, !input page_1_button_2_tap_action, !input page_1_button_3_tap_action, !input page_1_button_4_tap_action, !input page_1_button_5_tap_action, !input page_1_button_6_tap_action, !input page_1_button_7_tap_action, !input page_1_button_8_tap_action, !input page_1_button_9_tap_action, !input page_1_button_10_tap_action, !input page_1_button_11_tap_action, !input page_1_button_12_tap_action, !input page_1_button_13_tap_action, !input page_1_button_14_tap_action, !input page_1_button_15_tap_action, !input page_1_button_16_tap_action, !input page_1_button_17_tap_action, !input page_1_button_18_tap_action]
+    - [!input page_2_button_1_tap_action, !input page_2_button_2_tap_action, !input page_2_button_3_tap_action, !input page_2_button_4_tap_action, !input page_2_button_5_tap_action, !input page_2_button_6_tap_action, !input page_2_button_7_tap_action, !input page_2_button_8_tap_action, !input page_2_button_9_tap_action, !input page_2_button_10_tap_action, !input page_2_button_11_tap_action, !input page_2_button_12_tap_action, !input page_2_button_13_tap_action, !input page_2_button_14_tap_action, !input page_2_button_15_tap_action, !input page_2_button_16_tap_action, !input page_2_button_17_tap_action, !input page_2_button_18_tap_action]
+    - [!input page_3_button_1_tap_action, !input page_3_button_2_tap_action, !input page_3_button_3_tap_action, !input page_3_button_4_tap_action, !input page_3_button_5_tap_action, !input page_3_button_6_tap_action, !input page_3_button_7_tap_action, !input page_3_button_8_tap_action, !input page_3_button_9_tap_action, !input page_3_button_10_tap_action, !input page_3_button_11_tap_action, !input page_3_button_12_tap_action, !input page_3_button_13_tap_action, !input page_3_button_14_tap_action, !input page_3_button_15_tap_action, !input page_3_button_16_tap_action, !input page_3_button_17_tap_action, !input page_3_button_18_tap_action]
+    - [!input page_4_button_1_tap_action, !input page_4_button_2_tap_action, !input page_4_button_3_tap_action, !input page_4_button_4_tap_action, !input page_4_button_5_tap_action, !input page_4_button_6_tap_action, !input page_4_button_7_tap_action, !input page_4_button_8_tap_action, !input page_4_button_9_tap_action, !input page_4_button_10_tap_action, !input page_4_button_11_tap_action, !input page_4_button_12_tap_action, !input page_4_button_13_tap_action, !input page_4_button_14_tap_action, !input page_4_button_15_tap_action, !input page_4_button_16_tap_action, !input page_4_button_17_tap_action, !input page_4_button_18_tap_action]
+    - [!input page_5_button_1_tap_action, !input page_5_button_2_tap_action, !input page_5_button_3_tap_action, !input page_5_button_4_tap_action, !input page_5_button_5_tap_action, !input page_5_button_6_tap_action, !input page_5_button_7_tap_action, !input page_5_button_8_tap_action, !input page_5_button_9_tap_action, !input page_5_button_10_tap_action, !input page_5_button_11_tap_action, !input page_5_button_12_tap_action, !input page_5_button_13_tap_action, !input page_5_button_14_tap_action, !input page_5_button_15_tap_action, !input page_5_button_16_tap_action, !input page_5_button_17_tap_action, !input page_5_button_18_tap_action]
+    - [!input page_6_button_1_tap_action, !input page_6_button_2_tap_action, !input page_6_button_3_tap_action, !input page_6_button_4_tap_action, !input page_6_button_5_tap_action, !input page_6_button_6_tap_action, !input page_6_button_7_tap_action, !input page_6_button_8_tap_action, !input page_6_button_9_tap_action, !input page_6_button_10_tap_action, !input page_6_button_11_tap_action, !input page_6_button_12_tap_action, !input page_6_button_13_tap_action, !input page_6_button_14_tap_action, !input page_6_button_15_tap_action, !input page_6_button_16_tap_action, !input page_6_button_17_tap_action, !input page_6_button_18_tap_action]
+    - [!input page_7_button_1_tap_action, !input page_7_button_2_tap_action, !input page_7_button_3_tap_action, !input page_7_button_4_tap_action, !input page_7_button_5_tap_action, !input page_7_button_6_tap_action, !input page_7_button_7_tap_action, !input page_7_button_8_tap_action, !input page_7_button_9_tap_action, !input page_7_button_10_tap_action, !input page_7_button_11_tap_action, !input page_7_button_12_tap_action, !input page_7_button_13_tap_action, !input page_7_button_14_tap_action, !input page_7_button_15_tap_action, !input page_7_button_16_tap_action, !input page_7_button_17_tap_action, !input page_7_button_18_tap_action]
+    - [!input page_8_button_1_tap_action, !input page_8_button_2_tap_action, !input page_8_button_3_tap_action, !input page_8_button_4_tap_action, !input page_8_button_5_tap_action, !input page_8_button_6_tap_action, !input page_8_button_7_tap_action, !input page_8_button_8_tap_action, !input page_8_button_9_tap_action, !input page_8_button_10_tap_action, !input page_8_button_11_tap_action, !input page_8_button_12_tap_action, !input page_8_button_13_tap_action, !input page_8_button_14_tap_action, !input page_8_button_15_tap_action, !input page_8_button_16_tap_action, !input page_8_button_17_tap_action, !input page_8_button_18_tap_action]
   button_titles:
     - [!input page_1_button_1_title, !input page_1_button_2_title, !input page_1_button_3_title, !input page_1_button_4_title, !input page_1_button_5_title, !input page_1_button_6_title, !input page_1_button_7_title, !input page_1_button_8_title, !input page_1_button_9_title, !input page_1_button_10_title, !input page_1_button_11_title, !input page_1_button_12_title, !input page_1_button_13_title, !input page_1_button_14_title, !input page_1_button_15_title, !input page_1_button_16_title, !input page_1_button_17_title, !input page_1_button_18_title]
     - [!input page_2_button_1_title, !input page_2_button_2_title, !input page_2_button_3_title, !input page_2_button_4_title, !input page_2_button_5_title, !input page_2_button_6_title, !input page_2_button_7_title, !input page_2_button_8_title, !input page_2_button_9_title, !input page_2_button_10_title, !input page_2_button_11_title, !input page_2_button_12_title, !input page_2_button_13_title, !input page_2_button_14_title, !input page_2_button_15_title, !input page_2_button_16_title, !input page_2_button_17_title, !input page_2_button_18_title]
@@ -1785,22 +2496,37 @@ variables:
       {% endif %}
     {% endfor %}
     {{ ns.value }}
+  effective_pages: >-
+    {% set ns = namespace(pages=[]) %}
+    {% for p in range(8) %}
+      {% set slots = namespace(occupied=[], active=[]) %}
+      {% for entity in buttons[p] %}
+        {% if entity is string and entity %}
+          {% set slots.occupied = slots.occupied + [loop.index0] %}
+        {% endif %}
+      {% endfor %}
+      {% set required = (slots.occupied | length) if page_compact[p] else ((slots.occupied | last) + 1 if slots.occupied else 0) %}
+      {% set layout = ('2x2' if required <= 4 else '4x2' if required <= 8 else '6x3') if layouts[p] == 'auto' else layouts[p] %}
+      {% set capacity = {'2x2': 4, '4x2': 8, '6x3': 18}.get(layout, 0) %}
+      {% for slot in slots.occupied %}
+        {% if page_enabled[p] and (slot < capacity or (layouts[p] == 'auto' and page_compact[p])) %}
+          {% set slots.active = slots.active + [slot] %}
+        {% endif %}
+      {% endfor %}
+      {% set ns.pages = ns.pages + [dict(layout=layout, capacity=capacity, slots=slots.active)] %}
+    {% endfor %}
+    {{ ns.pages }}
   watched_entities: >-
     {% set ns = namespace(entities=wake_sensors | list) %}
     {% if release_sensor is string and release_sensor %}
       {% set ns.entities = ns.entities + [release_sensor] %}
     {% endif %}
-    {% for entity in temperatures %}
-      {% if entity is string and entity %}
-        {% set ns.entities = ns.entities + [entity] %}
-      {% endif %}
-    {% endfor %}
     {% for p in range(8) %}
-      {% set capacity = {'2x2': 4, '4x2': 8, '6x3': 18}[layouts[p]] %}
-      {% for entity in buttons[p][:capacity] %}
-        {% if entity is string and entity %}
-          {% set ns.entities = ns.entities + [entity] %}
-        {% endif %}
+      {% if effective_pages[p].slots and temperatures[p] is string and temperatures[p] %}
+        {% set ns.entities = ns.entities + [temperatures[p]] %}
+      {% endif %}
+      {% for slot in effective_pages[p].slots %}
+        {% set ns.entities = ns.entities + [buttons[p][slot]] %}
       {% endfor %}
     {% endfor %}
     {% set active = ns.entities | list %}
@@ -1816,8 +2542,8 @@ variables:
   ignored_slots: >-
     {% set ns = namespace(slots=[]) %}
     {% for p in range(8) %}
-      {% set capacity = {'2x2': 4, '4x2': 8, '6x3': 18}[layouts[p]] %}
-      {% for entity in buttons[p][capacity:] %}
+      {% set capacity = effective_pages[p].capacity %}
+      {% for entity in buttons[p][capacity:] if page_enabled[p] and layouts[p] != 'auto' %}
         {% if entity is string and entity %}
           {% set ns.slots = ns.slots + ['Page ' ~ (p + 1) ~ ' button ' ~ (capacity + loop.index)] %}
         {% endif %}
@@ -1871,14 +2597,20 @@ variables:
       {% endfor %}
     {% endif %}
     {% for p in range(8) %}
-      {% set active = namespace(count=0) %}
-      {% set capacity = {'2x2': 4, '4x2': 8, '6x3': 18}[layouts[p]] %}
-      {% for entity in buttons[p][:capacity] %}
-        {% if entity is string and entity %}
-          {% set active.count = active.count + 1 %}
+      {% if page_enabled[p] is not boolean or page_compact[p] is not boolean %}
+        {% set ns.error = 'Page Enabled and Compact settings must be booleans.' %}
+      {% elif layouts[p] not in ['auto', '2x2', '4x2', '6x3'] %}
+        {% set ns.error = 'Invalid button-page layout.' %}
+      {% endif %}
+      {% for slot in effective_pages[p].slots %}
+        {% set tap = button_tap_actions[p][slot] %}
+        {% if tap not in ['default', 'details'] %}
+          {% set ns.error = 'Invalid button tap action.' %}
+        {% elif tap == 'details' and not buttons[p][slot].startswith('light.') %}
+          {% set ns.error = 'Open light details tap actions require a light entity.' %}
         {% endif %}
       {% endfor %}
-      {% if active.count > 0 %}
+      {% if effective_pages[p].slots %}
         {% set ns.pages = ns.pages + 1 %}
       {% endif %}
     {% endfor %}
@@ -1975,9 +2707,8 @@ actions:
             {% endfor %}
             {% for p in range(8) %}
               {% set row = namespace(buttons=[]) %}
-              {% set capacity = {'2x2': 4, '4x2': 8, '6x3': 18}[layouts[p]] %}
-              {% for entity in buttons[p][:capacity] %}
-                {% if entity is string and entity %}
+              {% for entity in buttons[p] %}
+                {% if loop.index0 in effective_pages[p].slots %}
                   {% set custom_title = button_titles[p][loop.index0] | trim %}
                   {% set name = (custom_title or state_attr(entity, 'friendly_name') or entity)[:80] %}
                   {% set state = states(entity)[:40] %}
@@ -1985,19 +2716,19 @@ actions:
                   {% if not icon and state in ['on', 'off'] and entity.startswith('switch.') and state_attr(entity, 'device_class') == 'outlet' %}
                     {% set icon = 'mdi:power-plug-off' if state == 'off' else 'mdi:power-plug' %}
                   {% endif %}
-                  {% set row.buttons = row.buttons + [dict(entity=entity, name=name, state=state, icon=icon)] %}
+                  {% set row.buttons = row.buttons + [dict(entity=entity, name=name, state=state, icon=icon, tap_action=button_tap_actions[p][loop.index0])] %}
                 {% else %}
-                  {% set row.buttons = row.buttons + [dict(entity='', name='', state='', icon='')] %}
+                  {% set row.buttons = row.buttons + [dict(entity='', name='', state='', icon='', tap_action='default')] %}
                 {% endif %}
               {% endfor %}
               {% set temp = temperatures[p] %}
               {% set text = '' %}
-              {% if temp is string and temp %}
+              {% if effective_pages[p].slots and temp is string and temp %}
                 {% if is_number(states(temp)) %}
                   {% set unit = state_attr(temp, 'unit_of_measurement') or '' %}
-                  {% set text = 'Temperature: %.1f %s' | format(states(temp) | float, unit) %}
+                  {% set text = ('%.1f %s' | format(states(temp) | float, unit)) | trim %}
                 {% else %}
-                  {% set text = 'Temperature: UNAVAILABLE' %}
+                  {% set text = 'UNAVAILABLE' %}
                 {% endif %}
               {% endif %}
               {% set title_input = namespace(value='') %}
@@ -2007,7 +2738,7 @@ actions:
                 {% endif %}
               {% endfor %}
               {% set title = (title_input.value | trim)[:80] or ('Page ' ~ (p + 1)) %}
-              {% set ns.pages = ns.pages + [dict(title=title, icon=page_icons[p], layout=layouts[p], temperature=text[:80], buttons=row.buttons)] %}
+              {% set ns.pages = ns.pages + [dict(title=title, icon=page_icons[p], layout=effective_pages[p].layout, compact=page_compact[p], temperature=text[:80], buttons=row.buttons)] %}
             {% endfor %}
             {% for entity in wake_sensors %}
               {% if states(entity) == 'on' %}
@@ -2057,7 +2788,7 @@ actions:
                     related=binding.refs, related_titles=binding.titles)] %}
               {% endfor %}
             {% endfor %}
-            {{ dict(version=2, blueprint_release=blueprint_release, latest_release=latest_release,
+            {{ dict(version=3, blueprint_release=blueprint_release, latest_release=latest_release,
                     navigation_layout=navigation_layout, screensaver_enabled=screensaver_enabled,
                     homepage=dict(enabled=homepage_enabled, position=ns.home_position, title=ns.home_title),
                     localization=dict(time=time_format, date=date_format), wake_hold=ns.hold,

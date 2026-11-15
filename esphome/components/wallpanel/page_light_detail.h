@@ -40,7 +40,7 @@ inline void render_light_detail(const DetailWidgets &widgets, const std::array<B
   lv_label_set_text(widgets.title, title.c_str());
   detail_tile(tiles[0], 24, 64, 90, 86, "State", default_icon(primary), fonts);
   style_entity_tile(tiles[0], primary, online);
-  detail_tile(tiles[1], 24, 434, 48, 44, "", "mdi:arrow-left", fonts);
+  detail_tile(tiles[1], 640, 434, 48, 44, "", "mdi:arrow-left", fonts);
   lv_obj_set_style_bg_opa(tiles[1].button, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_width(tiles[1].button, 0, 0);
   lv_obj_set_style_radius(tiles[1].button, 0, 0);
