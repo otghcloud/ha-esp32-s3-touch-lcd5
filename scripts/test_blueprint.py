@@ -138,6 +138,222 @@ class BlueprintTests(unittest.TestCase):
         self.assertNotIn("switch.hidden", self.variables()["watched_entities"])
         self.assertNotIn("light.hidden", [light["entity"] for light in self.snapshot()["light_details"]])
 
+    def test_script_selectors_and_related_script_bindings(self):
+        self.inputs.update(
+            page_1_button_1="script.morning",
+            reverse_active=["script.morning"],
+            page_1_button_2="light.main",
+            light_details=[{"light": "light.main", "related_1": "script.morning",
+                            "related_1_title": "Run morning"}],
+        )
+        self.states.update({"script.morning": "on", "light.main": "off"})
+        snapshot = self.snapshot()
+        self.assertEqual(snapshot["pages"][0]["buttons"][0]["entity"], "script.morning")
+        self.assertEqual(snapshot["pages"][0]["buttons"][0]["state"], "on")
+        self.assertEqual(snapshot["reverse_active"], ["script.morning"])
+        self.assertEqual(snapshot["light_details"][0]["related"], ["script.morning"])
+        self.assertEqual(snapshot["light_details"][0]["related_titles"], ["Run morning"])
+        self.assertIn("script.morning", self.variables()["watched_entities"])
+        button_domains = self.blueprint["blueprint"]["input"]["page_1"]["input"]["page_1_button_1"]["selector"]["entity"]["filter"]["domain"]
+        reverse_domains = self.blueprint["blueprint"]["input"]["appearance_settings"]["input"]["reverse_active"]["selector"]["entity"]["filter"]["domain"]
+        related_domains = self.blueprint["blueprint"]["input"]["light_detail_settings"]["input"]["light_details"]["selector"]["object"]["fields"]["related_1"]["selector"]["entity"]["filter"]["domain"]
+        self.assertIn("script", button_domains)
+        self.assertIn("script", reverse_domains)
+        self.assertIn("script", related_domains)
+
+    def test_indicator_override_states_unavailability_and_actor_independence(self):
+        self.inputs.update(
+            page_1_button_1="light.actor",
+            page_1_button_1_indicator="binary_sensor.occupancy",
+            page_1_button_1_active_states=["occupied", "on"],
+            reverse_active=["light.actor"],
+        )
+        self.states.update({"light.actor": "off", "binary_sensor.occupancy": "occupied"})
+        button = self.snapshot()["pages"][0]["buttons"][0]
+        self.assertEqual(button["entity"], "light.actor")
+        self.assertEqual(button["state"], "off", "the actor state stays independent of its visual indicator")
+        self.assertEqual(button["indicator"], {"state": "occupied", "active": True, "available": True})
+        self.assertEqual(self.snapshot()["reverse_active"], ["light.actor"])
+
+        self.states.update({"light.actor": "unavailable", "binary_sensor.occupancy": "on"})
+        button = self.snapshot()["pages"][0]["buttons"][0]
+        self.assertEqual(button["state"], "unavailable")
+        self.assertEqual(button["indicator"], {"state": "on", "active": True, "available": True})
+        for unavailable in ("unknown", "unavailable"):
+            with self.subTest(unavailable=unavailable):
+                self.states["light.actor"] = "on"
+                self.states["binary_sensor.occupancy"] = unavailable
+                button = self.snapshot()["pages"][0]["buttons"][0]
+                self.assertEqual(button["state"], "on")
+                self.assertEqual(button["indicator"], {
+                    "state": unavailable, "active": False, "available": False
+                })
+
+    def test_indicator_only_light_does_not_activate_light_details(self):
+        self.inputs.update(
+            page_1_button_1="switch.button",
+            page_1_button_1_indicator="light.indicator_only",
+            light_details=[{"light": "light.indicator_only", "related_1": "script.not_watched"}],
+        )
+        self.states.update({"switch.button": "off", "light.indicator_only": "on"})
+        snapshot = self.snapshot()
+        self.assertEqual(snapshot["pages"][0]["buttons"][0]["indicator"],
+                         {"state": "on", "active": True, "available": True})
+        self.assertEqual(snapshot["light_details"], [])
+        self.assertIn("light.indicator_only", self.variables()["watched_entities"])
+        self.assertNotIn("script.not_watched", self.variables()["watched_entities"])
+
+    def test_disabled_and_out_of_capacity_indicator_sources_are_not_watched(self):
+        self.inputs.update(
+            page_1_enabled=False,
+            page_1_button_1="light.disabled",
+            page_1_button_1_indicator="sensor.disabled_indicator",
+            page_2_layout="2x2",
+            page_2_button_18="switch.outside",
+            page_2_button_18_indicator="media_player.outside_indicator",
+        )
+        variables = self.variables()
+        self.assertNotIn("sensor.disabled_indicator", variables["watched_entities"])
+        self.assertNotIn("media_player.outside_indicator", variables["watched_entities"])
+        self.assertIsNone(self.snapshot()["pages"][0]["buttons"][0]["indicator"])
+        self.assertNotIn("switch.outside", variables["watched_entities"])
+
+    def test_indicator_state_is_bounded_by_utf8_bytes(self):
+        self.inputs.update(
+            page_1_button_1="switch.actor",
+            page_1_button_1_indicator="sensor.long_state",
+        )
+        self.states.update({"switch.actor": "off", "sensor.long_state": "\U0001f4a1" * 256})
+        indicator = self.snapshot()["pages"][0]["buttons"][0]["indicator"]
+        self.assertEqual(indicator["state"], "\U0001f4a1" * 256)
+        self.assertEqual(len(indicator["state"].encode("utf-8")), 1024)
+        self.assertTrue(indicator["available"])
+        self.assertFalse(indicator["active"])
+
+    def test_indicator_state_over_utf8_limit_reports_configuration_error(self):
+        self.inputs.update(
+            page_1_button_1="switch.actor",
+            page_1_button_1_indicator="sensor.long_state",
+        )
+        self.states.update({"switch.actor": "off", "sensor.long_state": "\U0001f4a1" * 257})
+        error = self.variables()["configuration_error"]
+        self.assertIn("Page 1 button 1", error)
+        self.assertIn("exceeds 1024 UTF-8 bytes", error)
+        rejected = self.blueprint["actions"][-1]["choose"][1]
+        self.assertEqual(
+            self.env.from_string(rejected["conditions"]).render(
+                configuration_error=error
+            ),
+            "True",
+        )
+
+    def test_indicator_configuration_is_validated_when_slot_is_active(self):
+        self.inputs.update(page_1_button_1="switch.actor", page_1_button_1_indicator="sensor.state")
+        for value in (None, "on", {}, [None], [""], ["🚀" * 257]):
+            with self.subTest(value=value):
+                self.inputs["page_1_button_1_active_states"] = value
+                self.assertTrue(self.variables()["configuration_error"])
+        self.inputs["page_1_button_1_active_states"] = ["ready"]
+        self.inputs["page_1_button_1_indicator"] = []
+        self.assertTrue(self.variables()["configuration_error"])
+        self.inputs["page_1_button_1_active_states"] = ["on"]
+        for value in (42, "not-an-entity"):
+            with self.subTest(indicator=value):
+                self.inputs["page_1_button_1_indicator"] = value
+                self.assertTrue(self.variables()["configuration_error"])
+        self.inputs.update(page_1_button_1_indicator="sensor.state",
+                           page_1_enabled=False, page_1_button_1_active_states=None)
+        self.assertEqual(self.variables()["configuration_error"], "")
+
+    def test_lock_details_bindings_related_deduplication_and_watching(self):
+        self.inputs.update(
+            page_1_button_1="lock.front",
+            page_1_button_2="light.main",
+            page_2_button_1="lock.side",
+            page_3_button_1="lock.front",
+            lock_details=[
+                {"lock": "lock.front", "related_1": "script.shared", "related_1_title": "Auto lock"},
+                {"lock": "lock.side", "related_1": "switch.shared", "related_1_title": "Side"},
+            ],
+            light_details=[{"light": "light.main", "related_1": "script.shared"}],
+        )
+        self.attributes["script.shared"] = {"friendly_name": "Shared script"}
+        self.states.update({
+            "lock.front": "locked", "lock.side": "unlocked", "light.main": "on",
+            "script.shared": "off", "switch.shared": "on",
+        })
+        snapshot = self.snapshot()
+        self.assertEqual(snapshot["lock_details"], [
+            {"entity": "lock.front", "related": ["script.shared"], "related_titles": ["Auto lock"]},
+            {"entity": "lock.side", "related": ["switch.shared"], "related_titles": ["Side"]},
+        ])
+        self.assertTrue(all(
+            set(binding) == {"entity", "related", "related_titles"}
+            for binding in snapshot["lock_details"]
+        ))
+        self.assertEqual(len(snapshot["detail_entities"]), 2)
+        self.assertEqual(
+            [item["entity"] for item in snapshot["detail_entities"]],
+            ["script.shared", "switch.shared"],
+        )
+        self.assertIn("script.shared", self.variables()["watched_entities"])
+        self.assertIn("switch.shared", self.variables()["watched_entities"])
+        self.assertEqual(snapshot["light_details"][0]["related"], ["script.shared"])
+
+    def test_invalid_lock_related_configuration_is_rejected(self):
+        for value in (
+            None, "lock.test", {}, [None], [{}], [{"lock": "switch.bad"}],
+            [{"lock": "lock.test", "related_1": "lock.related"}],
+            [{"lock": "lock.test", "related_1": "lock.test"}],
+            [{"lock": "lock.test", "related_1": "script.same", "related_2": "script.same"}],
+            [{"lock": "lock.test", "related_1_title": 123}],
+            [{"lock": "lock.test"}, {"lock": "lock.test"}],
+        ):
+            with self.subTest(value=value):
+                self.inputs["lock_details"] = value
+                self.assertTrue(self.variables()["configuration_error"])
+
+    def test_protocol_four_requires_indicator_and_lock_detail_schema(self):
+        snapshot = self.snapshot()
+        self.assertEqual(snapshot["version"], 4)
+        self.assertEqual(set(snapshot), {
+            "version", "blueprint_release", "latest_release", "navigation_layout",
+            "screensaver_enabled", "homepage", "localization", "wake_hold",
+            "reverse_active", "light_details", "lock_details", "detail_entities",
+            "page_order", "pages",
+        })
+        self.assertEqual(snapshot["lock_details"], [])
+        for page in snapshot["pages"]:
+            for button in page["buttons"]:
+                self.assertEqual(
+                    set(button), {"entity", "name", "state", "icon", "tap_action", "indicator"}
+                )
+                self.assertIsNone(button["indicator"])
+        self.inputs.update(
+            page_1_button_1="switch.actor",
+            page_1_button_1_indicator="sensor.indicator",
+        )
+        self.states.update({"switch.actor": "off", "sensor.indicator": "on"})
+        indicator = self.snapshot()["pages"][0]["buttons"][0]["indicator"]
+        self.assertEqual(set(indicator), {"state", "active", "available"})
+        self.assertEqual(indicator, {"state": "on", "active": True, "available": True})
+
+    def test_all_144_controls_have_indicator_inputs_with_compatible_defaults(self):
+        definitions = {}
+        for section in self.blueprint["blueprint"]["input"].values():
+            definitions.update(section.get("input", {}))
+        self.assertEqual(
+            sum(key.endswith("_indicator") and "_button_" in key for key in definitions), 144
+        )
+        self.assertEqual(
+            sum(key.endswith("_active_states") and "_button_" in key for key in definitions), 144
+        )
+        for page in range(1, 9):
+            for button in range(1, 19):
+                key = f"page_{page}_button_{button}"
+                self.assertEqual(definitions[f"{key}_indicator"]["default"], [])
+                self.assertEqual(definitions[f"{key}_active_states"]["default"], ["on"])
+
     def test_release_checks_warn_without_blocking_the_dashboard(self):
         release = self.inputs["release_sensor"] = "sensor.latest_wallpanel"
         firmware = "sensor.renamed_firmware"
@@ -209,6 +425,7 @@ class BlueprintTests(unittest.TestCase):
         error = self.blueprint["actions"][-1]["default"][3]
         self.assertEqual(self.env.from_string(error["if"]).render(dashboard_snapshot=snapshot), "True")
         self.assertEqual(error["then"][0]["data"]["level"], "error")
+        self.assertIn("exceeds 256 KiB", error["then"][0]["data"]["message"])
 
     def test_sparse_pages_and_buttons_keep_slots_and_escape_names(self):
         self.inputs.update(
@@ -229,7 +446,7 @@ class BlueprintTests(unittest.TestCase):
         self.assertEqual(page["temperature"], "21.2 C")
         self.assertEqual(page["buttons"][2], {
             "entity": "automation.landing", "name": 'Lighting "auto" %', "state": "off", "icon": "",
-            "tap_action": "default",
+            "tap_action": "default", "indicator": None,
         })
 
     def test_changes_and_removals_replace_old_entities(self):
@@ -301,7 +518,8 @@ class BlueprintTests(unittest.TestCase):
         self.inputs["page_1_button_1"] = []
         self.inputs["page_1_button_1_title"] = "No entity"
         self.assertEqual(self.snapshot()["pages"][0]["buttons"][0],
-                         {"entity": "", "name": "", "state": "", "icon": "", "tap_action": "default"})
+                         {"entity": "", "name": "", "state": "", "icon": "",
+                          "tap_action": "default", "indicator": None})
 
     def test_custom_title_keeps_existing_label_limit(self):
         self.inputs["page_1_button_1"] = "light.office"
@@ -331,7 +549,7 @@ class BlueprintTests(unittest.TestCase):
             navigation_layout="6x3",
         )
         snapshot = self.snapshot()
-        self.assertEqual(snapshot["version"], 3)
+        self.assertEqual(snapshot["version"], 4)
         self.assertEqual(snapshot["navigation_layout"], "6x3")
         self.assertEqual([len(page["buttons"]) for page in snapshot["pages"][:3]], [18, 18, 18])
         self.assertEqual(snapshot["pages"][2]["icon"], "mdi:door-open")
@@ -422,9 +640,12 @@ class BlueprintTests(unittest.TestCase):
         pages = self.snapshot()["pages"]
         self.assertEqual([b["tap_action"] for b in pages[0]["buttons"][:2]], ["default", "details"])
         self.assertEqual(pages[1]["buttons"][0]["tap_action"], "default")
-        for entity, action in (("switch.bad", "details"), ("lock.bad", "details"), ("light.same", "bad")):
+        for entity, action in (("switch.bad", "details"), ("script.bad", "details"), ("light.same", "bad")):
             self.inputs.update(page_1_button_2=entity, page_1_button_2_tap_action=action)
             self.assertTrue(self.variables()["configuration_error"])
+        self.inputs.update(page_1_button_2="lock.entry", page_1_button_2_tap_action="details")
+        self.assertEqual(self.variables()["configuration_error"], "")
+        self.assertEqual(self.snapshot()["pages"][0]["buttons"][1]["tap_action"], "details")
         self.inputs["page_1_enabled"] = False
         self.assertEqual(self.variables()["configuration_error"], "")
         for key, value in (("page_1_enabled", "false"), ("page_1_compact", 1), ("page_1_layout", "bad")):
@@ -520,6 +741,10 @@ class BlueprintTests(unittest.TestCase):
 
     def test_full_unicode_snapshot_round_trips_through_bounded_blueprint_chunks(self):
         snapshot = self.full_snapshot("\U0001f600" * 80)
+        self.assertTrue(all(
+            button["indicator"] is None
+            for page in snapshot["pages"] for button in page["buttons"]
+        ))
         chunks = self.chunks(snapshot)
         body = "".join(chunk["payload"][1:] for chunk in chunks)
         self.assertGreater(len(body.encode()), 32768)
@@ -536,6 +761,34 @@ class BlueprintTests(unittest.TestCase):
         small = self.chunks(self.snapshot())
         self.assertEqual(json.loads("".join(chunk["payload"][1:] for chunk in small)), self.snapshot())
         self.assertTrue(small[0]["payload"].startswith("~{"))
+
+    def test_144_indicators_related_bindings_and_unicode_fit_existing_payload_bounds(self):
+        self.full_snapshot("\U0001f600" * 80)
+        self.inputs["light_details"] = []
+        for page in range(1, 9):
+            for button in range(1, 19):
+                actor = f"light.{f'p{page}_b{button}_'.ljust(122, 'x')}"
+                indicator = f"sensor.indicator_{page}_{button}"
+                self.inputs[f"page_{page}_button_{button}_indicator"] = indicator
+                self.inputs[f"page_{page}_button_{button}_active_states"] = ["active✨"]
+                self.states[indicator] = "active✨"
+                self.inputs["light_details"].append(
+                    {"light": actor, "related_1": "script.shared", "related_1_title": "Run"}
+                )
+        snapshot = self.snapshot()
+        self.assertEqual(sum(
+            button["indicator"] is not None
+            for page in snapshot["pages"] for button in page["buttons"]
+        ), 144)
+        self.assertEqual(len(snapshot["light_details"]), 144)
+        self.assertEqual(len(snapshot["detail_entities"]), 1)
+        encoded = json.dumps(snapshot, ensure_ascii=True).encode("ascii")
+        chunks = self.chunks(snapshot)
+        self.assertLessEqual(len(encoded), 262144)
+        self.assertLessEqual(len(chunks), 64)
+        self.assertEqual(
+            json.loads("".join(chunk["payload"][1:] for chunk in chunks)), snapshot
+        )
 
     def test_outlet_icons_follow_state_and_respect_custom_icon(self):
         self.inputs["page_1_button_1"] = "switch.outlet"

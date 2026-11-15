@@ -41,7 +41,11 @@ async def check():
         port_check.bind(("127.0.0.1", 16053))
     with tempfile.TemporaryDirectory(prefix="wallpanel-api-") as directory:
         process = await asyncio.create_subprocess_exec(
-            str(binary), cwd=directory, env={**os.environ, "WALLPANEL_API_TEST": "1"},
+            str(binary), cwd=directory, env={
+                **os.environ, "WALLPANEL_API_TEST": "1",
+                # mallinfo2 counts freed tcache blocks as allocated; measure live allocations instead.
+                "GLIBC_TUNABLES": "glibc.malloc.tcache_count=0",
+            },
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
             preexec_fn=limit_stack,
         )
@@ -213,6 +217,9 @@ async def check():
             await tap(768, 456)
             await wait_probe(lambda value: value["menu_visible"])
             unicode_snapshot = fixture.full_snapshot("\U0001f600" * 80)
+            for page in unicode_snapshot["pages"]:
+                for button in page["buttons"]:
+                    button["indicator"] = dict(state="\U0001f7e2" * 8, active=True, available=True)
             unicode_chunks = await send(unicode_snapshot, "unicode")
             await wait_probe(lambda value: value["menu_visible"])
             await tap(107, 142)
@@ -434,24 +441,127 @@ async def check():
                 await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
                 await tap(200, 142)
                 await expect_action(command, "lock.test")
-            await send(snapshot, "restore")
+
+            async def replace_model(body, transfer):
+                previous = await wait_probe()
+                await send(body, transfer)
+                await wait_probe(lambda value: value["tick"] > previous["tick"] + 150)
+
+            details.inputs["page_1_button_1"] = "script.start_tv"
+            for state in ("off", "on"):
+                details.states["script.start_tv"] = state
+                body = details.snapshot()
+                body["pages"][0]["buttons"][0]["indicator"] = dict(
+                    state="playing", available=True, active=True,
+                )
+                await replace_model(body, f"script-{state}")
+                for _ in range(2):
+                    await tap(200, 142)
+                    await expect_action("script.turn_on", "script.start_tv")
+            body["pages"][0]["buttons"][0]["indicator"] = dict(
+                state="unavailable", available=False, active=False,
+            )
+            await replace_model(body, "indicator-unavailable")
+            await tap(200, 142)
+            await expect_action("script.turn_on", "script.start_tv")
+            body["pages"][0]["buttons"][0].update(
+                state="unavailable", indicator=dict(state="on", available=True, active=True),
+            )
+            await replace_model(body, "actor-unavailable-indicator-active")
+            await tap(200, 142)
+            await asyncio.sleep(.15)
+            assert actions.empty(), "An independent indicator enabled an unavailable actor"
+
+            details.inputs.update(
+                page_1_button_1="lock.test", page_1_button_1_tap_action="details",
+                reverse_active=[],
+                lock_details=[dict(lock="lock.test", related_1="switch.outlet",
+                                   related_2="script.arrive", related_1_title="Auto-lock")],
+            )
+            details.states.update({"lock.test": "locked", "script.arrive": "on"})
+
+            def lock_model():
+                body = details.snapshot()
+                body["pages"][0]["buttons"][0]["indicator"] = dict(
+                    state="unlocked", available=True, active=True,
+                )
+                return body
+
+            await replace_model(lock_model(), "lock-detail-model")
+            await tap(200, 142)
+            await wait_probe(lambda value: value["detail_visible"] and value["detail_status"] == "LOCKED")
+            await touch(2)
+            assert actions.empty(), "Lock details tap also issued a command"
+            await tap(600, 169)
+            await expect_action("switch.toggle", "switch.outlet")
+            await tap(600, 339)
+            await expect_action("script.turn_on", "script.arrive")
+            await tap(200, 254)
+            await expect_action("lock.unlock", "lock.test")
+            # A command does not optimistically change actual lock state.
+            await tap(200, 254)
+            await expect_action("lock.unlock", "lock.test")
+            details.states["lock.test"] = "unlocked"
+            await replace_model(lock_model(), "lock-detail-unlocked")
+            await wait_probe(lambda value: value["detail_status"] == "UNLOCKED")
+            await tap(200, 254)
+            await expect_action("lock.lock", "lock.test")
+            await touch(0, 200, 254)
+            details.states["lock.test"] = "locked"
+            await replace_model(lock_model(), "lock-change-during-touch")
+            await touch(2)
+            await asyncio.sleep(.15)
+            assert actions.empty(), "Actual lock-state change completed a stale, different operation"
+            for state in ("locking", "unlocking", "opening", "jammed", "open", "unknown", "unavailable"):
+                details.states["lock.test"] = state
+                await replace_model(lock_model(), f"lock-{state}")
+                await wait_probe(lambda value: value["detail_status"] == state.upper())
+                await tap(200, 254)
+                await asyncio.sleep(.1)
+                assert actions.empty(), f"Non-actionable lock state {state} issued a guessed command"
+            details.states["lock.test"] = "locked"
+            await replace_model(lock_model(), "lock-restore")
+            await tap(664, 456)
+            await wait_probe(lambda value: not value["detail_visible"])
+            details.inputs["page_1_button_1_tap_action"] = "default"
+            await replace_model(lock_model(), "lock-default-tap")
+            await tap(200, 142)
+            await expect_action("lock.unlock", "lock.test")
+            await hold(200, 180)
+            await wait_probe(lambda value: value["detail_visible"] and not value["slider_visible"]
+                             and not value["wheel_visible"])
+            details.inputs["page_1_button_4"] = "lock.test"
+            await replace_model(lock_model(), "duplicate-lock")
+            details.inputs["page_1_button_1"] = []
+            await replace_model(details.snapshot(), "remove-exact-lock-source")
+            await wait_probe(lambda value: not value["detail_visible"])
+            assert actions.empty(), "Closing lock details emitted an action"
+
+            # A unique visible label acknowledges atomic application, not stale pooled text or elapsed time.
+            heap_snapshot = json.loads(json.dumps(unicode_snapshot))
+            heap_marker = "\U0001f600" * 79 + "\U0001f680"
+            heap_snapshot["pages"][0]["buttons"][17]["name"] = heap_marker
+            await send(heap_snapshot, "restore-worst-case")
             await expect_release_status("Latest release unavailable")
-            warm = await wait_probe(lambda value: value["last_name"] == "X" * 80 and not value["twelve_hour"])
+            warm = await wait_probe(lambda value: value["last_name"] == heap_marker and not value["twelve_hour"])
             await asyncio.sleep(5.2)
             quiet = await wait_probe(lambda value: value["tick"] > warm["tick"] + 5100)
             assert quiet["release_updates"] == warm["release_updates"], "Unchanged release status was republished"
-            warm_heap = warm["heap_bytes"]
+            warm_heap = quiet["heap_bytes"]
             for index in range(10):
-                await send(snapshot, f"repeat-{index}")
-                warm_tick = warm["tick"]
-                warm = await wait_probe(lambda value: value["tick"] > warm_tick + 100)
-            assert warm["heap_bytes"] - warm_heap < 16384, "Repeated transfers grow retained heap"
+                heap_marker = "\U0001f600" * 79 + chr(0x1F601 + index)
+                heap_snapshot["pages"][0]["buttons"][17]["name"] = heap_marker
+                await send(heap_snapshot, f"repeat-{index}")
+                warm = await wait_probe(lambda value: value["last_name"] == heap_marker)
+            assert warm["heap_bytes"] - warm_heap < 16384, (
+                f"Repeated transfers grow retained heap: {warm_heap} -> {warm['heap_bytes']}"
+            )
             await asyncio.sleep(max(0, 31 - (asyncio.get_running_loop().time() - endpoint_started)))
             endpoint_probe = await wait_probe(lambda value: value["tick"] >= baseline["tick"] + 31000)
             assert endpoint_probe["endpoint_updates"] == 1, "Constant endpoint was republished after boot"
             size = len(json.dumps(unicode_snapshot).encode())
             print(f"Native API passed: 144 controls, reserved gaps, configurable taps, whole-tile holds, "
-                  f"light details and typed release-only commands, "
+                  f"light/lock details, scripts, independent indicators and typed release-only commands, "
                   f"Homepage, Settings, sensor wake/hold, "
                   f"{size} bytes, {len(unicode_chunks)} chunks.")
             print(f"128 KiB host stack; retained host heap {warm['heap_bytes']} bytes "

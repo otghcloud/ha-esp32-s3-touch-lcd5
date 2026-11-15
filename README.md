@@ -5,9 +5,10 @@ A Home Assistant touch dashboard for the **Waveshare ESP32-S3-Touch-LCD-5**, pow
 ## What it does
 
 - Up to eight configurable pages, with 4, 8 or 18 controls per page.
-- Toggle lights, switches and automations; operate locks.
+- Toggle lights, switches and automations; operate locks and run scripts.
 - Drag-and-drop page ordering, custom titles and Material Design icons.
 - Light details with brightness, colour temperature, a colour wheel and two related controls.
+- Lock details and optional independent button state indicators.
 - Clock screensaver, presence-sensor wake, local Sleep/Restart and optional Homepage.
 
 Pages and entities are configured through a Home Assistant blueprint, without rebuilding firmware.
@@ -68,13 +69,16 @@ Keep **one dashboard automation per panel** enabled. Future state changes and re
 
 ## Using the panel
 
-- **Tap** a control to operate it. Automations enable/disable rather than run their actions. Locks operate immediately, without confirmation.
+- **Tap** a control to operate it. Automations enable/disable rather than run their actions. Scripts always run via `script.turn_on`, including repeat presses while running. Locks operate immediately, without confirmation.
 - **Swipe left/right** to move between pages.
 - Tap the **menu** icon for Navigation or the **cog** for Settings.
-- **Hold anywhere on a light tile for 600 ms** to open details, headed with its parent page and item title, such as **Office - Lamp**. Each button can instead use **Open light details** for its short tap; the default tap action is unchanged.
+- **Hold anywhere on a light or lock tile for 600 ms** to open details, headed with its parent page and item title, such as **Office - Lamp**. Each button can instead open details on its short tap; the default tap action is unchanged.
 - In details, use **State** to toggle the light and choose an available adjustment mode. Drag to preview; release to send one command. The footer arrow returns to the parent page.
 - Missing light readings are hidden while off, or replaced with a “Choose…” prompt while on. Colour is shown as an RGB hex code. Connection and command errors remain visible.
-- In **Light details > Related controls**, optionally add up to two lights, switches or automations beside a primary light.
+- Lock details offer one state-aware **Lock/Unlock** control on the left. Transitional/jammed/unavailable states cannot issue commands.
+- In **Light details** or **Lock details > Related controls**, optionally add up to two lights, switches, automations or scripts beside the primary entity.
+
+An optional per-button state indicator uses another entity's raw state and configurable active states (default `on`) for appearance only. Commands still target the selected control. An unavailable indicator does not disable an available control. Without an override, scripts show IDLE/RUNNING and other controls retain their usual states.
 
 Active controls are normally white. **Appearance > Reverse active state** changes that visual rule, not the action. Locks are normally active when unlocked.
 
@@ -98,7 +102,8 @@ Choose date/time formats and optional binary wake sensors in the blueprint. Wake
 
 ## Updating and troubleshooting
 
-- Use firmware and blueprint from the same release. Install updated firmware first, then replace the existing blueprint and reload automations. This batch uses protocol **3**, so earlier firmware/blueprints cannot be mixed; saved automation inputs remain, with defaults for the new options.
+- Use firmware and blueprint from the same release. Install updated firmware first, then replace the existing blueprint and reload automations. This batch uses protocol **4**, so earlier firmware/blueprints cannot be mixed; saved automation inputs remain, with defaults for the new options.
+- Display routing now follows the manufacturer's RGB pin assignments, correcting swapped red/blue throughout the panel. Locked is green and unlocked is red; active light icons and wheel hues also regain their intended colours.
 - The device's diagnostic **Firmware release** and **Release status** identify version mismatches.
 - Optional [release notifications](./DEVELOPER.md#release-notifications) warn about newer stable releases. Nothing installs automatically.
 - OTA updates blank the backlight until reboot. If an upload fails or aborts, its previous state is restored.

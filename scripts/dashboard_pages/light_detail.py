@@ -12,7 +12,7 @@ def build():
             "knob": {"bg_color": 0xFFD166, "pad_all": 8, "radius": 6,
                      "shadow_width": 0, "pressed": {"bg_color": 0xFFD166, "pad_all": 8}},
         }},
-        label("detail_value", "", "font_medium", x=120, y=98, width=260, height=32, text_align="CENTER"),
+        label("detail_value", "", "font_medium", x=136, y=98, width=260, height=32, text_align="CENTER"),
         {"image": {"id": "detail_wheel", "src": "light_colour_wheel", "x": 120, "y": 132}},
         {"obj": {
             "id": "detail_marker", "width": 16, "height": 16, "radius": 8,

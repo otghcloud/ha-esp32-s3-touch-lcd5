@@ -36,7 +36,19 @@ inline bool known_state(const ButtonData &button) {
     return button.state == "locked" || button.state == "unlocked";
   return button.state == "on" || button.state == "off";
 }
-inline uint32_t state_color(const ButtonData &button, bool online = true) {
+inline bool supports_details(const ButtonData &button) {
+  return button.entity.starts_with("light.") || button.entity.starts_with("lock.");
+}
+inline const char *state_text(const ButtonData &button, bool indicator = true) {
+  if (indicator && button.indicator.configured)
+    return button.indicator.available ? button.indicator.state.c_str() : "UNAVAILABLE";
+  return button.display_state;
+}
+inline uint32_t state_color(const ButtonData &button, bool online = true, bool indicator = true) {
+  if (indicator && button.indicator.configured) {
+    if (!online || !button.indicator.available) return 0xAAB4C5;
+    return button.indicator.active ? 0xFFD166 : 0xAAB4C5;
+  }
   if (!online || button.state == "unknown" || button.state == "unavailable")
     return 0xAAB4C5;
   if (button.entity.compare(0, 5, "lock.") == 0) {
@@ -48,20 +60,22 @@ inline uint32_t state_color(const ButtonData &button, bool online = true) {
   }
   return button.state == "on" ? 0xFFD166 : 0xAAB4C5;
 }
-inline bool active_state(const ButtonData &button, bool online = true) {
-  if (!online || !known_state(button))
+inline bool active_state(const ButtonData &button, bool online = true, bool indicator = true) {
+  const bool overridden = indicator && button.indicator.configured;
+  if (!online || (overridden ? !button.indicator.available : !known_state(button)))
     return false;
-  const bool active = button.entity.compare(0, 5, "lock.") == 0
+  const bool active = overridden ? button.indicator.active : button.entity.compare(0, 5, "lock.") == 0
                           ? button.state == "unlocked" : button.state == "on";
   return active != button.reverse_active;
 }
-inline void style_entity_tile(const ButtonWidgets &widgets, const ButtonData &data, bool online) {
-  const bool active = active_state(data, online);
+inline void style_entity_tile(const ButtonWidgets &widgets, const ButtonData &data, bool online,
+                              bool indicator = true) {
+  const bool active = active_state(data, online, indicator);
   const bool available = online && known_state(data);
   lv_obj_set_style_bg_color(widgets.button, lv_color_hex(active ? 0xFFFFFF : 0x171F2C), 0);
   lv_obj_set_style_bg_opa(widgets.button, active ? LV_OPA_COVER : LV_OPA_90, 0);
   lv_obj_set_style_text_color(widgets.name, lv_color_hex(active ? 0x111827 : 0xF2F4F8), 0);
-  uint32_t colour = state_color(data, online);
+  uint32_t colour = state_color(data, online, indicator);
   if (active) {
     if (colour == 0x68D391) colour = 0x176D3F;
     else if (colour == 0xF87171) colour = 0xA12B2B;
@@ -70,7 +84,8 @@ inline void style_entity_tile(const ButtonWidgets &widgets, const ButtonData &da
   }
   lv_obj_set_style_text_color(widgets.icon, lv_color_hex(colour), 0);
   lv_obj_set_style_text_color(widgets.state,
-      lv_color_hex(!online ? 0xAAB4C5 : active ? colour : data.display_color), 0);
+      lv_color_hex(!online ? 0xAAB4C5 : active || (indicator && data.indicator.configured)
+                   ? colour : data.display_color), 0);
   lv_obj_set_style_opa(widgets.button, available ? LV_OPA_COVER : LV_OPA_50, 0);
   if (available) lv_obj_remove_state(widgets.button, LV_STATE_DISABLED);
   else lv_obj_add_state(widgets.button, LV_STATE_DISABLED);
@@ -83,6 +98,8 @@ inline const char *default_icon(const ButtonData &button) {
     return button.state == "off" ? "mdi:toggle-switch-variant-off" : "mdi:toggle-switch-variant";
   if (domain == "automation")
     return button.state == "off" ? "mdi:robot-off" : "mdi:robot";
+  if (domain == "script")
+    return "mdi:script-text-play";
   if (button.state == "jammed")
     return "mdi:lock-alert";
   if (button.state == "locking" || button.state == "unlocking" || button.state == "opening")

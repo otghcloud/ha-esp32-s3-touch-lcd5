@@ -22,9 +22,9 @@ inline void render_entity_tile(const ButtonWidgets &button, const ButtonData &da
   visible(button.state, !compact);
   lv_label_set_text(button.name, data.name.c_str());
   const bool available = online && known_state(data);
-  visible(button.unavailable, !available && !compact);
+  visible(button.unavailable, (!available || (data.indicator.configured && !data.indicator.available)) && !compact);
   style_entity_tile(button, data, online);
   lv_label_set_text(button.icon, data.display_icon);
-  lv_label_set_text(button.state, data.display_state);
+  lv_label_set_text(button.state, state_text(data));
 }
 }  // namespace wallpanel
