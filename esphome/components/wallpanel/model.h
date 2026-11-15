@@ -15,6 +15,7 @@ inline constexpr size_t CHUNK_BYTES = 4096;
 
 enum class Layout { TWO_BY_TWO, FOUR_BY_TWO, SIX_BY_THREE };
 enum class View { BUTTONS, NAVIGATION, HOMEPAGE, SETTINGS, LIGHT_DETAIL };
+enum class TapAction { DEFAULT, DETAILS };
 
 struct Grid {
   int columns, rows, width, height, gap;
@@ -33,7 +34,7 @@ struct ButtonWidgets {
   lv_obj_t *button, *name, *state, *unavailable, *icon;
 };
 struct PageWidgets {
-  lv_obj_t *container, *title, *temperature;
+  lv_obj_t *container, *title, *temperature, *icon, *thermometer;
 };
 struct NavigationWidgets {
   lv_obj_t *container, *menu;
@@ -44,6 +45,7 @@ struct Fonts {
 struct ButtonData {
   std::string entity, name, state, icon;
   bool reverse_active{false};
+  TapAction tap_action{TapAction::DEFAULT};
   // These pointers reference static labels/glyphs, never shared widget text.
   const char *display_state{"UNKNOWN"};
   const char *display_icon{nullptr};
@@ -71,6 +73,7 @@ struct PageData {
   Layout layout{Layout::TWO_BY_TWO};
   std::array<ButtonData, MAX_BUTTONS> buttons;
   bool enabled{false};
+  bool compact{true};
   bool operator==(const PageData &) const = default;
 };
 struct Homepage {

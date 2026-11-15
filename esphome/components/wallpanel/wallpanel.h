@@ -12,6 +12,7 @@
 #include "esphome/components/lvgl/lvgl_esphome.h"
 #include "esphome/components/touchscreen/touchscreen.h"
 #include "esphome/core/component.h"
+#include "esphome/core/application.h"
 #include "esphome/core/log.h"
 #include "esphome/core/time.h"
 #include "model.h"
@@ -46,6 +47,9 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   void bind_detail(const DetailWidgets &widgets) { detail_widgets_ = widgets; }
   void loop() override {
     check_touch_hold();
+    if (ready_ && !updating_ && !screensaver_active_ && view_ == View::SETTINGS &&
+        uint32_t(esphome::millis() - settings_updated_) >= 1000)
+      refresh_settings_ip();
     if (!updating_ && detail_pending_ && uint32_t(esphome::millis() - pending_at_) >= 5000) {
       detail_pending_ = false;
       detail_error_ = true;
@@ -87,9 +91,12 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     homepage_container_ = container;
     homepage_title_ = title;
   }
-  void bind_settings(lv_obj_t *container, lv_obj_t *button) {
+  void bind_settings(lv_obj_t *container, lv_obj_t *button, const std::array<lv_obj_t *, 3> &info) {
     settings_container_ = container;
     settings_button_ = button;
+    settings_info_ = info;
+    lv_label_set_text(info[0], esphome::App.get_name().c_str());
+    lv_label_set_text(info[1], PROJECT_VERSION);
   }
   void bind_restart(std::function<void()> restart) { restart_ = std::move(restart); }
   void bind_power(std::function<void()> wake, std::function<void()> sleep, std::function<void()> activity) {
@@ -156,8 +163,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     }
     esphome::json::parse_json(payload, [this](JsonObject root) {
       const int version = root["version"].is<int>() ? root["version"].as<int>() : 0;
-      if (version != 2 || !root["pages"].is<JsonArray>() || root["pages"].size() != MAX_PAGES) {
-        ESP_LOGE("dashboard", "Expected protocol version 2 with %u pages", unsigned(MAX_PAGES));
+      if (version != 3 || !root["pages"].is<JsonArray>() || root["pages"].size() != MAX_PAGES) {
+        ESP_LOGE("dashboard", "Expected protocol version 3 with %u pages", unsigned(MAX_PAGES));
         return false;
       }
       std::string blueprint_release, latest_release;
@@ -245,27 +252,42 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
           return false;
         }
         if (!next[p].icon.empty() && mdi_glyph(next[p].icon) == nullptr) {
-          ESP_LOGW("dashboard", "Unsupported page icon '%s'; using dashboard icon", next[p].icon.c_str());
+          ESP_LOGW("dashboard", "Unsupported page icon '%s'; header omitted, navigation uses dashboard icon", next[p].icon.c_str());
           next[p].icon.clear();
         }
         if (page.isNull() || !read_string(page["title"], next[p].title, 320) ||
             !read_string(page["temperature"], next[p].temperature, 320) ||
-            !page["buttons"].is<JsonArray>() || page["buttons"].size() != grid(next[p].layout).capacity()) {
+            !page["compact"].is<bool>() ||
+            !page["buttons"].is<JsonArray>() || page["buttons"].size() != MAX_BUTTONS) {
           ESP_LOGE("dashboard", "Invalid page %u; configuration unchanged", unsigned(p + 1));
           return false;
         }
-        for (size_t b = 0; b < page["buttons"].size(); b++) {
+        next[p].compact = page["compact"].as<bool>();
+        size_t populated = 0;
+        const auto capacity = grid(next[p].layout).capacity();
+        for (size_t b = 0; b < MAX_BUTTONS; b++) {
           JsonObject button = page["buttons"][b];
           auto &data = next[p].buttons[b];
           if (button.isNull() || !read_string(button["entity"], data.entity, 128) ||
               !read_string(button["name"], data.name, 320) ||
               !read_string(button["state"], data.state, 40) ||
               !read_string(button["icon"], data.icon, 128) ||
-              (!data.entity.empty() && !valid_entity(data.entity))) {
+              (!data.entity.empty() && !valid_entity(data.entity)) ||
+              !button["tap_action"].is<const char *>()) {
             ESP_LOGE("dashboard", "Invalid button %u on page %u; configuration unchanged",
                      unsigned(b + 1), unsigned(p + 1));
             return false;
           }
+          const std::string tap_action = button["tap_action"].as<const char *>();
+          populated += !data.entity.empty();
+          if ((tap_action != "default" && tap_action != "details") ||
+              (tap_action == "details" && !data.entity.starts_with("light.")) ||
+              populated > capacity || (!next[p].compact && !data.entity.empty() && b >= capacity)) {
+            ESP_LOGE("dashboard", "Invalid tap action or grid position on page %u button %u",
+                     unsigned(p + 1), unsigned(b + 1));
+            return false;
+          }
+          data.tap_action = tap_action == "details" ? TapAction::DETAILS : TapAction::DEFAULT;
           data.reverse_active = std::find(reverse.begin(), reverse.end(), data.entity) != reverse.end();
           if (!data.icon.empty() && mdi_glyph(data.icon) == nullptr) {
             ESP_LOGW("dashboard", "Unsupported icon '%s' for '%s'; using state-aware default",
@@ -309,11 +331,12 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
                           old_light->related != new_light->related || old_light->related_titles != new_light->related_titles;
       for (size_t p = 0; p < MAX_PAGES; p++) {
         layout_changed |= next[p].enabled != pages_[p].enabled || next[p].title != pages_[p].title ||
-                          next[p].icon != pages_[p].icon || next[p].layout != pages_[p].layout;
+                          next[p].icon != pages_[p].icon || next[p].layout != pages_[p].layout ||
+                          next[p].compact != pages_[p].compact;
         for (size_t b = 0; b < MAX_BUTTONS; b++) {
           auto &data = next[p].buttons[b];
           const auto &previous = pages_[p].buttons[b];
-          layout_changed |= data.entity != previous.entity;
+          layout_changed |= data.entity != previous.entity || data.tap_action != previous.tap_action;
           update_appearance(data, &previous);
         }
       }
@@ -494,18 +517,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     touch_target_ = ready_ && !screensaver_active_ ? hit_target(x, y) : TouchTarget{};
     touch_entity_ = touch_target_.kind == TargetKind::ENTITY
                         ? pages_[current_].buttons[touch_target_.index].entity : "";
-    if (touch_target_.kind == TargetKind::ENTITY && touch_entity_.starts_with("light.")) {
-      lv_area_t area;
-      lv_obj_get_coords(buttons_[touch_target_.index].icon, &area);
-      const auto pad_x = std::max<int32_t>(6, (72 - lv_area_get_width(&area) + 1) / 2);
-      const auto pad_y = std::max<int32_t>(6, (72 - lv_area_get_height(&area) + 1) / 2);
-      hold_candidate_ = x >= area.x1 - pad_x && x <= area.x2 + pad_x &&
-                        y >= area.y1 - pad_y && y <= area.y2 + pad_y &&
-                        !hit_widget(buttons_[touch_target_.index].name, x, y);
-      ESP_LOGD("dashboard", "Light hold %s for '%s': touch (%d,%d), icon (%d,%d)-(%d,%d)",
-               hold_candidate_ ? "armed" : "outside icon area", touch_entity_.c_str(), x, y,
-               int(area.x1), int(area.y1), int(area.x2), int(area.y2));
-    }
+    hold_candidate_ = touch_target_.kind == TargetKind::ENTITY && touch_entity_.starts_with("light.");
     if (touch_target_.kind == TargetKind::RELATED) {
       const auto *light = find_light(details_, detail_entity_);
       touch_entity_ = light ? light->related[touch_target_.index] : "";
@@ -563,15 +575,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     hold_candidate_ = false;
     const auto &button = pages_[current_].buttons[touch_target_.index];
     if (button.entity != touch_entity_) return;
-    detail_entity_ = button.entity;
-    ESP_LOGD("dashboard", "Opening light details for '%s'", detail_entity_.c_str());
-    detail_page_ = current_;
-    detail_mode_ = initial_detail_mode(find_light(details_, detail_entity_));
-    detail_editing_ = detail_pending_ = detail_error_ = false;
-    gesture_.finish();
-    view_ = View::LIGHT_DETAIL;
-    layout_revision_++;
-    render();
+    open_details(current_, touch_target_.index);
   }
 
   TouchAction end_touch() {
@@ -631,7 +635,10 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         select_page(touch_target_.index);
       } else if (touch_target_.kind == TargetKind::ENTITY &&
                  pages_[current_].buttons[touch_target_.index].entity == touch_entity_) {
-        press(current_, touch_target_.index);
+        if (pages_[current_].buttons[touch_target_.index].tap_action == TapAction::DETAILS)
+          open_details(current_, touch_target_.index);
+        else
+          press(current_, touch_target_.index);
       }
     }
     return action;
@@ -693,11 +700,40 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
  private:
+  void refresh_settings_ip() {
+    std::string ip = "Unavailable";
+#ifdef USE_NETWORK
+    ip = settings_ip_address(esphome::network::is_connected(), esphome::network::get_ip_addresses());
+#endif
+    settings_updated_ = esphome::millis();
+    if (ip != settings_ip_) {
+      lv_label_set_text(settings_info_[2], ip.c_str());
+      settings_ip_ = std::move(ip);
+    }
+  }
   const ButtonData *primary_detail() const {
-    for (const auto &page : pages_)
-      for (const auto &button : page.buttons)
-        if (!detail_entity_.empty() && button.entity == detail_entity_) return &button;
+    if (detail_page_ < MAX_PAGES && detail_button_ < MAX_BUTTONS && pages_[detail_page_].enabled) {
+      const auto &button = pages_[detail_page_].buttons[detail_button_];
+      if (!detail_entity_.empty() && button.entity == detail_entity_) return &button;
+    }
     return nullptr;
+  }
+  void open_details(size_t page, size_t slot) {
+    const auto &button = pages_[page].buttons[slot];
+    if (!online_ || !known_state(button) || !button.entity.starts_with("light.")) {
+      ESP_LOGW("dashboard", "Cannot open light details without an available light");
+      return;
+    }
+    detail_entity_ = button.entity;
+    ESP_LOGD("dashboard", "Opening light details for '%s'", detail_entity_.c_str());
+    detail_page_ = page;
+    detail_button_ = slot;
+    detail_mode_ = initial_detail_mode(find_light(details_, detail_entity_));
+    detail_editing_ = detail_pending_ = detail_error_ = hold_candidate_ = false;
+    gesture_.finish();
+    view_ = View::LIGHT_DETAIL;
+    layout_revision_++;
+    render();
   }
   static DetailMode initial_detail_mode(const LightData *light) {
     return supports_mode(light, DetailMode::BRIGHTNESS) ? DetailMode::BRIGHTNESS :
@@ -893,6 +929,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     visible(navigation_.container, view_ == View::NAVIGATION && page_count > 0);
     visible(homepage_container_, view_ == View::HOMEPAGE && homepage_.enabled);
     visible(settings_container_, view_ == View::SETTINGS);
+    if (view_ == View::SETTINGS) refresh_settings_ip();
     visible(detail_widgets_.container, view_ == View::LIGHT_DETAIL);
     if (homepage_title_)
       render_homepage(homepage_title_, homepage_);
@@ -911,7 +948,13 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       lv_label_set_text(widgets.title, page_title(p).c_str());
       visible(widgets.temperature, !page.temperature.empty());
       lv_label_set_text(widgets.temperature,
-                        online_ ? page.temperature.c_str() : "Temperature: UNAVAILABLE");
+                        online_ ? page.temperature.c_str() : "UNAVAILABLE");
+      visible(widgets.thermometer, !page.temperature.empty());
+      visible(widgets.icon, !page.icon.empty());
+      if (!page.icon.empty()) lv_label_set_text(widgets.icon, mdi_glyph(page.icon));
+      lv_obj_set_x(widgets.title, page.icon.empty() ? 24 : 70);
+      lv_obj_set_width(widgets.title, (!page.temperature.empty() ? 570 : 776) -
+                                         (page.icon.empty() ? 24 : 70));
     }
     for (const auto p : content_order()) {
       if (p == current_) current_rank = page_rank;
@@ -980,7 +1023,9 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       visible(button.button, !data.entity.empty());
       if (data.entity.empty())
         continue;
-      render_entity_tile(button, data, page.layout, button_count, button_rank++, fonts, online_);
+      render_entity_tile(button, data, page.layout,
+                         page.compact ? button_count : grid(page.layout).capacity(),
+                         page.compact ? button_rank++ : b, fonts, online_);
     }
   }
 
@@ -999,6 +1044,9 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   lv_obj_t *homepage_title_{nullptr};
   lv_obj_t *settings_container_{nullptr};
   lv_obj_t *settings_button_{nullptr};
+  std::array<lv_obj_t *, 3> settings_info_{};
+  std::string settings_ip_;
+  uint32_t settings_updated_{0};
   std::function<void()> restart_, power_wake_, power_sleep_, activity_, refresh_clock_;
   bool sensor_hold_{false};
   bool manual_sleep_{false};
@@ -1011,6 +1059,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   DetailWidgets detail_widgets_{};
   std::string detail_entity_;
   size_t detail_page_{0};
+  size_t detail_button_{0};
   DetailMode detail_mode_{DetailMode::BRIGHTNESS};
   bool hold_candidate_{false}, detail_editing_{false}, detail_pending_{false}, detail_error_{false};
   float edit_first_{0}, edit_second_{0};

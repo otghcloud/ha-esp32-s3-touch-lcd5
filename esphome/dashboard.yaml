@@ -3,21 +3,22 @@ esphome:
   on_boot:
   - priority: -100
     then:
-    - lambda: 'id(dashboard).bind_page(0, {id(page_0), id(title_0), id(temperature_0)});
+    - lambda: 'id(dashboard).bind_page(0, {id(page_0), id(title_0), id(temperature_0), id(page_icon_0),
+        id(thermometer_0)});
 
-        id(dashboard).bind_page(1, {id(page_1), id(title_1), id(temperature_1)});
+        id(dashboard).bind_page(1, {id(page_1), id(title_1), id(temperature_1), id(page_icon_1), id(thermometer_1)});
 
-        id(dashboard).bind_page(2, {id(page_2), id(title_2), id(temperature_2)});
+        id(dashboard).bind_page(2, {id(page_2), id(title_2), id(temperature_2), id(page_icon_2), id(thermometer_2)});
 
-        id(dashboard).bind_page(3, {id(page_3), id(title_3), id(temperature_3)});
+        id(dashboard).bind_page(3, {id(page_3), id(title_3), id(temperature_3), id(page_icon_3), id(thermometer_3)});
 
-        id(dashboard).bind_page(4, {id(page_4), id(title_4), id(temperature_4)});
+        id(dashboard).bind_page(4, {id(page_4), id(title_4), id(temperature_4), id(page_icon_4), id(thermometer_4)});
 
-        id(dashboard).bind_page(5, {id(page_5), id(title_5), id(temperature_5)});
+        id(dashboard).bind_page(5, {id(page_5), id(title_5), id(temperature_5), id(page_icon_5), id(thermometer_5)});
 
-        id(dashboard).bind_page(6, {id(page_6), id(title_6), id(temperature_6)});
+        id(dashboard).bind_page(6, {id(page_6), id(title_6), id(temperature_6), id(page_icon_6), id(thermometer_6)});
 
-        id(dashboard).bind_page(7, {id(page_7), id(title_7), id(temperature_7)});
+        id(dashboard).bind_page(7, {id(page_7), id(title_7), id(temperature_7), id(page_icon_7), id(thermometer_7)});
 
         id(dashboard).bind_buttons(id(dashboard_tiles), {{{id(button_0_0), id(button_0_0_name), id(button_0_0_state),
         id(button_0_0_unavailable), id(button_0_0_icon)}, {id(button_0_1), id(button_0_1_name), id(button_0_1_state),
@@ -51,7 +52,8 @@ esphome:
 
         id(dashboard).bind_homepage(id(homepage), id(homepage_title));
 
-        id(dashboard).bind_settings(id(settings), id(dashboard_settings));
+        id(dashboard).bind_settings(id(settings), id(dashboard_settings), {id(settings_name), id(settings_version),
+        id(settings_ip)});
 
         id(dashboard).bind_update(id(dashboard_updating));
 
@@ -69,6 +71,33 @@ font:
 - file: gfonts://Roboto
   id: font_small
   size: 16
+- file: gfonts://Roboto
+  id: font_temperature
+  size: 20
+- file:
+    type: gfonts
+    family: Roboto
+    weight: 700
+  id: font_clock
+  size: 16
+  glyphsets: []
+  glyphs:
+  - '0'
+  - '1'
+  - '2'
+  - '3'
+  - '4'
+  - '5'
+  - '6'
+  - '7'
+  - '8'
+  - '9'
+  - ':'
+  - '-'
+  - ' '
+  - A
+  - P
+  - M
 - file: gfonts://Roboto
   id: font_screensaver
   size: 104
@@ -15005,6 +15034,13 @@ font:
   - "\U000F035C"
   - "\U000F0493"
   - "\U000F004D"
+- file: https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/fonts/materialdesignicons-webfont.ttf
+  id: font_temperature_icon
+  size: 20
+  bpp: 1
+  glyphsets: []
+  glyphs:
+  - "\U000F050F"
 image:
 - platform: file
   file: ../assets/background_dark.png
@@ -15027,13 +15063,14 @@ lvgl:
     - label:
         id: lbl_time
         text: --:--
-        text_font: font_large
-        text_color: 15922424
-        align: TOP_RIGHT
-        x: -24
-        y: 4
-        width: 160
-        text_align: RIGHT
+        text_font: font_clock
+        text_color: 1118481
+        align: BOTTOM_LEFT
+        x: 24
+        y: -14
+        width: 180
+        height: 20
+        text_align: LEFT
     - label:
         id: dashboard_connection
         text: HOME ASSISTANT UNAVAILABLE
@@ -15191,19 +15228,38 @@ lvgl:
           text_color: 15922424
           x: 24
           y: 14
-          width: 560
+          width: 546
           height: 32
           long_mode: DOT
       - label:
+          id: page_icon_0
+          text: ''
+          text_font: font_dense_icons
+          text_color: 15922424
+          x: 24
+          y: 10
+          width: 36
+          height: 36
+          hidden: true
+      - label:
+          id: thermometer_0
+          text: "\U000F050F"
+          text_font: font_temperature_icon
+          text_color: 15922424
+          x: 592
+          y: 18
+          width: 20
+          height: 24
+          hidden: true
+      - label:
           id: temperature_0
           text: ''
-          text_font: font_small
-          text_color: 1118481
-          align: BOTTOM_LEFT
-          x: 24
-          y: -14
-          width: 280
-          height: 20
+          text_font: font_temperature
+          text_color: 15922424
+          x: 620
+          y: 17
+          width: 156
+          height: 26
           long_mode: DOT
   - obj:
       id: page_1
@@ -15224,19 +15280,38 @@ lvgl:
           text_color: 15922424
           x: 24
           y: 14
-          width: 560
+          width: 546
           height: 32
           long_mode: DOT
       - label:
+          id: page_icon_1
+          text: ''
+          text_font: font_dense_icons
+          text_color: 15922424
+          x: 24
+          y: 10
+          width: 36
+          height: 36
+          hidden: true
+      - label:
+          id: thermometer_1
+          text: "\U000F050F"
+          text_font: font_temperature_icon
+          text_color: 15922424
+          x: 592
+          y: 18
+          width: 20
+          height: 24
+          hidden: true
+      - label:
           id: temperature_1
           text: ''
-          text_font: font_small
-          text_color: 1118481
-          align: BOTTOM_LEFT
-          x: 24
-          y: -14
-          width: 280
-          height: 20
+          text_font: font_temperature
+          text_color: 15922424
+          x: 620
+          y: 17
+          width: 156
+          height: 26
           long_mode: DOT
   - obj:
       id: page_2
@@ -15257,19 +15332,38 @@ lvgl:
           text_color: 15922424
           x: 24
           y: 14
-          width: 560
+          width: 546
           height: 32
           long_mode: DOT
       - label:
+          id: page_icon_2
+          text: ''
+          text_font: font_dense_icons
+          text_color: 15922424
+          x: 24
+          y: 10
+          width: 36
+          height: 36
+          hidden: true
+      - label:
+          id: thermometer_2
+          text: "\U000F050F"
+          text_font: font_temperature_icon
+          text_color: 15922424
+          x: 592
+          y: 18
+          width: 20
+          height: 24
+          hidden: true
+      - label:
           id: temperature_2
           text: ''
-          text_font: font_small
-          text_color: 1118481
-          align: BOTTOM_LEFT
-          x: 24
-          y: -14
-          width: 280
-          height: 20
+          text_font: font_temperature
+          text_color: 15922424
+          x: 620
+          y: 17
+          width: 156
+          height: 26
           long_mode: DOT
   - obj:
       id: page_3
@@ -15290,19 +15384,38 @@ lvgl:
           text_color: 15922424
           x: 24
           y: 14
-          width: 560
+          width: 546
           height: 32
           long_mode: DOT
       - label:
+          id: page_icon_3
+          text: ''
+          text_font: font_dense_icons
+          text_color: 15922424
+          x: 24
+          y: 10
+          width: 36
+          height: 36
+          hidden: true
+      - label:
+          id: thermometer_3
+          text: "\U000F050F"
+          text_font: font_temperature_icon
+          text_color: 15922424
+          x: 592
+          y: 18
+          width: 20
+          height: 24
+          hidden: true
+      - label:
           id: temperature_3
           text: ''
-          text_font: font_small
-          text_color: 1118481
-          align: BOTTOM_LEFT
-          x: 24
-          y: -14
-          width: 280
-          height: 20
+          text_font: font_temperature
+          text_color: 15922424
+          x: 620
+          y: 17
+          width: 156
+          height: 26
           long_mode: DOT
   - obj:
       id: page_4
@@ -15323,19 +15436,38 @@ lvgl:
           text_color: 15922424
           x: 24
           y: 14
-          width: 560
+          width: 546
           height: 32
           long_mode: DOT
       - label:
+          id: page_icon_4
+          text: ''
+          text_font: font_dense_icons
+          text_color: 15922424
+          x: 24
+          y: 10
+          width: 36
+          height: 36
+          hidden: true
+      - label:
+          id: thermometer_4
+          text: "\U000F050F"
+          text_font: font_temperature_icon
+          text_color: 15922424
+          x: 592
+          y: 18
+          width: 20
+          height: 24
+          hidden: true
+      - label:
           id: temperature_4
           text: ''
-          text_font: font_small
-          text_color: 1118481
-          align: BOTTOM_LEFT
-          x: 24
-          y: -14
-          width: 280
-          height: 20
+          text_font: font_temperature
+          text_color: 15922424
+          x: 620
+          y: 17
+          width: 156
+          height: 26
           long_mode: DOT
   - obj:
       id: page_5
@@ -15356,19 +15488,38 @@ lvgl:
           text_color: 15922424
           x: 24
           y: 14
-          width: 560
+          width: 546
           height: 32
           long_mode: DOT
       - label:
+          id: page_icon_5
+          text: ''
+          text_font: font_dense_icons
+          text_color: 15922424
+          x: 24
+          y: 10
+          width: 36
+          height: 36
+          hidden: true
+      - label:
+          id: thermometer_5
+          text: "\U000F050F"
+          text_font: font_temperature_icon
+          text_color: 15922424
+          x: 592
+          y: 18
+          width: 20
+          height: 24
+          hidden: true
+      - label:
           id: temperature_5
           text: ''
-          text_font: font_small
-          text_color: 1118481
-          align: BOTTOM_LEFT
-          x: 24
-          y: -14
-          width: 280
-          height: 20
+          text_font: font_temperature
+          text_color: 15922424
+          x: 620
+          y: 17
+          width: 156
+          height: 26
           long_mode: DOT
   - obj:
       id: page_6
@@ -15389,19 +15540,38 @@ lvgl:
           text_color: 15922424
           x: 24
           y: 14
-          width: 560
+          width: 546
           height: 32
           long_mode: DOT
       - label:
+          id: page_icon_6
+          text: ''
+          text_font: font_dense_icons
+          text_color: 15922424
+          x: 24
+          y: 10
+          width: 36
+          height: 36
+          hidden: true
+      - label:
+          id: thermometer_6
+          text: "\U000F050F"
+          text_font: font_temperature_icon
+          text_color: 15922424
+          x: 592
+          y: 18
+          width: 20
+          height: 24
+          hidden: true
+      - label:
           id: temperature_6
           text: ''
-          text_font: font_small
-          text_color: 1118481
-          align: BOTTOM_LEFT
-          x: 24
-          y: -14
-          width: 280
-          height: 20
+          text_font: font_temperature
+          text_color: 15922424
+          x: 620
+          y: 17
+          width: 156
+          height: 26
           long_mode: DOT
   - obj:
       id: page_7
@@ -15422,19 +15592,38 @@ lvgl:
           text_color: 15922424
           x: 24
           y: 14
-          width: 560
+          width: 546
           height: 32
           long_mode: DOT
       - label:
+          id: page_icon_7
+          text: ''
+          text_font: font_dense_icons
+          text_color: 15922424
+          x: 24
+          y: 10
+          width: 36
+          height: 36
+          hidden: true
+      - label:
+          id: thermometer_7
+          text: "\U000F050F"
+          text_font: font_temperature_icon
+          text_color: 15922424
+          x: 592
+          y: 18
+          width: 20
+          height: 24
+          hidden: true
+      - label:
           id: temperature_7
           text: ''
-          text_font: font_small
-          text_color: 1118481
-          align: BOTTOM_LEFT
-          x: 24
-          y: -14
-          width: 280
-          height: 20
+          text_font: font_temperature
+          text_color: 15922424
+          x: 620
+          y: 17
+          width: 156
+          height: 26
           long_mode: DOT
   - obj:
       id: dashboard_tiles
@@ -16383,6 +16572,64 @@ lvgl:
           x: 24
           y: 14
           width: 560
+          height: 32
+          long_mode: DOT
+      - label:
+          id: settings_overview
+          text: Overview
+          text_font: font_medium
+          text_color: 15922424
+          x: 292
+          y: 80
+      - label:
+          id: settings_name_label
+          text: Device name
+          text_font: font_small
+          text_color: 15922424
+          x: 292
+          y: 132
+      - label:
+          id: settings_name
+          text: ''
+          text_font: font_medium
+          text_color: 15922424
+          x: 292
+          y: 155
+          width: 484
+          height: 32
+          long_mode: DOT
+      - label:
+          id: settings_version_label
+          text: Firmware version
+          text_font: font_small
+          text_color: 15922424
+          x: 292
+          y: 214
+      - label:
+          id: settings_version
+          text: ''
+          text_font: font_medium
+          text_color: 15922424
+          x: 292
+          y: 237
+          width: 484
+          height: 32
+          long_mode: DOT
+      - label:
+          id: settings_ip_label
+          text: IP address
+          text_font: font_small
+          text_color: 15922424
+          x: 292
+          y: 296
+      - label:
+          id: settings_ip
+          text: Unavailable
+          text_font: font_medium
+          text_color: 15922424
+          x: 292
+          y: 319
+          width: 484
           height: 32
           long_mode: DOT
   - obj:

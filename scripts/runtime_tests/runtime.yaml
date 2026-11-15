@@ -139,7 +139,7 @@ esphome:
             lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN);
           }
           auto initialize_snapshot = [](JsonObject root) {
-            root["version"] = 2;
+            root["version"] = 3;
             root["blueprint_release"] = wallpanel::PROJECT_VERSION;
             root["latest_release"] = "";
             root["navigation_layout"] = "2x2";
@@ -156,19 +156,29 @@ esphome:
             root["light_details"].to<JsonArray>();
             root["detail_entities"].to<JsonArray>();
           };
+          auto build_snapshot = [&](const esphome::json::json_build_t &build) {
+            JsonDocument document(esphome::json::heap_json_allocator());
+            build(document.to<JsonObject>());
+            require(!document.overflowed(), "test snapshot allocation");
+            std::string result;
+            serializeJson(document, result);
+            return result;
+          };
           auto snapshot = [&](int mode) {
-            return esphome::json::build_json([&](JsonObject root) {
+            return build_snapshot([&](JsonObject root) {
               initialize_snapshot(root);
               JsonArray pages = root["pages"].to<JsonArray>();
               for (size_t p = 0; p < wallpanel::MAX_PAGES + (mode == 4); p++) {
                 JsonObject page = pages.add<JsonObject>();
                 page["title"] = p == 0 ? "Office" : "Landing";
-                page["temperature"] = p == 2 ? "Temperature: 21.5 C" : "";
+                page["temperature"] = p == 2 ? "21.5 C" : "";
                 page["layout"] = "2x2";
+                page["compact"] = true;
                 page["icon"] = "";
                 JsonArray buttons = page["buttons"].to<JsonArray>();
-                for (int b = 0; b < (mode == 10 ? 5 : 4); b++) {
+                for (int b = 0; b < (mode == 10 ? 19 : 18); b++) {
                   JsonObject button = buttons.add<JsonObject>();
+                  button["tap_action"] = "default";
                   bool populated = mode != 3 && ((p == 0 && b == 0 && mode != 2) || (p == 2 && b == 3));
                   button["entity"] = populated ? (mode == 5 ? "cover.invalid" : mode == 6 ? "automation.test"
                     : mode == 7 || mode == 9 ? "lock.test" : mode == 8 ? "switch.test" : "light.test") : "";
@@ -248,8 +258,12 @@ esphome:
           }
           require(!lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED), "available control enabled");
           check_chrome();
-          require(within(id(title_0), 0, 0, 599, 55) && within(id(lbl_time), 600, 0, 799, 55),
-                  "page title and clock fit within separate header regions");
+          require(within(id(title_0), 24, 0, 775, 55) && within(id(lbl_time), 24, 432, 203, 479) &&
+                  lv_obj_get_style_text_font(id(lbl_time), LV_PART_MAIN) == id(font_clock)->get_lv_font(),
+                  "page title fits header and bold small clock fits footer");
+          require(hidden(id(page_icon_0)) && hidden(id(thermometer_0)) &&
+                  lv_obj_get_x(id(title_0)) == 24,
+                  "unconfigured page icons and temperatures reclaim header space");
           require(within(id(dashboard_menu), 0, 432, 799, 479) &&
                   lv_obj_get_width(id(dashboard_menu)) >= 44 && lv_obj_get_height(id(dashboard_menu)) >= 44,
                   "menu has a footer-contained accessible touch target");
@@ -297,8 +311,9 @@ esphome:
           require(!hidden(id(navigation)), "tap must start and finish on the same menu target");
           tap(id(button_0_2));
           require(hidden(id(navigation)) && !hidden(id(page_2)), "menu selects original third slot");
-          require(within(id(temperature_2), 0, 432, 323, 479) &&
-                  within(id(dashboard_dot_1), 324, 432, 743, 479), "temperature and dots fit footer regions");
+          require(within(id(temperature_2), 620, 0, 775, 55) &&
+                  within(id(thermometer_2), 592, 0, 611, 55) &&
+                  within(id(dashboard_dot_1), 324, 432, 639, 479), "temperature fits header and dots fit footer");
           tap(id(dashboard_menu));
           tap(id(dashboard_menu));
           require(hidden(id(navigation)) && !hidden(id(page_2)), "menu toggle preserves current page");
@@ -326,7 +341,7 @@ esphome:
                     "waking touch cannot open menu or select a navigation page");
           }
           auto edit_snapshot = [&](auto edit) {
-            return esphome::json::build_json([&](JsonObject root) {
+            return build_snapshot([&](JsonObject root) {
               esphome::json::parse_json(snapshot(0), [&](JsonObject source) {
                 root.set(source);
                 edit(root);
@@ -364,8 +379,8 @@ esphome:
           tap(id(dashboard_menu));
           tap(id(button_0_3));
           require(!hidden(id(page_3)), "menu selects fourth page");
-          require(within(id(title_3), 0, 0, 599, 55), "long page title stays out of clock region");
-          require(within(id(temperature_3), 0, 432, 323, 479), "long temperature stays within footer region");
+          require(within(id(title_3), 0, 0, 569, 55), "long page title stays out of temperature region");
+          require(within(id(temperature_3), 620, 0, 775, 55), "long temperature stays within header region");
           tap(id(dashboard_menu));
           id(dashboard).begin_touch(1, 600, 300);
           receive(snapshot(0));
@@ -390,7 +405,7 @@ esphome:
           require(hidden(id(page_0)) && !hidden(id(page_2)), "swipe skips empty page");
           require(lv_obj_get_style_bg_opa(id(dashboard_dot_1), LV_PART_MAIN) == LV_OPA_COVER &&
                   lv_obj_get_style_bg_opa(id(dashboard_dot_0), LV_PART_MAIN) == LV_OPA_TRANSP, "current page dot highlighted");
-          require(std::string(lv_label_get_text(id(temperature_2))) == "Temperature: 21.5 C", "dynamic temperature");
+          require(std::string(lv_label_get_text(id(temperature_2))) == "21.5 C", "dynamic temperature");
           id(dashboard).navigate(1);
           require(!hidden(id(page_0)), "next wraps from last page to first");
           id(dashboard).navigate(-1);
@@ -462,7 +477,7 @@ esphome:
             require(icon_is(id(button_0_3_icon), "mdi:lightbulb"), "unsupported or cleared icon uses default");
           }
           auto state_snapshot = [&](const char *entity, const char *state) {
-            return esphome::json::build_json([&](JsonObject root) {
+            return build_snapshot([&](JsonObject root) {
               esphome::json::parse_json(snapshot(0), [&](JsonObject source) {
                 root.set(source);
                 root["pages"][2]["buttons"][3]["entity"] = entity;
@@ -501,14 +516,6 @@ esphome:
           require(!hidden(id(dashboard_waiting)), "wake with no pages retains waiting screen");
           receive(snapshot(0));
           require(!hidden(id(page_2)), "wake with no pages waits for populated configuration");
-          auto build_snapshot = [&](const esphome::json::json_build_t &build) {
-            JsonDocument document(esphome::json::heap_json_allocator());
-            build(document.to<JsonObject>());
-            require(!document.overflowed(), "test snapshot allocation");
-            std::string result;
-            serializeJson(document, result);
-            return result;
-          };
           auto modern = [&](const char *layout, size_t populated = 18) {
             return build_snapshot([&](JsonObject root) {
               initialize_snapshot(root);
@@ -518,13 +525,15 @@ esphome:
               for (size_t p = 0; p < wallpanel::MAX_PAGES; p++) {
                 auto page = pages.add<JsonObject>();
                 page["title"] = "Modern page " + std::to_string(p + 1);
-                page["temperature"] = "Temperature: 21.5 C";
+                page["temperature"] = "21.5 C";
                 page["layout"] = layout;
+                page["compact"] = true;
                 page["icon"] = p == 7 ? "mdi:door-open" : "";
                 auto buttons = page["buttons"].to<JsonArray>();
-                for (size_t b = 0; b < capacity; b++) {
+                for (size_t b = 0; b < wallpanel::MAX_BUTTONS; b++) {
                   auto button = buttons.add<JsonObject>();
-                  button["entity"] = b < populated ? "light.p" + std::to_string(p) + "_b" + std::to_string(b) : "";
+                  button["tap_action"] = "default";
+                  button["entity"] = b < populated && b < capacity ? "light.p" + std::to_string(p) + "_b" + std::to_string(b) : "";
                   button["name"] = "Control " + std::to_string(b + 1);
                   button["state"] = "on";
                   button["icon"] = "mdi:ceiling-light";
@@ -556,7 +565,7 @@ esphome:
                       "missing or null protocol fields reject the entire snapshot");
             }
           }
-          for (int version : {0, 1, 3}) {
+          for (int version : {0, 1, 2, 4}) {
             receive(transform(snapshot(0), [&](JsonObject root) {
               root["version"] = version;
               root["pages"][0]["title"] = "INVALID";
@@ -568,7 +577,7 @@ esphome:
             require(std::string(lv_label_get_text(id(title_0))) == "Office",
                     "unsupported protocols cannot replace the current dashboard");
           }
-          for (const char *key : {"layout", "icon"}) {
+          for (const char *key : {"layout", "icon", "compact"}) {
             receive(transform(snapshot(0), [&](JsonObject root) {
               root["pages"][0]["title"] = "INVALID";
               root["pages"][0].remove(key);
@@ -576,12 +585,32 @@ esphome:
             require(std::string(lv_label_get_text(id(title_0))) == "Office",
                     "page metadata is required even for the default layout and icon");
           }
-          receive(transform(snapshot(0), [](JsonObject root) {
-            root["pages"][0]["title"] = "INVALID";
-            root["pages"][0]["buttons"][0].remove("icon");
-          }));
-          require(std::string(lv_label_get_text(id(title_0))) == "Office",
-                  "button icons must be explicit, including an empty default");
+          for (const char *key : {"icon", "tap_action"}) {
+            receive(transform(snapshot(0), [&](JsonObject root) {
+              root["pages"][0]["title"] = "INVALID";
+              root["pages"][0]["buttons"][0].remove(key);
+            }));
+            require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                    "button icons and tap actions must be explicit");
+          }
+          for (int invalid = 0; invalid < 4; invalid++) {
+            receive(transform(snapshot(0), [&](JsonObject root) {
+              auto page = root["pages"][0];
+              page["title"] = "INVALID";
+              if (invalid == 0) page["compact"] = 1;
+              if (invalid == 1) page["buttons"][0]["tap_action"] = "bad";
+              if (invalid == 2) {
+                page["buttons"][0]["tap_action"] = "details";
+                page["buttons"][0]["entity"] = "switch.test";
+              }
+              if (invalid == 3) {
+                page["buttons"][17].set(page["buttons"][0]);
+                page["compact"] = false;
+              }
+            }));
+            require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                    "invalid compaction, tap actions and reserved positions reject atomically");
+          }
           const auto unchanged_snapshot = modern("4x2");
           require(id(dashboard).release_status() == "Latest release unavailable",
                   "unconfigured release checks do not claim firmware is current");
@@ -672,7 +701,58 @@ esphome:
           lv_obj_update_layout(id(page_0));
           require(!hidden(id(button_0_7)) && hidden(id(button_0_2)) &&
                   lv_obj_get_x(id(button_0_7)) == 507, "sparse high slots compact without changing identity");
+          receive(transform(modern("4x2", 4), [](JsonObject root) {
+            root["pages"][0]["compact"] = false;
+            root["pages"][0]["buttons"][2]["entity"] = "";
+          }));
+          require(lv_obj_get_x(id(button_0_0)) == 20 && lv_obj_get_x(id(button_0_1)) == 215 &&
+                  hidden(id(button_0_2)) && lv_obj_get_x(id(button_0_3)) == 605,
+                  "reserved slots leave the third position empty instead of centering or shifting");
+          const auto high_slot = transform(snapshot(0), [](JsonObject root) {
+            auto buttons = root["pages"][0]["buttons"];
+            buttons[17].set(buttons[0]);
+            buttons[0]["entity"] = "";
+          });
+          receive(high_slot);
+          require(!hidden(id(button_0_17)) && hidden(id(button_0_0)) &&
+                  lv_obj_get_x(id(button_0_17)) == 220,
+                  "compact small grids retain the original eighteenth slot and center its tile");
+          id(dashboard).begin_touch(1, 400, 140);
+          receive(transform(high_slot, [](JsonObject root) {
+            root["pages"][0]["buttons"][17]["tap_action"] = "details";
+          }));
+          require(id(dashboard).end_touch() == TouchAction::NONE && hidden(id(light_detail)),
+                  "changing only a tap action invalidates an in-flight touch");
+          const auto duplicate = transform(snapshot(0), [](JsonObject root) {
+            auto buttons = root["pages"][0]["buttons"];
+            buttons[1].set(buttons[0]);
+            buttons[1]["name"] = "Alternate Lamp";
+            buttons[1]["tap_action"] = "details";
+          });
+          receive(duplicate);
+          tap(id(button_0_1));
+          require(!hidden(id(light_detail)) &&
+                  std::string(lv_label_get_text(id(detail_title))) == "Office - Alternate Lamp",
+                  "details taps use the exact source slot even for duplicate entities");
+          require(id(dashboard).end_touch() == TouchAction::NONE, "details taps consume duplicate releases");
+          receive(transform(duplicate, [](JsonObject root) {
+            root["pages"][0]["buttons"][1]["entity"] = "";
+            root["pages"][0]["buttons"][1]["tap_action"] = "default";
+          }));
+          require(hidden(id(light_detail)) && !hidden(id(page_0)),
+                  "removing a detail source closes it even when the entity remains in other slots");
+          receive(duplicate);
+          tap(id(button_0_1));
+          receive(transform(snapshot(0), [](JsonObject root) {
+            for (auto button : root["pages"][0]["buttons"].as<JsonArray>())
+              button["entity"] = "";
+          }));
+          require(hidden(id(light_detail)) && !hidden(id(page_2)) &&
+                  hidden(id(dashboard_dot_1)), "disabled source page falls back and removes its dot");
+          id(dashboard).wake();
+          require(!hidden(id(page_2)), "disabled preferred wake page falls back to an active page");
           receive(modern("6x3"));
+          id(dashboard).wake();
           tap(id(dashboard_menu));
           require(!hidden(id(button_0_7)) && icon_is(id(button_0_7_icon), "mdi:door-open") &&
                   icon_is(id(button_0_0_icon), "mdi:view-dashboard"), "eight-page menu includes custom and fallback icons");
@@ -681,6 +761,10 @@ esphome:
           tap(id(button_0_7));
           require(!hidden(id(page_7)) && std::string(lv_label_get_text(id(button_0_17_name))) == "Control 18",
                   "menu reaches page eight and its eighteenth control");
+          require(!hidden(id(page_icon_7)) && icon_is(id(page_icon_7), "mdi:door-open") &&
+                  within(id(page_icon_7), 24, 0, 59, 55) && lv_obj_get_x(id(title_7)) == 70 &&
+                  within(id(title_7), 70, 0, 569, 55) && !hidden(id(thermometer_7)),
+                  "configured header icon precedes a bounded title and separate temperature block");
           choose_wake_page("Last used page");
           tap(id(dashboard_menu));
           id(dashboard).wake();
@@ -788,7 +872,7 @@ esphome:
               root["pages"][0]["title"] = "Invalid update";
             }));
             require(std::string(lv_label_get_text(id(title_0))) == "Modern page 1",
-                    "invalid version-2 snapshots are rejected atomically");
+                    "invalid protocol-3 snapshots are rejected atomically");
           }
           receive(std::string(wallpanel::MAX_PAYLOAD_BYTES + 1, 'x'));
           require(std::string(lv_label_get_text(id(title_0))) == "Modern page 1", "oversized snapshot preserves UI");
@@ -1046,6 +1130,23 @@ esphome:
                   std::string(lv_label_get_text(id(button_0_0_name))) == "Restart" &&
                   std::string(lv_label_get_text(id(button_0_1_name))) == "Sleep",
                   "Settings has local Restart and Sleep without content dots");
+          require(within(id(button_0_0), 20, 65, 259, 219) &&
+                  within(id(button_0_1), 20, 230, 259, 384) &&
+                  within(id(settings_ip), 292, 56, 775, 431),
+                  "Settings stacks controls in the left third and bounds Overview to the right");
+          require(std::string(lv_label_get_text(id(settings_name))) == esphome::App.get_name() &&
+                  std::string(lv_label_get_text(id(settings_version))) == wallpanel::PROJECT_VERSION,
+                  "Settings shows the actual device name and generated project release");
+          esphome::network::IPAddresses addresses{};
+          require(wallpanel::settings_ip_address(true, addresses) == "Unavailable",
+                  "unset network addresses cannot appear as zero IPs");
+          addresses[0] = esphome::network::IPAddress(std::string("192.0.2.10"));
+          require(wallpanel::settings_ip_address(false, addresses) == "Unavailable" &&
+                  wallpanel::settings_ip_address(true, addresses) == "192.0.2.10",
+                  "Settings distinguishes stale disconnected addresses from a current IP");
+          addresses[0] = esphome::network::IPAddress(std::string("192.0.2.20"));
+          require(wallpanel::settings_ip_address(true, addresses) == "192.0.2.20",
+                  "Settings obtains a changed network address rather than caching the old one");
           id(dashboard).navigate(1);
           require(!hidden(id(settings)), "Settings is excluded from swipes");
           id(dashboard).begin_touch(1, 200, 150);
@@ -1199,9 +1300,9 @@ esphome:
             lv_obj_get_coords(id(button_0_0_name), &name);
             id(dashboard).begin_touch(1, (name.x1 + name.x2) / 2, name.y1 + 1, 2000);
             id(dashboard).check_touch_hold(2600);
-            require(hidden(id(light_detail)), "expanded icon hold region excludes the title");
-            id(dashboard).update_touch(1, (name.x1 + name.x2) / 2 + 21, name.y1 + 1);
-            id(dashboard).end_touch();
+            require(!hidden(id(light_detail)), "whole-tile holds include the title");
+            require(id(dashboard).end_touch() == TouchAction::NONE, "name hold consumes its release");
+            tap(id(button_0_1));
           }
           choose_wake_page("Page 1");
           receive(snapshot(0));
@@ -1315,7 +1416,7 @@ esphome:
           require(std::string(lv_label_get_text(id(detail_title))) == "Study - Desk Lamp",
                   "detail header follows live parent and item renames");
           receive(detail_snapshot);
-          require(within(id(button_0_1), 24, 434, 71, 477) && !hidden(id(button_0_1_icon)) &&
+          require(within(id(button_0_1), 640, 434, 687, 477) && !hidden(id(button_0_1_icon)) &&
                   std::string(lv_label_get_text(id(button_0_1_name))).empty() &&
                   lv_obj_get_style_text_font(id(button_0_1_icon), LV_PART_MAIN) == id(font_ui_icons)->get_lv_font() &&
                   lv_obj_get_style_bg_opa(id(button_0_1), LV_PART_MAIN) == LV_OPA_TRANSP,
@@ -1566,8 +1667,8 @@ text_sensor:
         root["restarts"] = id(test_restarts);
         root["endpoint_updates"] = id(test_endpoint_updates);
         root["release_updates"] = id(test_release_updates);
-        root["compact_clock"] =
-            lv_obj_get_style_text_font(id(lbl_time), LV_PART_MAIN) == id(font_medium)->get_lv_font();
+        root["twelve_hour"] =
+            id(dashboard).localization().twelve_hour;
         root["heap_bytes"] = id(test_lcd).allocated_bytes();
         root["tick"] = esphome::millis();
       });

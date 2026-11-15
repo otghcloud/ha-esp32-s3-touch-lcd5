@@ -16,9 +16,6 @@ script:
     then:
       - lambda: |-
           if (id(dashboard).updating()) return;
-          lv_obj_set_style_text_font(id(lbl_time),
-                                    id(dashboard).localization().twelve_hour ? id(font_medium) : id(font_large), 0);
-          lv_obj_set_y(id(lbl_time), id(dashboard).localization().twelve_hour ? 14 : 4);
           wallpanel::update_clock(id(homeassistant_time).now(), id(lbl_time),
                                  id(screensaver_clock), id(screensaver_date), id(dashboard).localization());
 

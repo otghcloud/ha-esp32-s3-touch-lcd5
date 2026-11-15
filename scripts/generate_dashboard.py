@@ -73,7 +73,8 @@ def make_dashboard():
         "id(font_medium)->get_lv_font(), id(font_small)->get_lv_font(), id(font_ui_icons)->get_lv_font());",
         "id(dashboard).bind_screensaver(id(dashboard_screensaver));",
         "id(dashboard).bind_homepage(id(homepage), id(homepage_title));",
-        "id(dashboard).bind_settings(id(settings), id(dashboard_settings));",
+        "id(dashboard).bind_settings(id(settings), id(dashboard_settings), "
+        "{id(settings_name), id(settings_version), id(settings_ip)});",
         "id(dashboard).bind_update(id(dashboard_updating));",
         "id(dashboard).bind_detail({id(light_detail), id(detail_title), id(detail_status), "
         "id(detail_slider), id(detail_value), id(detail_wheel), id(detail_marker)});",
@@ -82,7 +83,10 @@ def make_dashboard():
     return {
         "esphome": {"on_boot": [{"priority": -100, "then": [{"lambda": "\n".join(bindings)}]}]},
         "font": [{"file": "gfonts://Roboto", "id": name, "size": size}
-                 for name, size in (("font_large", 38), ("font_medium", 24), ("font_small", 16))]
+                 for name, size in (("font_large", 38), ("font_medium", 24), ("font_small", 16),
+                                    ("font_temperature", 20))]
+                + [{"file": {"type": "gfonts", "family": "Roboto", "weight": 700},
+                    "id": "font_clock", "size": 16, "glyphsets": [], "glyphs": list("0123456789:- APM")}]
                 + [{"file": "gfonts://Roboto", "id": "font_screensaver", "size": 104,
                     "glyphsets": [], "glyphs": list("0123456789:- APM")}]
                 + [{"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
@@ -92,7 +96,10 @@ def make_dashboard():
                    for name, size in (("font_icons", 72), ("font_dense_icons", 36))]
                 + [{"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
                     "id": "font_ui_icons", "size": 32, "bpp": 1, "glyphsets": [],
-                    "glyphs": [chr(int(load_icons()[name], 16)) for name in ("menu", "cog", "arrow-left")]}],
+                    "glyphs": [chr(int(load_icons()[name], 16)) for name in ("menu", "cog", "arrow-left")]}]
+                + [{"file": f"{MDI_SOURCE}/fonts/materialdesignicons-webfont.ttf",
+                    "id": "font_temperature_icon", "size": 20, "bpp": 1, "glyphsets": [],
+                    "glyphs": [chr(int(load_icons()["thermometer"], 16))]}],
         "image": [{"platform": "file", "file": "../assets/background_dark.png",
                    "id": "dashboard_background", "type": "RGB565", "resize": "800x480"},
                   {"platform": "file", "file": "../assets/light_colour_wheel.png",
@@ -102,8 +109,8 @@ def make_dashboard():
             "bg_color": 0x111827, "bg_image_src": "dashboard_background",
             "pad_all": 0, "scrollable": False,
             "top_layer": {"widgets": [
-                label("lbl_time", "--:--", "font_large", align="TOP_RIGHT", x=-24, y=4,
-                      width=160, text_align="RIGHT"),
+                label("lbl_time", "--:--", "font_clock", align="BOTTOM_LEFT", x=24, y=-14,
+                      width=180, height=20, text_align="LEFT", text_color=0x111111),
                 label("dashboard_connection", "HOME ASSISTANT UNAVAILABLE", "font_small",
                       align="BOTTOM_RIGHT", x=-24, y=-52, text_color=0xF2A65A, hidden=True),
                 {"button": {
