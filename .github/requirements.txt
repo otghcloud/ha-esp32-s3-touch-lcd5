@@ -1,0 +1,3 @@
+esphome==2026.10.2
+ruff==0.14.4
+yamllint==1.37.1

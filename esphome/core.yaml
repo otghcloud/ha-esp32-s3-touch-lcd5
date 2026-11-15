@@ -3,7 +3,7 @@ esphome:
   friendly_name: ${friendly_name}
   project:
     name: "OTGH Cloud.HA Panel LCD5"
-    version: "0.0.1"
+    version: !include project_version.yaml
   on_boot:
     - priority: -200
       then:

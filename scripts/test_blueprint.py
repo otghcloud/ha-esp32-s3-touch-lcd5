@@ -2,6 +2,7 @@ import ast
 import copy
 import json
 import math
+import re
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -59,16 +60,20 @@ class BlueprintTests(unittest.TestCase):
         self.env.filters["to_json"] = lambda value, ensure_ascii=False: json.dumps(value, ensure_ascii=ensure_ascii)
         # HA rejects nonnumeric input when no int-filter default is supplied.
         self.env.filters["int"] = int
+        self.env.filters["regex_match"] = lambda value, pattern: re.match(pattern, value) is not None
         self.env.globals.update(
             states=lambda entity: self.states.get(entity, "unknown"),
             state_attr=lambda entity, attribute: self.attributes.get(entity, {}).get(attribute),
             device_entities=lambda device: self.device_entities if device == "test-panel" else [],
             is_number=is_number,
+            version=lambda value: tuple(map(int, value.split("."))),
         )
 
     def variables(self):
         result = resolve(self.blueprint["variables"], self.inputs)
         result["endpoint"] = self.env.from_string(result["endpoint"]).render(**result).strip()
+        for key in ("firmware_release", "latest_release", "release_notice"):
+            result[key] = self.env.from_string(result[key]).render(**result).strip()
         result["watched_entities"] = ast.literal_eval(
             self.env.from_string(result["watched_entities"]).render(**result).strip()
         )
@@ -135,6 +140,46 @@ class BlueprintTests(unittest.TestCase):
         self.inputs["light_details"].append(dict(light="light.hidden", related_1="switch.hidden"))
         self.assertNotIn("switch.hidden", self.variables()["watched_entities"])
         self.assertNotIn("light.hidden", [light["entity"] for light in self.snapshot()["light_details"]])
+
+    def test_release_checks_warn_without_blocking_the_dashboard(self):
+        release = self.inputs["release_sensor"] = "sensor.latest_wallpanel"
+        firmware = "sensor.renamed_firmware"
+        self.device_entities.append(firmware)
+        current = self.variables()["blueprint_release"]
+        self.states[firmware] = f"wallpanel/{current}"
+        self.states[release] = current
+        self.assertEqual(self.variables()["release_notice"], "")
+        self.assertIn(release, self.variables()["watched_entities"])
+        self.assertEqual(self.snapshot()["latest_release"], current)
+        latest = "4294967295.4294967295.4294967295"
+        self.states[release] = latest
+        if current == latest:
+            self.assertEqual(self.variables()["release_notice"], "")
+        else:
+            self.assertIn(f"{latest} is available", self.variables()["release_notice"])
+        self.states[firmware] = "wallpanel/0.0.0"
+        self.assertIn("does not match blueprint", self.variables()["release_notice"])
+        self.assertEqual(self.variables()["configuration_error"], "")
+        self.assertEqual(self.snapshot()["blueprint_release"], current)
+        for invalid in ("unknown", "unavailable", "1.2", "01.2.3", "1.0.0-beta.1", "1.2.4294967296"):
+            with self.subTest(invalid=invalid):
+                self.states[release] = invalid
+                self.assertEqual(self.snapshot()["latest_release"], "")
+        self.states[release] = latest
+        self.states[firmware] = f"wallpanel/{current}"
+        notice = self.variables()["release_notice"]
+        self.assertNotIn("does not match", notice)
+        self.assertEqual("is available" in notice, current != latest)
+        guard = self.env.from_string(self.blueprint["actions"][1]["if"])
+        variables = self.variables()
+        self.assertEqual(guard.render(**variables).strip(), "True")
+        for trigger_id, entity, expected in (
+                ("refresh", release, "False"), ("state", "light.other", "False"),
+                ("state", release, "True"), ("state", firmware, "True")):
+            trigger = SimpleNamespace(
+                id=trigger_id, event=SimpleNamespace(data=SimpleNamespace(entity_id=entity))
+            )
+            self.assertEqual(guard.render(trigger=trigger, **variables).strip(), expected)
 
     def test_missing_and_partial_light_attributes_remain_unknown(self):
         self.inputs["page_1_button_1"] = "light.test"

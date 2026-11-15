@@ -9,7 +9,7 @@ blueprint:
     Create only one configuration automation per panel.
     Use the firmware and blueprint from the same project release.
   domain: automation
-  source_url: https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/heads/main/wallpanel_blueprint.yaml
+  source_url: https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/tags/v0.0.1/wallpanel_blueprint.yaml
   homeassistant:
     min_version: 2025.7.0
   input:
@@ -20,6 +20,19 @@ blueprint:
         device:
           filter:
             integration: esphome
+    release_settings:
+      name: Release checks
+      icon: mdi:update
+      collapsed: true
+      input:
+        release_sensor:
+          name: Latest stable release sensor
+          description: Optional shared REST sensor from home_assistant/wallpanel_releases.yaml. Notifications never install updates.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: sensor
     navigation_settings:
       name: Navigation
       icon: mdi:view-dashboard
@@ -1677,9 +1690,33 @@ mode: restart
 max_exceeded: silent
 
 variables:
+  panel_device: !input panel_device
+  blueprint_release: "0.0.1"
+  release_sensor: !input release_sensor
+  firmware_release: >-
+    {% set ns = namespace(value='') %}
+    {% for entity in device_entities(panel_device) %}
+      {% set value = states(entity) %}
+      {% if entity.startswith('sensor.') and value.startswith('wallpanel/') %}
+        {% set ns.value = value[10:] %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.value }}
+  latest_release: >-
+    {% set candidate = states(release_sensor) if release_sensor is string and release_sensor else '' %}
+    {{ candidate if candidate | regex_match('^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$')
+       and (candidate.split('.') | map('int') | max) <= 4294967295 else '' }}
+  release_notice: >-
+    {% if firmware_release and firmware_release != blueprint_release %}
+      Wallpanel firmware {{ firmware_release }} does not match blueprint {{ blueprint_release }}.
+      Install firmware and blueprint from the same release.
+    {% endif %}
+    {% if latest_release and version(latest_release) > version(blueprint_release) %}
+      Wallpanel {{ latest_release }} is available. Review its release notes and update both firmware and blueprint:
+      https://github.com/otghcloud/ha-esp32-s3-touch-lcd5/releases/latest
+    {% endif %}
   reverse_active: !input reverse_active
   light_details: !input light_details
-  panel_device: !input panel_device
   screensaver_enabled: !input screensaver_enabled
   homepage_enabled: !input homepage_enabled
   time_format: !input time_format
@@ -1750,6 +1787,9 @@ variables:
     {{ ns.value }}
   watched_entities: >-
     {% set ns = namespace(entities=wake_sensors | list) %}
+    {% if release_sensor is string and release_sensor %}
+      {% set ns.entities = ns.entities + [release_sensor] %}
+    {% endif %}
     {% for entity in temperatures %}
       {% if entity is string and entity %}
         {% set ns.entities = ns.entities + [entity] %}
@@ -1875,6 +1915,23 @@ actions:
   - if: "{{ fresh_wake and endpoint != '' and configuration_error == '' }}"
     then:
       - action: "{{ endpoint[:-20] ~ '_wake_display' }}"
+  - if: >-
+      {{ trigger is not defined or trigger.id in ['start', 'ready']
+         or (trigger.id == 'state' and
+             (trigger.event.data.entity_id in device_entities(panel_device)
+              or trigger.event.data.entity_id == release_sensor)) }}
+    then:
+      - if: "{{ release_notice | trim != '' }}"
+        then:
+          - action: persistent_notification.create
+            data:
+              notification_id: "wallpanel_release_{{ panel_device }}"
+              title: Wallpanel release check
+              message: "{{ release_notice | trim }}"
+        else:
+          - action: persistent_notification.dismiss
+            data:
+              notification_id: "wallpanel_release_{{ panel_device }}"
   - choose:
       - conditions: "{{ endpoint == '' }}"
         sequence:
@@ -2000,7 +2057,8 @@ actions:
                     related=binding.refs, related_titles=binding.titles)] %}
               {% endfor %}
             {% endfor %}
-            {{ dict(version=2, navigation_layout=navigation_layout, screensaver_enabled=screensaver_enabled,
+            {{ dict(version=2, blueprint_release=blueprint_release, latest_release=latest_release,
+                    navigation_layout=navigation_layout, screensaver_enabled=screensaver_enabled,
                     homepage=dict(enabled=homepage_enabled, position=ns.home_position, title=ns.home_title),
                     localization=dict(time=time_format, date=date_format), wake_hold=ns.hold,
                     reverse_active=reverse_active, light_details=ns.lights, detail_entities=ns.related,

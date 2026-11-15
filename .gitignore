@@ -6,3 +6,6 @@
 /build/
 **/__pycache__/
 /scripts/runtime_tests/.esphome/
+/.github/.esphome/
+/scripts/runtime_tests/.gitignore
+/.github/.gitignore

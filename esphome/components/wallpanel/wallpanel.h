@@ -23,6 +23,7 @@
 #include "page_settings.h"
 #include "detail_data.h"
 #include "light_actions.h"
+#include "releases.h"
 
 namespace wallpanel {
 
@@ -53,6 +54,16 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     }
   }
   bool updating() const { return updating_; }
+  std::string release_status() const {
+    if (blueprint_release_.empty()) return "Waiting for Home Assistant";
+    if (blueprint_release_ != PROJECT_VERSION)
+      return "Firmware/blueprint mismatch: " + blueprint_release_;
+    if (latest_release_.empty()) return "Latest release unavailable";
+    if (latest_release_parts_ > PROJECT_VERSION_PARTS)
+      return "Update available: " + latest_release_;
+    if (latest_release_parts_ < PROJECT_VERSION_PARTS) return "Ahead of latest stable";
+    return "Up to date";
+  }
   void begin_update() {
     if (!ready_ || updating_) return;
     updating_ = true;
@@ -147,6 +158,15 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       const int version = root["version"].is<int>() ? root["version"].as<int>() : 0;
       if (version != 2 || !root["pages"].is<JsonArray>() || root["pages"].size() != MAX_PAGES) {
         ESP_LOGE("dashboard", "Expected protocol version 2 with %u pages", unsigned(MAX_PAGES));
+        return false;
+      }
+      std::string blueprint_release, latest_release;
+      std::array<uint32_t, 3> blueprint_parts{}, latest_parts{};
+      if (!read_text(root["blueprint_release"], blueprint_release, 32) ||
+          !read_release(blueprint_release, blueprint_parts) ||
+          !read_text(root["latest_release"], latest_release, 32) ||
+          (!latest_release.empty() && !read_release(latest_release, latest_parts))) {
+        ESP_LOGE("dashboard", "Invalid release metadata; configuration unchanged");
         return false;
       }
       Layout navigation_layout = Layout::TWO_BY_TWO;
@@ -307,6 +327,12 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         layout_revision_++;
         detail_editing_ = detail_pending_ = false;
       }
+      if (blueprint_release != PROJECT_VERSION && blueprint_release != blueprint_release_)
+        ESP_LOGW("dashboard", "Blueprint release %s differs from firmware %s",
+                 blueprint_release.c_str(), PROJECT_VERSION);
+      blueprint_release_ = std::move(blueprint_release);
+      latest_release_ = std::move(latest_release);
+      latest_release_parts_ = latest_parts;
       pages_ = std::move(next);
       details_ = std::move(details);
       if (view_ == View::LIGHT_DETAIL) {
@@ -1003,6 +1029,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   lv_obj_t *waiting_{nullptr};
   lv_obj_t *connection_{nullptr};
   size_t current_{0};
+  std::string blueprint_release_, latest_release_;
+  std::array<uint32_t, 3> latest_release_parts_{};
   size_t wake_page_{0};
   uint32_t last_update_{0};
   uint32_t layout_revision_{0};

@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_override:
+        description: Automatic Conventional Commit bump, or force a bump type
+        type: choice
+        default: auto
+        options: [auto, patch, minor, major]
+      version:
+        description: Optional exact X.Y.Z instead of automatic calculation (leave bump on auto)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Calculate release version
+    runs-on: [self-hosted, ubuntu-latest]
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      previous_tag: ${{ steps.plan.outputs.previous_tag }}
+      source_sha: ${{ steps.plan.outputs.source_sha }}
+    steps:
+      - name: Require manual dispatch from main
+        env:
+          SOURCE_REF: ${{ github.ref }}
+        run: test "$SOURCE_REF" = refs/heads/main
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Calculate version from all commits since the previous release
+        id: plan
+        env:
+          BUMP_OVERRIDE: ${{ inputs.bump_override }}
+          EXACT_VERSION: ${{ inputs.version }}
+        run: |
+          python3 scripts/release.py plan --bump "$BUMP_OVERRIDE" \
+            --version "$EXACT_VERSION" --github-output "$GITHUB_OUTPUT"
+
+  verify:
+    needs: version
+    uses: ./.github/workflows/checks.yml
+    with:
+      source_ref: ${{ needs.version.outputs.source_sha }}
+      release_version: ${{ needs.version.outputs.version }}
+
+  publish:
+    name: Tag and publish tested release
+    needs: [version, verify]
+    runs-on: [self-hosted, ubuntu-latest]
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.version.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Generate version commit, release notes and local tag
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+          PREVIOUS_TAG: ${{ needs.version.outputs.previous_tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 scripts/release.py candidate --version "$RELEASE_VERSION" --previous-tag "$PREVIOUS_TAG"
+      - name: Prepare release assets
+        env:
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          python3 scripts/release.py package --tag "$RELEASE_TAG"
+          cd build/release
+          sha256sum --check SHA256SUMS
+      - name: Push only the release tag, upload complete draft and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin "refs/tags/$RELEASE_TAG"
+          gh release create "$RELEASE_TAG" --verify-tag --draft \
+            --title "$RELEASE_TAG" --notes-file build/release-notes.md \
+            build/release/wallpanel_blueprint.yaml build/release/version.json \
+            build/release/example.yaml build/release/SHA256SUMS
+          gh release edit "$RELEASE_TAG" --draft=false --latest

@@ -1,0 +1,15 @@
+name: Prepare Python build environment
+description: Isolated Python environment with pinned CI dependencies
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+      with:
+        python-version: "3.14"
+        cache: pip
+        cache-dependency-path: .github/requirements.txt
+    - shell: bash
+      run: |
+        python -m venv "$RUNNER_TEMP/wallpanel-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+        echo "$RUNNER_TEMP/wallpanel-${GITHUB_RUN_ID}-${GITHUB_JOB}/bin" >> "$GITHUB_PATH"
+        "$RUNNER_TEMP/wallpanel-${GITHUB_RUN_ID}-${GITHUB_JOB}/bin/python" -m pip install -r .github/requirements.txt

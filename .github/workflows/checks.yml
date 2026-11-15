@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  push:
+    branches: [main]
+  merge_group:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      source_ref:
+        type: string
+        default: ""
+      release_version:
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.release_version }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  IDF_PY_BUILD_JOBS: "2"
+
+jobs:
+  validate:
+    name: Metadata and tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, ubuntu-latest]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Validate PR title and new commit messages
+        if: contains(fromJSON('["pull_request", "push", "merge_group"]'), github.event_name)
+        run: python scripts/release.py commits --event "$GITHUB_EVENT_PATH"
+      - name: Generate the release version under test
+        if: inputs.release_version != ''
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: |
+          python scripts/release.py sync --version "$RELEASE_VERSION"
+          git add -- VERSION esphome/project_version.yaml esphome/components/wallpanel/release_version.h wallpanel_blueprint.yaml
+      - run: python scripts/release.py check
+      - run: python scripts/generate_dashboard.py --check
+      - run: actionlint -color
+      - run: python -m unittest discover -s scripts -p 'test_*.py'
+      - run: ruff check --select E9,F63,F7,F82 --exclude .esphome scripts esphome/components
+      - run: yamllint .github .yamllint.yml ha-esp32-s3-touch-lcd5.yaml wallpanel_blueprint.yaml esphome/*.yaml home_assistant/*.yaml scripts/runtime_tests/runtime.yaml
+      - run: git diff --exit-code
+
+  native:
+    name: LVGL and native API
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, ubuntu-latest]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Generate the release version under test
+        if: inputs.release_version != ''
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: python scripts/release.py sync --version "$RELEASE_VERSION"
+      - run: esphome compile scripts/runtime_tests/runtime.yaml
+      - run: python scripts/runtime_tests/check_native_api.py
+
+  firmware:
+    name: ESP32 firmware
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, ubuntu-latest]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Generate the release version under test
+        if: inputs.release_version != ''
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: python scripts/release.py sync --version "$RELEASE_VERSION"
+      - run: esphome compile .github/firmware.yaml
+      - name: Collect validation images
+        run: |
+          mkdir -p build/validation
+          cp .github/.esphome/build/wallpanel-ci/build/firmware*.bin build/validation/
+          cp esphome/components/wallpanel/MDI-LICENSE build/validation/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: validation-firmware-${{ github.sha }}
+          path: build/validation/
+          if-no-files-found: error
+          retention-days: 7
+
+  required:
+    name: Required checks
+    if: always()
+    needs: [validate, native, firmware]
+    runs-on: [self-hosted, ubuntu-latest]
+    timeout-minutes: 5
+    steps:
+      - name: Require every validation job to pass
+        env:
+          VALIDATE: ${{ needs.validate.result }}
+          NATIVE: ${{ needs.native.result }}
+          FIRMWARE: ${{ needs.firmware.result }}
+        run: |
+          test "$VALIDATE" = success
+          test "$NATIVE" = success
+          test "$FIRMWARE" = success

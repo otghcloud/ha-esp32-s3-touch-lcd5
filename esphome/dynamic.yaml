@@ -14,6 +14,7 @@ esphome:
     - priority: -200
       then:
         - lambda: id(dashboard_endpoint).update();
+        - lambda: id(firmware_release).update();
 
 select:
   - platform: template
@@ -66,6 +67,22 @@ api:
               return "esphome." + name + "_set_dashboard_chunk";
 
 text_sensor:
+  - platform: template
+    name: Firmware release
+    id: firmware_release
+    entity_category: diagnostic
+    update_interval: never
+    lambda: return std::string("wallpanel/") + wallpanel::PROJECT_VERSION;
+  - platform: template
+    name: Release status
+    id: release_status_sensor
+    entity_category: diagnostic
+    update_interval: 5s
+    lambda: |-
+      const auto status = id(dashboard).release_status();
+      if (!id(release_status_sensor).has_state() || status != id(release_status_sensor).state)
+        return status;
+      return {};
   - platform: template
     name: Dashboard endpoint
     id: dashboard_endpoint

@@ -4,9 +4,66 @@ For the short installation guide and everyday controls, start with [README.md](.
 
 ## Firmware and deployment
 
-The [installation guide](./README.md#1-install-the-firmware) uses published `main` packages. The dashboard component is fetched separately from the same branch; pin both sources together when testing another revision. Initial builds need internet access for dependencies, Roboto and Material Design icons. Keep Wi-Fi/API credentials in private ESPHome secrets.
+The [installation guide](./README.md#1-install-the-firmware) uses matching published release assets. The release's example pins both the package and separately fetched dashboard component to the same immutable tag. Initial builds need internet access for dependencies, Roboto and Material Design icons. Keep Wi-Fi/API credentials in private ESPHome secrets.
 
 Home Assistant's **Device info** identifies the panel as **HA Panel LCD5** by **OTGH Cloud**, using `esphome.project` in [`esphome/core.yaml`](./esphome/core.yaml). The initial release baseline is **0.0.1**. Keep the firmware project version aligned with its release tag (for example, `0.0.1` for `v0.0.1`). Firmware and blueprint belong to the same release; the dashboard protocol's independent version number is **2**.
+
+### Release process and CI
+
+The [release workflow](./.github/workflows/release.yml) owns version generation. **Do not edit `VERSION`, bump generated version fields, or create release tags manually.** Stable tags are the version history; [`VERSION`](./VERSION), the ESPHome project-version include, runtime version header, blueprint release variable and tag-pinned `source_url` are generated together for each release.
+
+Use **Conventional Commits** for PR titles and every new non-merge commit:
+
+```text
+fix(touch): Preserve the first contact
+feat(ui): Add another control
+refactor(api)!: Remove the old endpoint
+```
+
+Allowed types are `feat`, `fix`, `perf`, `revert`, `docs`, `style`, `refactor`, `test`, `build`, `ci` and `chore`, with an optional lowercase scope. CI checks the PR title and all introduced commits, and checks new commits again on pushes to `main` and merge queues. Existing legacy history is not retroactively rejected. Dependabot uses valid `ci`/`build` prefixes; it is not exempt. Git-generated merge commits are excluded.
+
+Configure **squash merging only**, using the **PR title and description** as the default squash message, and require **Required checks** in the `main` ruleset. This preserves the reviewed title and any `BREAKING CHANGE:` footer in the actual main commit. Mark breaking changes with `!` after the type/scope or a `BREAKING CHANGE:` / `BREAKING-CHANGE:` body footer.
+
+To publish, merge the changes normally, then open **Actions > Release > Run workflow**, selecting **main**:
+
+- Leave **bump_override** on `auto` and **version** empty for automatic calculation.
+- Since the previous release, any breaking change selects **major**, otherwise any `feat` selects **minor**, otherwise **patch** (including docs/dependency-only changes).
+- The first automatic release establishes **0.0.1**, including the pre-pipeline legacy history.
+- Optionally select `patch`, `minor` or `major` to force a bump, **or** enter an exact `X.Y.Z` with the bump left on `auto`. Exact versions must exceed every existing stable tag.
+- With no new commits, `auto` stops without publishing; an explicit bump/version can intentionally publish a version-only release, identified as such in its notes.
+- Stable versions only: no `v` prefix in the input, leading zeroes, prerelease/build suffixes, or segments larger than 32 bits. Breaking changes select major even during `0.x`; an intentional override is the maintainer's responsibility.
+
+The workflow pins the dispatch's main commit and calculates the version from all non-merge commits since the preceding release, not just the latest commit/PR. It re-runs the complete CI suite with the generated version, then creates a **release-only metadata commit** whose parent is that tested main commit. Only generated version files may differ. The tag points to this commit, so tagged source archives, firmware and blueprint metadata all agree. **No branch is pushed or changed**, and protected `main` needs no bypass. The files on `main` remain the development/bootstrap metadata, not a record of the latest published version; use release tags for that. This is intentionally different from committing version bumps back to `main`.
+
+The workflow generates grouped release notes directly from commit messages (including breaking-change bodies), prepares assets and SHA-256 checksums, uploads a complete draft, then publishes it as latest. It does not publish on merge or on a manually pushed tag. Release runs are serialized; a newer tag appearing during validation fails the run rather than reusing a stale version.
+
+Tags/releases must never be moved or overwritten. A failed push/upload/publish may leave an unpublished tag or draft. Inspect the failed run and remove only that unpublished draft/tag before restarting; never delete or overwrite a published release. Fix published errors with another version.
+
+Release assets are the blueprint, a tag-pinned device example, `version.json` and `SHA256SUMS`, alongside GitHub's tagged source archives. Build firmware locally with your own Wi-Fi/API secrets. The CI firmware uses dummy credentials and is retained for seven days as **validation-only** artifacts with its MDI licence; it is not a distributable device image or an automatic OTA update.
+
+The [CI workflow](./.github/workflows/checks.yml) runs on PRs to `main`, pushes to `main`, merge queues and manual dispatch, and is reused for releases. It validates metadata, generated assets, blueprint/release tests, Python/YAML/workflow lint, real LVGL/native API behaviour and a full ESP32 build. Require **Required checks** in the `main` branch ruleset (select the actual check name after its first run). No path filters omit checks on dependency PRs. [Dependabot](./.github/dependabot.yml) proposes weekly GitHub Actions and pinned Python/ESPHome updates; these receive the same complete checks, without automatic merging.
+
+Every executing job uses `runs-on: [self-hosted, ubuntu-latest]`. These are **runner labels**, not a GitHub-hosted VM request or `uses` parameters. Grant this repository access to runners with both labels. Use current GitHub Actions runners supporting Node 24; provide Git, GitHub CLI, Python 3/venv support, a C/C++ toolchain, CMake, Ninja, pkg-config, FreeType/OpenSSL development libraries and actionlint (1.7.12 tested). The setup action installs Python 3.14 and the pinned tools from [requirements.txt](./.github/requirements.txt) into an isolated job environment. Builds need outbound access to GitHub, PyPI, ESPHome/ESP-IDF dependencies and font hosts, plus sufficient RAM/disk for two concurrent compiler processes. Native tests need an isolated/free localhost port 16053.
+
+Use ephemeral, isolated self-hosted runners without production secrets or LAN access. Fork PR build jobs are skipped and **Required checks** fails until the work is reviewed and moved to a trusted in-repository branch. Also configure GitHub to require approval for **all** external-fork workflow runs: workflow guards alone are not a security boundary because contributors can edit workflow files. Restrict changes to workflows/release assets through review. If tag rulesets restrict `v*` creation, allow the release workflow's identity to create tags; do not permit moving published tags. Only the publish job receives a write token; checkouts do not persist credentials, and push credentials are supplied only for the tag operation. Publishing is not exercised by local tests.
+
+Conventional Commit/manual-release patterns follow [otghcloud/laravel-edgelink](https://github.com/otghcloud/laravel-edgelink), [otghcloud/aurora-gha-manager](https://github.com/otghcloud/aurora-gha-manager) and [otghcloud/aurora-manage](https://github.com/otghcloud/aurora-manage). Firmware validation patterns also reference [otghcloud/nspanel-ha](https://github.com/otghcloud/nspanel-ha) and [edwardtfn/NSPanel-Easy](https://github.com/edwardtfn/NSPanel-Easy).
+
+### Release notifications
+
+Firmware advertises a diagnostic **Firmware release** state such as `wallpanel/0.0.1`; its prefix lets the blueprint discover it even if the entity is renamed. **Release status** distinguishes waiting for configuration, mismatched firmware/blueprint versions, unavailable latest-release data, newer stable releases, matching releases and development builds ahead of stable. A protocol-compatible mismatch warns without blocking controls; unsupported protocol versions still reject the complete snapshot.
+
+For newer-release checks, install the shared [Home Assistant package](./home_assistant/wallpanel_releases.yaml) once, for example:
+
+```yaml
+homeassistant:
+  packages:
+    wallpanel_releases: !include packages/wallpanel_releases.yaml
+```
+
+Copy that file into `/config/packages/wallpanel_releases.yaml`, merge with your existing packages configuration, check HA configuration and restart. In each dashboard blueprint, select the resulting **Wallpanel latest release** sensor under **Release checks**. HA fetches the latest published stable manifest over verified HTTPS every six hours; panels do not make internet requests. Before the first release, or if the request fails, HA reports unavailable data rather than asserting that firmware is current. Malformed/unknown sensor versions are not used.
+
+The blueprint sends the latest known version with each snapshot and creates one persistent notification per panel for a mismatch or newer release. It updates/dismisses that notification on relevant version/device events or manual execution, not every heartbeat. No automatic firmware downloads or installation, watchdog changes or display-layout changes are introduced.
 
 ## Dashboard configuration
 
@@ -16,11 +73,7 @@ Pages and entities are configured at runtime by the [Home Assistant blueprint](.
 2. Open the device's ESPHome integration configuration and enable **Allow the device to perform Home Assistant actions**.
 3. Under **Settings > Automations & scenes > Blueprints > Import blueprint**, import:
 
-   ```text
-   https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/heads/main/wallpanel_blueprint.yaml
-   ```
-
-   The import URL works after these changes are published to `main`. Before publication, copy `wallpanel_blueprint.yaml` to `/config/blueprints/automation/otghcloud/wallpanel_blueprint.yaml` and reload automations.
+   Use the `source_url` from the blueprint in your chosen release. Before publication, copy the local `wallpanel_blueprint.yaml` to `/config/blueprints/automation/otghcloud/wallpanel_blueprint.yaml` and reload automations.
 
 4. Create an automation from **Waveshare Touch LCD HA-Panel** and select your panel device.
 5. Expand **Button page 01** through **Button page 08**. Each provides a layout, page icon, optional temperature sensor and up to eighteen entity selectors with optional **Title** overrides. Choose **2x2**, **4x2** or **6x3** for 4, 8 or 18 controls respectively. Leave all active button slots empty to hide a page.
@@ -193,6 +246,24 @@ ESPHome **took a long time for an operation** warnings mean a component blocked 
 
 ### Development
 
+For an unpublished local build, keep a private device YAML with your own secrets and absolute checkout paths:
+
+```yaml
+substitutions:
+  device_name: office-panel
+  friendly_name: Office Panel
+  wifi_ssid: !secret panel_wifi_ssid
+  wifi_password: !secret panel_wifi_password
+  wallpanel_component_source: /absolute/path/to/checkout/esphome/components
+api:
+  encryption:
+    key: !secret panel_api_key
+packages:
+  wallpanel: !include /absolute/path/to/checkout/ha-esp32-s3-touch-lcd5.yaml
+```
+
+Replace both checkout paths. Compile that private configuration and copy the matching local blueprint into HA; do not use an unpublished tag URL.
+
 The firmware stores eight page models with eighteen button slots each, but shares one eighteen-tile LVGL pool between entity pages, Navigation, Settings and light details, plus one nine-dot strip and a single detail editor. Hidden-page updates retain each entity's own last-known state and icon in the model, not in hidden widgets. The tree has 155 actual screen/top-layer objects, below the 220-object limit, with 1016 measured startup refresh requests below the 1500-request limit. Watchdog settings are unchanged. [`scripts/generate_dashboard.py`](./scripts/generate_dashboard.py) generates this fixed widget scaffold, not user configuration:
 
 ```sh
@@ -217,7 +288,7 @@ The connected native API check also requires `aioesphomeapi` (included with ESPH
 
 The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). Protocol version 2 uses exactly eight page slots with per-page layout/icon metadata and 4, 8 or 18 button slots per page. Every button includes an `icon` string; an empty string selects its state-aware default. The required root `page_order` is a permutation of zero-based slot indices 0-7, separate from the `pages` array. The blueprint expands partial user orders to a complete permutation. The runtime validates the entire snapshot before changing the UI; unsupported protocols/entities and malformed payloads are logged and rejected without replacing the previous configuration.
 
-All root fields are required: `version`, `pages`, `navigation_layout`, `page_order`, `screensaver_enabled`, `homepage`, `localization`, `wake_hold`, `reverse_active`, `light_details` and `detail_entities`. `homepage: {enabled, position, title}` uses insertion position 0-8 among ordered entity slots; `localization: {time, date}` uses allowlisted presets. Disabled features are represented explicitly with false flags and empty arrays, not missing fields. The separate `esphome.<device_name>_wake_display` action represents a fresh sensor activation; the blueprint sends it before the snapshot transfer so a later attribute/periodic update cannot cancel it mid-transfer. Local manual-sleep precedence is not stored in HA snapshots.
+All root fields are required: `version`, `blueprint_release`, `latest_release`, `pages`, `navigation_layout`, `page_order`, `screensaver_enabled`, `homepage`, `localization`, `wake_hold`, `reverse_active`, `light_details` and `detail_entities`. `blueprint_release` is a stable SemVer string; `latest_release` is another stable version or an empty string when unavailable/unconfigured. `homepage: {enabled, position, title}` uses insertion position 0-8 among ordered entity slots; `localization: {time, date}` uses allowlisted presets. Disabled features are represented explicitly with false flags and empty arrays, not missing fields. The separate `esphome.<device_name>_wake_display` action represents a fresh sensor activation; the blueprint sends it before the snapshot transfer so a later attribute/periodic update cannot cancel it mid-transfer. Local manual-sleep precedence is not stored in HA snapshots.
 
 `reverse_active` contains unique entity IDs; `light_details` contains unique primary-light capability/readings/bindings; `detail_entities` contains deduplicated related entity/name/state/icon records. Detail readings include normalized `colour_mode`, brightness 0–255, HS values and Kelvin bounds/value; unavailable readings use -1 rather than a manufactured setting. Each light record includes `temperature_issue` and `related_titles`, even when false or empty. Up to two related references and titles belong to each primary binding. Unknown bulb capabilities remain explicit diagnostics rather than invented capabilities. Metadata is validated with the rest of the snapshot before an atomic replacement. Outgoing brightness/Kelvin values and HS lists use native HA `data_template` expressions; they are not quoted string-valued colour arrays.
 
@@ -225,7 +296,7 @@ The Dashboard endpoint sensor and ready events advertise `esphome.<device_name>_
 
 The blueprint explicitly uses `to_json(ensure_ascii=True)`: HA otherwise preserves Unicode, so a 4096-character fragment containing degree signs, accents or emoji can exceed the firmware's 4096-byte JSON limit. Escaping preserves the original displayed text while keeping character and byte counts equal. Do not remove it or raise the transfer limits to mask invalid chunks.
 
-Automated validation includes a 225,220-byte Unicode snapshot with light metadata across 55 native API chunks, within the 256 KiB cap. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. The validated 0.0.1 baseline uses 6,375,540 bytes flash (78.5%) and 124,644 bytes static RAM (36.5%). Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light controls and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
+Automated validation includes a 225,272-byte Unicode snapshot with light metadata across 55 native API chunks, within the 256 KiB cap. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light controls and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
 
 For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
 

@@ -31,6 +31,8 @@ async def check():
     log = deque(maxlen=200)
     ready = asyncio.get_running_loop().create_future()
     endpoint_seen = asyncio.get_running_loop().create_future()
+    firmware_seen = asyncio.get_running_loop().create_future()
+    release_states = asyncio.Queue()
     client = APIClient("127.0.0.1", 16053, expected_name="dynamic-host", client_info="Wallpanel tests")
     probes = asyncio.Queue()
     actions = asyncio.Queue()
@@ -63,9 +65,16 @@ async def check():
             assert "set_dashboard" not in service, "Only chunked dashboard transport is exposed"
             probe = next(item for item in entities if isinstance(item, TextSensorInfo) and item.name == "Transport probe")
             endpoint = next(item for item in entities if isinstance(item, TextSensorInfo) and item.name == "Dashboard endpoint")
+            firmware = next(item for item in entities if isinstance(item, TextSensorInfo) and item.name == "Firmware release")
+            release_status = next(item for item in entities if isinstance(item, TextSensorInfo) and item.name == "Release status")
             wake = next(item for item in entities if isinstance(item, SelectInfo) and "Page 8" in item.options)
 
             def on_state(state):
+                if isinstance(state, TextSensorState) and not state.missing_state:
+                    if state.key == firmware.key and not firmware_seen.done():
+                        firmware_seen.set_result(state.state)
+                    if state.key == release_status.key:
+                        release_states.put_nowait(state.state)
                 if isinstance(state, TextSensorState) and state.key == endpoint.key and not state.missing_state:
                     if not endpoint_seen.done():
                         endpoint_seen.set_result(state.state)
@@ -80,6 +89,8 @@ async def check():
 
             client.subscribe_home_assistant_states_and_services(on_state, on_action, lambda entity, attr: None)
             assert await asyncio.wait_for(endpoint_seen, 5) == "esphome.dynamic_host_set_dashboard_chunk"
+            expected_release = (ROOT / "VERSION").read_text().strip()
+            assert await asyncio.wait_for(firmware_seen, 5) == f"wallpanel/{expected_release}"
             endpoint_started = asyncio.get_running_loop().time()
 
             async def wait_probe(predicate=lambda value: True):
@@ -96,6 +107,11 @@ async def check():
                         **chunk, "transfer": transfer, "index": int(chunk["index"]), "total": int(chunk["total"]),
                     })
                 return chunks
+
+            async def expect_release_status(expected):
+                async with asyncio.timeout(10):
+                    while await release_states.get() != expected:
+                        pass
 
             async def tap(x, y):
                 await client.execute_service(service["test_tap"], {"x": x, "y": y})
@@ -130,6 +146,14 @@ async def check():
             assert actions.empty(), "Menu navigation invoked an entity action"
             await tap(720, 335)
             await expect_entity(snapshot["pages"][0]["buttons"][17]["entity"])
+
+            latest_release = "4294967295.4294967295.4294967295"
+            await send({**snapshot, "latest_release": latest_release}, "new-stable-release")
+            await expect_release_status(
+                "Up to date" if snapshot["blueprint_release"] == latest_release else f"Update available: {latest_release}"
+            )
+            await send({**snapshot, "blueprint_release": "0.0.0"}, "blueprint-release-mismatch")
+            await expect_release_status("Firmware/blueprint mismatch: 0.0.0")
 
             mixed = json.loads(json.dumps(snapshot))
             mixed["pages"][0].update(layout="2x2", buttons=mixed["pages"][0]["buttons"][:4])
@@ -369,7 +393,11 @@ async def check():
                 await tap(200, 142)
                 await expect_action(command, "lock.test")
             await send(snapshot, "restore")
+            await expect_release_status("Latest release unavailable")
             warm = await wait_probe(lambda value: value["last_name"] == "X" * 80 and not value["compact_clock"])
+            await asyncio.sleep(5.2)
+            quiet = await wait_probe(lambda value: value["tick"] > warm["tick"] + 5100)
+            assert quiet["release_updates"] == warm["release_updates"], "Unchanged release status was republished"
             warm_heap = warm["heap_bytes"]
             for index in range(10):
                 await send(snapshot, f"repeat-{index}")

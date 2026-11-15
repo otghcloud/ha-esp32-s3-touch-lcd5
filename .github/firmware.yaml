@@ -1,0 +1,10 @@
+substitutions:
+  device_name: wallpanel-ci
+  friendly_name: Wallpanel CI
+  wifi_ssid: ci-build-only
+  wifi_password: ci-build-only
+  wallpanel_component_source: ../esphome/components
+esphome:
+  compile_process_limit: 2
+packages:
+  wallpanel: !include ../ha-esp32-s3-touch-lcd5.yaml

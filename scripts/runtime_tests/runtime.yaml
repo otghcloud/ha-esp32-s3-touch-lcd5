@@ -3,6 +3,7 @@ substitutions:
 
 esphome:
   name: dynamic-host
+  compile_process_limit: 2
   on_boot:
   - priority: -101
     then:
@@ -139,6 +140,8 @@ esphome:
           }
           auto initialize_snapshot = [](JsonObject root) {
             root["version"] = 2;
+            root["blueprint_release"] = wallpanel::PROJECT_VERSION;
+            root["latest_release"] = "";
             root["navigation_layout"] = "2x2";
             root["screensaver_enabled"] = false;
             root["wake_hold"] = false;
@@ -539,7 +542,8 @@ esphome:
             });
           };
           receive(snapshot(0));
-          for (const char *key : {"version", "pages", "navigation_layout", "screensaver_enabled",
+          for (const char *key : {"version", "blueprint_release", "latest_release", "pages",
+                                  "navigation_layout", "screensaver_enabled",
                                   "homepage", "localization", "wake_hold", "reverse_active",
                                   "page_order", "light_details", "detail_entities"}) {
             for (bool null_value : {false, true}) {
@@ -579,6 +583,36 @@ esphome:
           require(std::string(lv_label_get_text(id(title_0))) == "Office",
                   "button icons must be explicit, including an empty default");
           const auto unchanged_snapshot = modern("4x2");
+          require(id(dashboard).release_status() == "Latest release unavailable",
+                  "unconfigured release checks do not claim firmware is current");
+          receive(transform(snapshot(0), [](JsonObject root) {
+            root["latest_release"] = "4294967295.4294967295.4294967295";
+          }));
+          require(id(dashboard).release_status() ==
+                  (std::string(wallpanel::PROJECT_VERSION) == "4294967295.4294967295.4294967295" ?
+                   "Up to date" : "Update available: 4294967295.4294967295.4294967295"),
+                  "newer stable release is flagged, independent of the version being built");
+          receive(transform(snapshot(0), [](JsonObject root) {
+            root["blueprint_release"] = "0.0.0";
+            root["latest_release"] = wallpanel::PROJECT_VERSION;
+          }));
+          require(id(dashboard).release_status().find("mismatch") != std::string::npos,
+                  "matching protocol with a different blueprint release warns without rejecting configuration");
+          receive(transform(snapshot(0), [](JsonObject root) {
+            root["latest_release"] = wallpanel::PROJECT_VERSION;
+          }));
+          require(id(dashboard).release_status() == "Up to date", "same stable release is current");
+          for (const char *invalid : {"1.2", "01.2.3", "1.2.3.4", "1.0.0-beta.1", "1.2.4294967296"}) {
+            receive(transform(snapshot(0), [&](JsonObject root) {
+              root["latest_release"] = invalid;
+              root["pages"][0]["title"] = "INVALID";
+            }));
+            require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                    "invalid release metadata cannot replace the current dashboard");
+          }
+          std::array<uint32_t, 3> older{}, newer{};
+          require(wallpanel::read_release("1.2.9", older) && wallpanel::read_release("1.10.0", newer) &&
+                  newer > older, "release comparison is numeric, not lexicographic");
           receive(unchanged_snapshot);
           lv_refr_now(nullptr);
           const auto before_heartbeat = id(test_lcd).startup_refresh_requests;
@@ -1452,6 +1486,9 @@ globals:
   - id: test_endpoint_updates
     type: int
     initial_value: '0'
+  - id: test_release_updates
+    type: int
+    initial_value: '0'
 logger:
 api:
   port: 16053
@@ -1491,6 +1528,10 @@ api:
               id(dashboard).update_touches(frame);
             }
 text_sensor:
+  - id: !extend release_status_sensor
+    on_value:
+      then:
+        - lambda: id(test_release_updates)++;
   - id: !extend dashboard_endpoint
     on_value:
       then:
@@ -1524,6 +1565,7 @@ text_sensor:
         root["backlight"] = id(test_backlight);
         root["restarts"] = id(test_restarts);
         root["endpoint_updates"] = id(test_endpoint_updates);
+        root["release_updates"] = id(test_release_updates);
         root["compact_clock"] =
             lv_obj_get_style_text_font(id(lbl_time), LV_PART_MAIN) == id(font_medium)->get_lv_font();
         root["heap_bytes"] = id(test_lcd).allocated_bytes();
