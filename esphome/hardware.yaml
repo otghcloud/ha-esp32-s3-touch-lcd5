@@ -152,24 +152,10 @@ display:
       width: 800
       height: 480
 
-    # The panel wiring uses BGR data-bit mapping.
     data_pins:
-      - GPIO48
-      - GPIO47
-      - GPIO21
-      - GPIO14
-      - GPIO38
-      - GPIO18
-      - GPIO17
-      - GPIO10
-      - GPIO1
-      - GPIO2
-      - GPIO42
-      - GPIO41
-      - GPIO40
-      - GPIO39
-      - GPIO0
-      - GPIO45
+      red: [GPIO1, GPIO2, GPIO42, GPIO41, GPIO40]
+      green: [GPIO39, GPIO0, GPIO45, GPIO48, GPIO47, GPIO21]
+      blue: [GPIO14, GPIO38, GPIO18, GPIO17, GPIO10]
 
     de_pin: GPIO5
     pclk_pin: GPIO7

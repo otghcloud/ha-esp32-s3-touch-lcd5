@@ -16689,7 +16689,7 @@ lvgl:
           text: ''
           text_font: font_medium
           text_color: 15922424
-          x: 120
+          x: 136
           y: 98
           width: 260
           height: 32

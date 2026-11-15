@@ -101,7 +101,7 @@ blueprint:
             entity:
               multiple: true
               filter:
-                domain: [light, switch, automation, lock]
+                domain: [light, switch, automation, lock, script]
     light_detail_settings:
       name: Light details
       icon: mdi:lightbulb
@@ -110,8 +110,8 @@ blueprint:
         light_details:
           name: Related controls
           description: >-
-            Hold a light icon to open details. Add a row to show up to two related
-            light/switch/automation controls there, without main-page tiles.
+            Hold a light or lock tile to open details. Add a row to show up to two related
+            light/switch/automation/script controls there, without main-page tiles.
             Rows for lights outside active page layouts remain saved but unused.
           default: []
           selector:
@@ -131,7 +131,44 @@ blueprint:
                   selector: &related_selector
                     entity:
                       filter:
-                        domain: [light, switch, automation]
+                        domain: [light, switch, automation, script]
+                related_1_title:
+                  label: Related title 1 (optional)
+                  selector:
+                    text:
+                related_2:
+                  label: Related entity 2
+                  selector: *related_selector
+                related_2_title:
+                  label: Related title 2 (optional)
+                  selector:
+                    text:
+    lock_detail_settings:
+      name: Lock details
+      icon: mdi:lock
+      collapsed: true
+      input:
+        lock_details:
+          name: Related controls
+          description: >-
+            Add a row to show up to two related light/switch/automation/script
+            controls in each matching lock's details.
+          default: []
+          selector:
+            object:
+              multiple: true
+              label_field: lock
+              fields:
+                lock:
+                  label: Primary lock
+                  required: true
+                  selector:
+                    entity:
+                      filter:
+                        domain: lock
+                related_1:
+                  label: Related entity 1
+                  selector: *related_selector
                 related_1_title:
                   label: Related title 1 (optional)
                   selector:
@@ -263,12 +300,28 @@ blueprint:
                   - switch
                   - automation
                   - lock
+                  - script
         page_1_button_1_title:
           name: Button 1 - Title
           description: &title_description Leave blank to use the entity's Home Assistant display name.
           default: ""
           selector: &title_selector
             text:
+        page_1_button_1_indicator:
+          name: Button 1 - State indicator
+          description: &indicator_description Optional state-only source for this button's appearance.
+          default: []
+          selector: &indicator_selector
+            entity:
+        page_1_button_1_active_states:
+          name: Button 1 - Active states
+          description: &active_states_description Raw, case-sensitive indicator states shown as active.
+          default: ["on"]
+          selector: &active_states_selector
+            select:
+              multiple: true
+              custom_value: true
+              options: ["on"]
         page_1_button_1_tap_action:
           name: Button 1 - Tap action
           default: default
@@ -277,7 +330,7 @@ blueprint:
               options:
                 - label: Default action
                   value: default
-                - label: Open light details (lights only)
+                - label: Open details (lights and locks)
                   value: details
         page_1_button_2:
           name: Button 2 - Entity
@@ -288,6 +341,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_2_indicator:
+          name: Button 2 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_2_active_states:
+          name: Button 2 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_2_tap_action:
           name: Button 2 - Tap action
           default: default
@@ -301,6 +364,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_3_indicator:
+          name: Button 3 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_3_active_states:
+          name: Button 3 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_3_tap_action:
           name: Button 3 - Tap action
           default: default
@@ -314,6 +387,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_4_indicator:
+          name: Button 4 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_4_active_states:
+          name: Button 4 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_4_tap_action:
           name: Button 4 - Tap action
           default: default
@@ -327,6 +410,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_5_indicator:
+          name: Button 5 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_5_active_states:
+          name: Button 5 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_5_tap_action:
           name: Button 5 - Tap action
           default: default
@@ -340,6 +433,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_6_indicator:
+          name: Button 6 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_6_active_states:
+          name: Button 6 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_6_tap_action:
           name: Button 6 - Tap action
           default: default
@@ -353,6 +456,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_7_indicator:
+          name: Button 7 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_7_active_states:
+          name: Button 7 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_7_tap_action:
           name: Button 7 - Tap action
           default: default
@@ -366,6 +479,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_8_indicator:
+          name: Button 8 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_8_active_states:
+          name: Button 8 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_8_tap_action:
           name: Button 8 - Tap action
           default: default
@@ -379,6 +502,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_9_indicator:
+          name: Button 9 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_9_active_states:
+          name: Button 9 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_9_tap_action:
           name: Button 9 - Tap action
           default: default
@@ -392,6 +525,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_10_indicator:
+          name: Button 10 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_10_active_states:
+          name: Button 10 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_10_tap_action:
           name: Button 10 - Tap action
           default: default
@@ -405,6 +548,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_11_indicator:
+          name: Button 11 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_11_active_states:
+          name: Button 11 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_11_tap_action:
           name: Button 11 - Tap action
           default: default
@@ -418,6 +571,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_12_indicator:
+          name: Button 12 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_12_active_states:
+          name: Button 12 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_12_tap_action:
           name: Button 12 - Tap action
           default: default
@@ -431,6 +594,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_13_indicator:
+          name: Button 13 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_13_active_states:
+          name: Button 13 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_13_tap_action:
           name: Button 13 - Tap action
           default: default
@@ -444,6 +617,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_14_indicator:
+          name: Button 14 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_14_active_states:
+          name: Button 14 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_14_tap_action:
           name: Button 14 - Tap action
           default: default
@@ -457,6 +640,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_15_indicator:
+          name: Button 15 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_15_active_states:
+          name: Button 15 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_15_tap_action:
           name: Button 15 - Tap action
           default: default
@@ -470,6 +663,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_16_indicator:
+          name: Button 16 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_16_active_states:
+          name: Button 16 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_16_tap_action:
           name: Button 16 - Tap action
           default: default
@@ -483,6 +686,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_17_indicator:
+          name: Button 17 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_17_active_states:
+          name: Button 17 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_17_tap_action:
           name: Button 17 - Tap action
           default: default
@@ -496,6 +709,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_1_button_18_indicator:
+          name: Button 18 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_1_button_18_active_states:
+          name: Button 18 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_1_button_18_tap_action:
           name: Button 18 - Tap action
           default: default
@@ -542,6 +765,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_1_indicator:
+          name: Button 1 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_1_active_states:
+          name: Button 1 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_1_tap_action:
           name: Button 1 - Tap action
           default: default
@@ -555,6 +788,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_2_indicator:
+          name: Button 2 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_2_active_states:
+          name: Button 2 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_2_tap_action:
           name: Button 2 - Tap action
           default: default
@@ -568,6 +811,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_3_indicator:
+          name: Button 3 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_3_active_states:
+          name: Button 3 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_3_tap_action:
           name: Button 3 - Tap action
           default: default
@@ -581,6 +834,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_4_indicator:
+          name: Button 4 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_4_active_states:
+          name: Button 4 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_4_tap_action:
           name: Button 4 - Tap action
           default: default
@@ -594,6 +857,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_5_indicator:
+          name: Button 5 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_5_active_states:
+          name: Button 5 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_5_tap_action:
           name: Button 5 - Tap action
           default: default
@@ -607,6 +880,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_6_indicator:
+          name: Button 6 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_6_active_states:
+          name: Button 6 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_6_tap_action:
           name: Button 6 - Tap action
           default: default
@@ -620,6 +903,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_7_indicator:
+          name: Button 7 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_7_active_states:
+          name: Button 7 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_7_tap_action:
           name: Button 7 - Tap action
           default: default
@@ -633,6 +926,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_8_indicator:
+          name: Button 8 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_8_active_states:
+          name: Button 8 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_8_tap_action:
           name: Button 8 - Tap action
           default: default
@@ -646,6 +949,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_9_indicator:
+          name: Button 9 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_9_active_states:
+          name: Button 9 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_9_tap_action:
           name: Button 9 - Tap action
           default: default
@@ -659,6 +972,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_10_indicator:
+          name: Button 10 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_10_active_states:
+          name: Button 10 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_10_tap_action:
           name: Button 10 - Tap action
           default: default
@@ -672,6 +995,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_11_indicator:
+          name: Button 11 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_11_active_states:
+          name: Button 11 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_11_tap_action:
           name: Button 11 - Tap action
           default: default
@@ -685,6 +1018,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_12_indicator:
+          name: Button 12 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_12_active_states:
+          name: Button 12 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_12_tap_action:
           name: Button 12 - Tap action
           default: default
@@ -698,6 +1041,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_13_indicator:
+          name: Button 13 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_13_active_states:
+          name: Button 13 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_13_tap_action:
           name: Button 13 - Tap action
           default: default
@@ -711,6 +1064,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_14_indicator:
+          name: Button 14 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_14_active_states:
+          name: Button 14 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_14_tap_action:
           name: Button 14 - Tap action
           default: default
@@ -724,6 +1087,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_15_indicator:
+          name: Button 15 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_15_active_states:
+          name: Button 15 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_15_tap_action:
           name: Button 15 - Tap action
           default: default
@@ -737,6 +1110,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_16_indicator:
+          name: Button 16 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_16_active_states:
+          name: Button 16 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_16_tap_action:
           name: Button 16 - Tap action
           default: default
@@ -750,6 +1133,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_17_indicator:
+          name: Button 17 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_17_active_states:
+          name: Button 17 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_17_tap_action:
           name: Button 17 - Tap action
           default: default
@@ -763,6 +1156,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_2_button_18_indicator:
+          name: Button 18 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_2_button_18_active_states:
+          name: Button 18 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_2_button_18_tap_action:
           name: Button 18 - Tap action
           default: default
@@ -809,6 +1212,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_1_indicator:
+          name: Button 1 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_1_active_states:
+          name: Button 1 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_1_tap_action:
           name: Button 1 - Tap action
           default: default
@@ -822,6 +1235,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_2_indicator:
+          name: Button 2 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_2_active_states:
+          name: Button 2 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_2_tap_action:
           name: Button 2 - Tap action
           default: default
@@ -835,6 +1258,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_3_indicator:
+          name: Button 3 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_3_active_states:
+          name: Button 3 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_3_tap_action:
           name: Button 3 - Tap action
           default: default
@@ -848,6 +1281,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_4_indicator:
+          name: Button 4 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_4_active_states:
+          name: Button 4 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_4_tap_action:
           name: Button 4 - Tap action
           default: default
@@ -861,6 +1304,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_5_indicator:
+          name: Button 5 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_5_active_states:
+          name: Button 5 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_5_tap_action:
           name: Button 5 - Tap action
           default: default
@@ -874,6 +1327,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_6_indicator:
+          name: Button 6 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_6_active_states:
+          name: Button 6 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_6_tap_action:
           name: Button 6 - Tap action
           default: default
@@ -887,6 +1350,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_7_indicator:
+          name: Button 7 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_7_active_states:
+          name: Button 7 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_7_tap_action:
           name: Button 7 - Tap action
           default: default
@@ -900,6 +1373,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_8_indicator:
+          name: Button 8 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_8_active_states:
+          name: Button 8 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_8_tap_action:
           name: Button 8 - Tap action
           default: default
@@ -913,6 +1396,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_9_indicator:
+          name: Button 9 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_9_active_states:
+          name: Button 9 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_9_tap_action:
           name: Button 9 - Tap action
           default: default
@@ -926,6 +1419,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_10_indicator:
+          name: Button 10 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_10_active_states:
+          name: Button 10 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_10_tap_action:
           name: Button 10 - Tap action
           default: default
@@ -939,6 +1442,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_11_indicator:
+          name: Button 11 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_11_active_states:
+          name: Button 11 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_11_tap_action:
           name: Button 11 - Tap action
           default: default
@@ -952,6 +1465,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_12_indicator:
+          name: Button 12 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_12_active_states:
+          name: Button 12 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_12_tap_action:
           name: Button 12 - Tap action
           default: default
@@ -965,6 +1488,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_13_indicator:
+          name: Button 13 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_13_active_states:
+          name: Button 13 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_13_tap_action:
           name: Button 13 - Tap action
           default: default
@@ -978,6 +1511,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_14_indicator:
+          name: Button 14 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_14_active_states:
+          name: Button 14 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_14_tap_action:
           name: Button 14 - Tap action
           default: default
@@ -991,6 +1534,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_15_indicator:
+          name: Button 15 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_15_active_states:
+          name: Button 15 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_15_tap_action:
           name: Button 15 - Tap action
           default: default
@@ -1004,6 +1557,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_16_indicator:
+          name: Button 16 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_16_active_states:
+          name: Button 16 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_16_tap_action:
           name: Button 16 - Tap action
           default: default
@@ -1017,6 +1580,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_17_indicator:
+          name: Button 17 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_17_active_states:
+          name: Button 17 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_17_tap_action:
           name: Button 17 - Tap action
           default: default
@@ -1030,6 +1603,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_3_button_18_indicator:
+          name: Button 18 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_3_button_18_active_states:
+          name: Button 18 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_3_button_18_tap_action:
           name: Button 18 - Tap action
           default: default
@@ -1076,6 +1659,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_1_indicator:
+          name: Button 1 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_1_active_states:
+          name: Button 1 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_1_tap_action:
           name: Button 1 - Tap action
           default: default
@@ -1089,6 +1682,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_2_indicator:
+          name: Button 2 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_2_active_states:
+          name: Button 2 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_2_tap_action:
           name: Button 2 - Tap action
           default: default
@@ -1102,6 +1705,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_3_indicator:
+          name: Button 3 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_3_active_states:
+          name: Button 3 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_3_tap_action:
           name: Button 3 - Tap action
           default: default
@@ -1115,6 +1728,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_4_indicator:
+          name: Button 4 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_4_active_states:
+          name: Button 4 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_4_tap_action:
           name: Button 4 - Tap action
           default: default
@@ -1128,6 +1751,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_5_indicator:
+          name: Button 5 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_5_active_states:
+          name: Button 5 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_5_tap_action:
           name: Button 5 - Tap action
           default: default
@@ -1141,6 +1774,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_6_indicator:
+          name: Button 6 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_6_active_states:
+          name: Button 6 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_6_tap_action:
           name: Button 6 - Tap action
           default: default
@@ -1154,6 +1797,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_7_indicator:
+          name: Button 7 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_7_active_states:
+          name: Button 7 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_7_tap_action:
           name: Button 7 - Tap action
           default: default
@@ -1167,6 +1820,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_8_indicator:
+          name: Button 8 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_8_active_states:
+          name: Button 8 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_8_tap_action:
           name: Button 8 - Tap action
           default: default
@@ -1180,6 +1843,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_9_indicator:
+          name: Button 9 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_9_active_states:
+          name: Button 9 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_9_tap_action:
           name: Button 9 - Tap action
           default: default
@@ -1193,6 +1866,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_10_indicator:
+          name: Button 10 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_10_active_states:
+          name: Button 10 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_10_tap_action:
           name: Button 10 - Tap action
           default: default
@@ -1206,6 +1889,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_11_indicator:
+          name: Button 11 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_11_active_states:
+          name: Button 11 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_11_tap_action:
           name: Button 11 - Tap action
           default: default
@@ -1219,6 +1912,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_12_indicator:
+          name: Button 12 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_12_active_states:
+          name: Button 12 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_12_tap_action:
           name: Button 12 - Tap action
           default: default
@@ -1232,6 +1935,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_13_indicator:
+          name: Button 13 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_13_active_states:
+          name: Button 13 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_13_tap_action:
           name: Button 13 - Tap action
           default: default
@@ -1245,6 +1958,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_14_indicator:
+          name: Button 14 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_14_active_states:
+          name: Button 14 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_14_tap_action:
           name: Button 14 - Tap action
           default: default
@@ -1258,6 +1981,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_15_indicator:
+          name: Button 15 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_15_active_states:
+          name: Button 15 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_15_tap_action:
           name: Button 15 - Tap action
           default: default
@@ -1271,6 +2004,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_16_indicator:
+          name: Button 16 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_16_active_states:
+          name: Button 16 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_16_tap_action:
           name: Button 16 - Tap action
           default: default
@@ -1284,6 +2027,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_17_indicator:
+          name: Button 17 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_17_active_states:
+          name: Button 17 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_17_tap_action:
           name: Button 17 - Tap action
           default: default
@@ -1297,6 +2050,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_4_button_18_indicator:
+          name: Button 18 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_4_button_18_active_states:
+          name: Button 18 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_4_button_18_tap_action:
           name: Button 18 - Tap action
           default: default
@@ -1343,6 +2106,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_1_indicator:
+          name: Button 1 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_1_active_states:
+          name: Button 1 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_1_tap_action:
           name: Button 1 - Tap action
           default: default
@@ -1356,6 +2129,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_2_indicator:
+          name: Button 2 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_2_active_states:
+          name: Button 2 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_2_tap_action:
           name: Button 2 - Tap action
           default: default
@@ -1369,6 +2152,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_3_indicator:
+          name: Button 3 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_3_active_states:
+          name: Button 3 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_3_tap_action:
           name: Button 3 - Tap action
           default: default
@@ -1382,6 +2175,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_4_indicator:
+          name: Button 4 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_4_active_states:
+          name: Button 4 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_4_tap_action:
           name: Button 4 - Tap action
           default: default
@@ -1395,6 +2198,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_5_indicator:
+          name: Button 5 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_5_active_states:
+          name: Button 5 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_5_tap_action:
           name: Button 5 - Tap action
           default: default
@@ -1408,6 +2221,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_6_indicator:
+          name: Button 6 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_6_active_states:
+          name: Button 6 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_6_tap_action:
           name: Button 6 - Tap action
           default: default
@@ -1421,6 +2244,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_7_indicator:
+          name: Button 7 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_7_active_states:
+          name: Button 7 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_7_tap_action:
           name: Button 7 - Tap action
           default: default
@@ -1434,6 +2267,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_8_indicator:
+          name: Button 8 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_8_active_states:
+          name: Button 8 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_8_tap_action:
           name: Button 8 - Tap action
           default: default
@@ -1447,6 +2290,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_9_indicator:
+          name: Button 9 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_9_active_states:
+          name: Button 9 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_9_tap_action:
           name: Button 9 - Tap action
           default: default
@@ -1460,6 +2313,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_10_indicator:
+          name: Button 10 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_10_active_states:
+          name: Button 10 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_10_tap_action:
           name: Button 10 - Tap action
           default: default
@@ -1473,6 +2336,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_11_indicator:
+          name: Button 11 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_11_active_states:
+          name: Button 11 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_11_tap_action:
           name: Button 11 - Tap action
           default: default
@@ -1486,6 +2359,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_12_indicator:
+          name: Button 12 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_12_active_states:
+          name: Button 12 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_12_tap_action:
           name: Button 12 - Tap action
           default: default
@@ -1499,6 +2382,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_13_indicator:
+          name: Button 13 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_13_active_states:
+          name: Button 13 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_13_tap_action:
           name: Button 13 - Tap action
           default: default
@@ -1512,6 +2405,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_14_indicator:
+          name: Button 14 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_14_active_states:
+          name: Button 14 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_14_tap_action:
           name: Button 14 - Tap action
           default: default
@@ -1525,6 +2428,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_15_indicator:
+          name: Button 15 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_15_active_states:
+          name: Button 15 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_15_tap_action:
           name: Button 15 - Tap action
           default: default
@@ -1538,6 +2451,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_16_indicator:
+          name: Button 16 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_16_active_states:
+          name: Button 16 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_16_tap_action:
           name: Button 16 - Tap action
           default: default
@@ -1551,6 +2474,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_17_indicator:
+          name: Button 17 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_17_active_states:
+          name: Button 17 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_17_tap_action:
           name: Button 17 - Tap action
           default: default
@@ -1564,6 +2497,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_5_button_18_indicator:
+          name: Button 18 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_5_button_18_active_states:
+          name: Button 18 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_5_button_18_tap_action:
           name: Button 18 - Tap action
           default: default
@@ -1610,6 +2553,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_1_indicator:
+          name: Button 1 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_1_active_states:
+          name: Button 1 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_1_tap_action:
           name: Button 1 - Tap action
           default: default
@@ -1623,6 +2576,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_2_indicator:
+          name: Button 2 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_2_active_states:
+          name: Button 2 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_2_tap_action:
           name: Button 2 - Tap action
           default: default
@@ -1636,6 +2599,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_3_indicator:
+          name: Button 3 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_3_active_states:
+          name: Button 3 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_3_tap_action:
           name: Button 3 - Tap action
           default: default
@@ -1649,6 +2622,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_4_indicator:
+          name: Button 4 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_4_active_states:
+          name: Button 4 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_4_tap_action:
           name: Button 4 - Tap action
           default: default
@@ -1662,6 +2645,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_5_indicator:
+          name: Button 5 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_5_active_states:
+          name: Button 5 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_5_tap_action:
           name: Button 5 - Tap action
           default: default
@@ -1675,6 +2668,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_6_indicator:
+          name: Button 6 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_6_active_states:
+          name: Button 6 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_6_tap_action:
           name: Button 6 - Tap action
           default: default
@@ -1688,6 +2691,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_7_indicator:
+          name: Button 7 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_7_active_states:
+          name: Button 7 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_7_tap_action:
           name: Button 7 - Tap action
           default: default
@@ -1701,6 +2714,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_8_indicator:
+          name: Button 8 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_8_active_states:
+          name: Button 8 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_8_tap_action:
           name: Button 8 - Tap action
           default: default
@@ -1714,6 +2737,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_9_indicator:
+          name: Button 9 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_9_active_states:
+          name: Button 9 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_9_tap_action:
           name: Button 9 - Tap action
           default: default
@@ -1727,6 +2760,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_10_indicator:
+          name: Button 10 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_10_active_states:
+          name: Button 10 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_10_tap_action:
           name: Button 10 - Tap action
           default: default
@@ -1740,6 +2783,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_11_indicator:
+          name: Button 11 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_11_active_states:
+          name: Button 11 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_11_tap_action:
           name: Button 11 - Tap action
           default: default
@@ -1753,6 +2806,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_12_indicator:
+          name: Button 12 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_12_active_states:
+          name: Button 12 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_12_tap_action:
           name: Button 12 - Tap action
           default: default
@@ -1766,6 +2829,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_13_indicator:
+          name: Button 13 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_13_active_states:
+          name: Button 13 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_13_tap_action:
           name: Button 13 - Tap action
           default: default
@@ -1779,6 +2852,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_14_indicator:
+          name: Button 14 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_14_active_states:
+          name: Button 14 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_14_tap_action:
           name: Button 14 - Tap action
           default: default
@@ -1792,6 +2875,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_15_indicator:
+          name: Button 15 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_15_active_states:
+          name: Button 15 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_15_tap_action:
           name: Button 15 - Tap action
           default: default
@@ -1805,6 +2898,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_16_indicator:
+          name: Button 16 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_16_active_states:
+          name: Button 16 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_16_tap_action:
           name: Button 16 - Tap action
           default: default
@@ -1818,6 +2921,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_17_indicator:
+          name: Button 17 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_17_active_states:
+          name: Button 17 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_17_tap_action:
           name: Button 17 - Tap action
           default: default
@@ -1831,6 +2944,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_6_button_18_indicator:
+          name: Button 18 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_6_button_18_active_states:
+          name: Button 18 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_6_button_18_tap_action:
           name: Button 18 - Tap action
           default: default
@@ -1877,6 +3000,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_1_indicator:
+          name: Button 1 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_1_active_states:
+          name: Button 1 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_1_tap_action:
           name: Button 1 - Tap action
           default: default
@@ -1890,6 +3023,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_2_indicator:
+          name: Button 2 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_2_active_states:
+          name: Button 2 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_2_tap_action:
           name: Button 2 - Tap action
           default: default
@@ -1903,6 +3046,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_3_indicator:
+          name: Button 3 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_3_active_states:
+          name: Button 3 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_3_tap_action:
           name: Button 3 - Tap action
           default: default
@@ -1916,6 +3069,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_4_indicator:
+          name: Button 4 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_4_active_states:
+          name: Button 4 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_4_tap_action:
           name: Button 4 - Tap action
           default: default
@@ -1929,6 +3092,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_5_indicator:
+          name: Button 5 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_5_active_states:
+          name: Button 5 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_5_tap_action:
           name: Button 5 - Tap action
           default: default
@@ -1942,6 +3115,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_6_indicator:
+          name: Button 6 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_6_active_states:
+          name: Button 6 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_6_tap_action:
           name: Button 6 - Tap action
           default: default
@@ -1955,6 +3138,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_7_indicator:
+          name: Button 7 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_7_active_states:
+          name: Button 7 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_7_tap_action:
           name: Button 7 - Tap action
           default: default
@@ -1968,6 +3161,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_8_indicator:
+          name: Button 8 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_8_active_states:
+          name: Button 8 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_8_tap_action:
           name: Button 8 - Tap action
           default: default
@@ -1981,6 +3184,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_9_indicator:
+          name: Button 9 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_9_active_states:
+          name: Button 9 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_9_tap_action:
           name: Button 9 - Tap action
           default: default
@@ -1994,6 +3207,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_10_indicator:
+          name: Button 10 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_10_active_states:
+          name: Button 10 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_10_tap_action:
           name: Button 10 - Tap action
           default: default
@@ -2007,6 +3230,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_11_indicator:
+          name: Button 11 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_11_active_states:
+          name: Button 11 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_11_tap_action:
           name: Button 11 - Tap action
           default: default
@@ -2020,6 +3253,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_12_indicator:
+          name: Button 12 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_12_active_states:
+          name: Button 12 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_12_tap_action:
           name: Button 12 - Tap action
           default: default
@@ -2033,6 +3276,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_13_indicator:
+          name: Button 13 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_13_active_states:
+          name: Button 13 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_13_tap_action:
           name: Button 13 - Tap action
           default: default
@@ -2046,6 +3299,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_14_indicator:
+          name: Button 14 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_14_active_states:
+          name: Button 14 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_14_tap_action:
           name: Button 14 - Tap action
           default: default
@@ -2059,6 +3322,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_15_indicator:
+          name: Button 15 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_15_active_states:
+          name: Button 15 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_15_tap_action:
           name: Button 15 - Tap action
           default: default
@@ -2072,6 +3345,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_16_indicator:
+          name: Button 16 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_16_active_states:
+          name: Button 16 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_16_tap_action:
           name: Button 16 - Tap action
           default: default
@@ -2085,6 +3368,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_17_indicator:
+          name: Button 17 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_17_active_states:
+          name: Button 17 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_17_tap_action:
           name: Button 17 - Tap action
           default: default
@@ -2098,6 +3391,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_7_button_18_indicator:
+          name: Button 18 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_7_button_18_active_states:
+          name: Button 18 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_7_button_18_tap_action:
           name: Button 18 - Tap action
           default: default
@@ -2144,6 +3447,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_1_indicator:
+          name: Button 1 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_1_active_states:
+          name: Button 1 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_1_tap_action:
           name: Button 1 - Tap action
           default: default
@@ -2157,6 +3470,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_2_indicator:
+          name: Button 2 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_2_active_states:
+          name: Button 2 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_2_tap_action:
           name: Button 2 - Tap action
           default: default
@@ -2170,6 +3493,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_3_indicator:
+          name: Button 3 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_3_active_states:
+          name: Button 3 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_3_tap_action:
           name: Button 3 - Tap action
           default: default
@@ -2183,6 +3516,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_4_indicator:
+          name: Button 4 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_4_active_states:
+          name: Button 4 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_4_tap_action:
           name: Button 4 - Tap action
           default: default
@@ -2196,6 +3539,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_5_indicator:
+          name: Button 5 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_5_active_states:
+          name: Button 5 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_5_tap_action:
           name: Button 5 - Tap action
           default: default
@@ -2209,6 +3562,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_6_indicator:
+          name: Button 6 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_6_active_states:
+          name: Button 6 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_6_tap_action:
           name: Button 6 - Tap action
           default: default
@@ -2222,6 +3585,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_7_indicator:
+          name: Button 7 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_7_active_states:
+          name: Button 7 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_7_tap_action:
           name: Button 7 - Tap action
           default: default
@@ -2235,6 +3608,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_8_indicator:
+          name: Button 8 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_8_active_states:
+          name: Button 8 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_8_tap_action:
           name: Button 8 - Tap action
           default: default
@@ -2248,6 +3631,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_9_indicator:
+          name: Button 9 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_9_active_states:
+          name: Button 9 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_9_tap_action:
           name: Button 9 - Tap action
           default: default
@@ -2261,6 +3654,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_10_indicator:
+          name: Button 10 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_10_active_states:
+          name: Button 10 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_10_tap_action:
           name: Button 10 - Tap action
           default: default
@@ -2274,6 +3677,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_11_indicator:
+          name: Button 11 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_11_active_states:
+          name: Button 11 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_11_tap_action:
           name: Button 11 - Tap action
           default: default
@@ -2287,6 +3700,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_12_indicator:
+          name: Button 12 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_12_active_states:
+          name: Button 12 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_12_tap_action:
           name: Button 12 - Tap action
           default: default
@@ -2300,6 +3723,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_13_indicator:
+          name: Button 13 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_13_active_states:
+          name: Button 13 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_13_tap_action:
           name: Button 13 - Tap action
           default: default
@@ -2313,6 +3746,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_14_indicator:
+          name: Button 14 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_14_active_states:
+          name: Button 14 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_14_tap_action:
           name: Button 14 - Tap action
           default: default
@@ -2326,6 +3769,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_15_indicator:
+          name: Button 15 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_15_active_states:
+          name: Button 15 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_15_tap_action:
           name: Button 15 - Tap action
           default: default
@@ -2339,6 +3792,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_16_indicator:
+          name: Button 16 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_16_active_states:
+          name: Button 16 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_16_tap_action:
           name: Button 16 - Tap action
           default: default
@@ -2352,6 +3815,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_17_indicator:
+          name: Button 17 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_17_active_states:
+          name: Button 17 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_17_tap_action:
           name: Button 17 - Tap action
           default: default
@@ -2365,6 +3838,16 @@ blueprint:
           description: *title_description
           default: ""
           selector: *title_selector
+        page_8_button_18_indicator:
+          name: Button 18 - State indicator
+          description: *indicator_description
+          default: []
+          selector: *indicator_selector
+        page_8_button_18_active_states:
+          name: Button 18 - Active states
+          description: *active_states_description
+          default: ["on"]
+          selector: *active_states_selector
         page_8_button_18_tap_action:
           name: Button 18 - Tap action
           default: default
@@ -2401,6 +3884,7 @@ variables:
     {% endif %}
   reverse_active: !input reverse_active
   light_details: !input light_details
+  lock_details: !input lock_details
   screensaver_enabled: !input screensaver_enabled
   homepage_enabled: !input homepage_enabled
   time_format: !input time_format
@@ -2469,6 +3953,24 @@ variables:
     - [!input page_6_button_1, !input page_6_button_2, !input page_6_button_3, !input page_6_button_4, !input page_6_button_5, !input page_6_button_6, !input page_6_button_7, !input page_6_button_8, !input page_6_button_9, !input page_6_button_10, !input page_6_button_11, !input page_6_button_12, !input page_6_button_13, !input page_6_button_14, !input page_6_button_15, !input page_6_button_16, !input page_6_button_17, !input page_6_button_18]
     - [!input page_7_button_1, !input page_7_button_2, !input page_7_button_3, !input page_7_button_4, !input page_7_button_5, !input page_7_button_6, !input page_7_button_7, !input page_7_button_8, !input page_7_button_9, !input page_7_button_10, !input page_7_button_11, !input page_7_button_12, !input page_7_button_13, !input page_7_button_14, !input page_7_button_15, !input page_7_button_16, !input page_7_button_17, !input page_7_button_18]
     - [!input page_8_button_1, !input page_8_button_2, !input page_8_button_3, !input page_8_button_4, !input page_8_button_5, !input page_8_button_6, !input page_8_button_7, !input page_8_button_8, !input page_8_button_9, !input page_8_button_10, !input page_8_button_11, !input page_8_button_12, !input page_8_button_13, !input page_8_button_14, !input page_8_button_15, !input page_8_button_16, !input page_8_button_17, !input page_8_button_18]
+  button_indicators:
+    - [!input page_1_button_1_indicator, !input page_1_button_2_indicator, !input page_1_button_3_indicator, !input page_1_button_4_indicator, !input page_1_button_5_indicator, !input page_1_button_6_indicator, !input page_1_button_7_indicator, !input page_1_button_8_indicator, !input page_1_button_9_indicator, !input page_1_button_10_indicator, !input page_1_button_11_indicator, !input page_1_button_12_indicator, !input page_1_button_13_indicator, !input page_1_button_14_indicator, !input page_1_button_15_indicator, !input page_1_button_16_indicator, !input page_1_button_17_indicator, !input page_1_button_18_indicator]
+    - [!input page_2_button_1_indicator, !input page_2_button_2_indicator, !input page_2_button_3_indicator, !input page_2_button_4_indicator, !input page_2_button_5_indicator, !input page_2_button_6_indicator, !input page_2_button_7_indicator, !input page_2_button_8_indicator, !input page_2_button_9_indicator, !input page_2_button_10_indicator, !input page_2_button_11_indicator, !input page_2_button_12_indicator, !input page_2_button_13_indicator, !input page_2_button_14_indicator, !input page_2_button_15_indicator, !input page_2_button_16_indicator, !input page_2_button_17_indicator, !input page_2_button_18_indicator]
+    - [!input page_3_button_1_indicator, !input page_3_button_2_indicator, !input page_3_button_3_indicator, !input page_3_button_4_indicator, !input page_3_button_5_indicator, !input page_3_button_6_indicator, !input page_3_button_7_indicator, !input page_3_button_8_indicator, !input page_3_button_9_indicator, !input page_3_button_10_indicator, !input page_3_button_11_indicator, !input page_3_button_12_indicator, !input page_3_button_13_indicator, !input page_3_button_14_indicator, !input page_3_button_15_indicator, !input page_3_button_16_indicator, !input page_3_button_17_indicator, !input page_3_button_18_indicator]
+    - [!input page_4_button_1_indicator, !input page_4_button_2_indicator, !input page_4_button_3_indicator, !input page_4_button_4_indicator, !input page_4_button_5_indicator, !input page_4_button_6_indicator, !input page_4_button_7_indicator, !input page_4_button_8_indicator, !input page_4_button_9_indicator, !input page_4_button_10_indicator, !input page_4_button_11_indicator, !input page_4_button_12_indicator, !input page_4_button_13_indicator, !input page_4_button_14_indicator, !input page_4_button_15_indicator, !input page_4_button_16_indicator, !input page_4_button_17_indicator, !input page_4_button_18_indicator]
+    - [!input page_5_button_1_indicator, !input page_5_button_2_indicator, !input page_5_button_3_indicator, !input page_5_button_4_indicator, !input page_5_button_5_indicator, !input page_5_button_6_indicator, !input page_5_button_7_indicator, !input page_5_button_8_indicator, !input page_5_button_9_indicator, !input page_5_button_10_indicator, !input page_5_button_11_indicator, !input page_5_button_12_indicator, !input page_5_button_13_indicator, !input page_5_button_14_indicator, !input page_5_button_15_indicator, !input page_5_button_16_indicator, !input page_5_button_17_indicator, !input page_5_button_18_indicator]
+    - [!input page_6_button_1_indicator, !input page_6_button_2_indicator, !input page_6_button_3_indicator, !input page_6_button_4_indicator, !input page_6_button_5_indicator, !input page_6_button_6_indicator, !input page_6_button_7_indicator, !input page_6_button_8_indicator, !input page_6_button_9_indicator, !input page_6_button_10_indicator, !input page_6_button_11_indicator, !input page_6_button_12_indicator, !input page_6_button_13_indicator, !input page_6_button_14_indicator, !input page_6_button_15_indicator, !input page_6_button_16_indicator, !input page_6_button_17_indicator, !input page_6_button_18_indicator]
+    - [!input page_7_button_1_indicator, !input page_7_button_2_indicator, !input page_7_button_3_indicator, !input page_7_button_4_indicator, !input page_7_button_5_indicator, !input page_7_button_6_indicator, !input page_7_button_7_indicator, !input page_7_button_8_indicator, !input page_7_button_9_indicator, !input page_7_button_10_indicator, !input page_7_button_11_indicator, !input page_7_button_12_indicator, !input page_7_button_13_indicator, !input page_7_button_14_indicator, !input page_7_button_15_indicator, !input page_7_button_16_indicator, !input page_7_button_17_indicator, !input page_7_button_18_indicator]
+    - [!input page_8_button_1_indicator, !input page_8_button_2_indicator, !input page_8_button_3_indicator, !input page_8_button_4_indicator, !input page_8_button_5_indicator, !input page_8_button_6_indicator, !input page_8_button_7_indicator, !input page_8_button_8_indicator, !input page_8_button_9_indicator, !input page_8_button_10_indicator, !input page_8_button_11_indicator, !input page_8_button_12_indicator, !input page_8_button_13_indicator, !input page_8_button_14_indicator, !input page_8_button_15_indicator, !input page_8_button_16_indicator, !input page_8_button_17_indicator, !input page_8_button_18_indicator]
+  button_active_states:
+    - [!input page_1_button_1_active_states, !input page_1_button_2_active_states, !input page_1_button_3_active_states, !input page_1_button_4_active_states, !input page_1_button_5_active_states, !input page_1_button_6_active_states, !input page_1_button_7_active_states, !input page_1_button_8_active_states, !input page_1_button_9_active_states, !input page_1_button_10_active_states, !input page_1_button_11_active_states, !input page_1_button_12_active_states, !input page_1_button_13_active_states, !input page_1_button_14_active_states, !input page_1_button_15_active_states, !input page_1_button_16_active_states, !input page_1_button_17_active_states, !input page_1_button_18_active_states]
+    - [!input page_2_button_1_active_states, !input page_2_button_2_active_states, !input page_2_button_3_active_states, !input page_2_button_4_active_states, !input page_2_button_5_active_states, !input page_2_button_6_active_states, !input page_2_button_7_active_states, !input page_2_button_8_active_states, !input page_2_button_9_active_states, !input page_2_button_10_active_states, !input page_2_button_11_active_states, !input page_2_button_12_active_states, !input page_2_button_13_active_states, !input page_2_button_14_active_states, !input page_2_button_15_active_states, !input page_2_button_16_active_states, !input page_2_button_17_active_states, !input page_2_button_18_active_states]
+    - [!input page_3_button_1_active_states, !input page_3_button_2_active_states, !input page_3_button_3_active_states, !input page_3_button_4_active_states, !input page_3_button_5_active_states, !input page_3_button_6_active_states, !input page_3_button_7_active_states, !input page_3_button_8_active_states, !input page_3_button_9_active_states, !input page_3_button_10_active_states, !input page_3_button_11_active_states, !input page_3_button_12_active_states, !input page_3_button_13_active_states, !input page_3_button_14_active_states, !input page_3_button_15_active_states, !input page_3_button_16_active_states, !input page_3_button_17_active_states, !input page_3_button_18_active_states]
+    - [!input page_4_button_1_active_states, !input page_4_button_2_active_states, !input page_4_button_3_active_states, !input page_4_button_4_active_states, !input page_4_button_5_active_states, !input page_4_button_6_active_states, !input page_4_button_7_active_states, !input page_4_button_8_active_states, !input page_4_button_9_active_states, !input page_4_button_10_active_states, !input page_4_button_11_active_states, !input page_4_button_12_active_states, !input page_4_button_13_active_states, !input page_4_button_14_active_states, !input page_4_button_15_active_states, !input page_4_button_16_active_states, !input page_4_button_17_active_states, !input page_4_button_18_active_states]
+    - [!input page_5_button_1_active_states, !input page_5_button_2_active_states, !input page_5_button_3_active_states, !input page_5_button_4_active_states, !input page_5_button_5_active_states, !input page_5_button_6_active_states, !input page_5_button_7_active_states, !input page_5_button_8_active_states, !input page_5_button_9_active_states, !input page_5_button_10_active_states, !input page_5_button_11_active_states, !input page_5_button_12_active_states, !input page_5_button_13_active_states, !input page_5_button_14_active_states, !input page_5_button_15_active_states, !input page_5_button_16_active_states, !input page_5_button_17_active_states, !input page_5_button_18_active_states]
+    - [!input page_6_button_1_active_states, !input page_6_button_2_active_states, !input page_6_button_3_active_states, !input page_6_button_4_active_states, !input page_6_button_5_active_states, !input page_6_button_6_active_states, !input page_6_button_7_active_states, !input page_6_button_8_active_states, !input page_6_button_9_active_states, !input page_6_button_10_active_states, !input page_6_button_11_active_states, !input page_6_button_12_active_states, !input page_6_button_13_active_states, !input page_6_button_14_active_states, !input page_6_button_15_active_states, !input page_6_button_16_active_states, !input page_6_button_17_active_states, !input page_6_button_18_active_states]
+    - [!input page_7_button_1_active_states, !input page_7_button_2_active_states, !input page_7_button_3_active_states, !input page_7_button_4_active_states, !input page_7_button_5_active_states, !input page_7_button_6_active_states, !input page_7_button_7_active_states, !input page_7_button_8_active_states, !input page_7_button_9_active_states, !input page_7_button_10_active_states, !input page_7_button_11_active_states, !input page_7_button_12_active_states, !input page_7_button_13_active_states, !input page_7_button_14_active_states, !input page_7_button_15_active_states, !input page_7_button_16_active_states, !input page_7_button_17_active_states, !input page_7_button_18_active_states]
+    - [!input page_8_button_1_active_states, !input page_8_button_2_active_states, !input page_8_button_3_active_states, !input page_8_button_4_active_states, !input page_8_button_5_active_states, !input page_8_button_6_active_states, !input page_8_button_7_active_states, !input page_8_button_8_active_states, !input page_8_button_9_active_states, !input page_8_button_10_active_states, !input page_8_button_11_active_states, !input page_8_button_12_active_states, !input page_8_button_13_active_states, !input page_8_button_14_active_states, !input page_8_button_15_active_states, !input page_8_button_16_active_states, !input page_8_button_17_active_states, !input page_8_button_18_active_states]
   button_tap_actions:
     - [!input page_1_button_1_tap_action, !input page_1_button_2_tap_action, !input page_1_button_3_tap_action, !input page_1_button_4_tap_action, !input page_1_button_5_tap_action, !input page_1_button_6_tap_action, !input page_1_button_7_tap_action, !input page_1_button_8_tap_action, !input page_1_button_9_tap_action, !input page_1_button_10_tap_action, !input page_1_button_11_tap_action, !input page_1_button_12_tap_action, !input page_1_button_13_tap_action, !input page_1_button_14_tap_action, !input page_1_button_15_tap_action, !input page_1_button_16_tap_action, !input page_1_button_17_tap_action, !input page_1_button_18_tap_action]
     - [!input page_2_button_1_tap_action, !input page_2_button_2_tap_action, !input page_2_button_3_tap_action, !input page_2_button_4_tap_action, !input page_2_button_5_tap_action, !input page_2_button_6_tap_action, !input page_2_button_7_tap_action, !input page_2_button_8_tap_action, !input page_2_button_9_tap_action, !input page_2_button_10_tap_action, !input page_2_button_11_tap_action, !input page_2_button_12_tap_action, !input page_2_button_13_tap_action, !input page_2_button_14_tap_action, !input page_2_button_15_tap_action, !input page_2_button_16_tap_action, !input page_2_button_17_tap_action, !input page_2_button_18_tap_action]
@@ -2518,6 +4020,7 @@ variables:
     {{ ns.pages }}
   watched_entities: >-
     {% set ns = namespace(entities=wake_sensors | list) %}
+    {% set active = namespace(entities=[]) %}
     {% if release_sensor is string and release_sensor %}
       {% set ns.entities = ns.entities + [release_sensor] %}
     {% endif %}
@@ -2527,10 +4030,22 @@ variables:
       {% endif %}
       {% for slot in effective_pages[p].slots %}
         {% set ns.entities = ns.entities + [buttons[p][slot]] %}
+        {% set active.entities = active.entities + [buttons[p][slot]] %}
+        {% set indicator = button_indicators[p][slot] %}
+        {% if indicator is string and indicator and indicator not in ns.entities %}
+          {% set ns.entities = ns.entities + [indicator] %}
+        {% endif %}
       {% endfor %}
     {% endfor %}
-    {% set active = ns.entities | list %}
-    {% for row in (light_details if light_details is sequence and light_details is not string and light_details is not mapping else []) if row is mapping and row.get('light') in active %}
+    {% for row in (light_details if light_details is sequence and light_details is not string and light_details is not mapping else []) if row is mapping and row.get('light') in active.entities %}
+      {% for key in ['related_1', 'related_2'] %}
+        {% set entity = row.get(key, '') %}
+        {% if entity is string and entity and entity not in ns.entities %}
+          {% set ns.entities = ns.entities + [entity] %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+    {% for row in (lock_details if lock_details is sequence and lock_details is not string and lock_details is not mapping else []) if row is mapping and row.get('lock') in active.entities %}
       {% for key in ['related_1', 'related_2'] %}
         {% set entity = row.get(key, '') %}
         {% if entity is string and entity and entity not in ns.entities %}
@@ -2567,10 +4082,39 @@ variables:
           {% for key in ['related_1', 'related_2'] %}
             {% set entity = row.get(key, '') %}
             {% if entity not in ['', none, []] %}
-              {% if entity is not string or entity.split('.')[0] not in ['light', 'switch', 'automation'] or '.' not in entity %}
-                {% set ns.error = 'Related controls support only lights, switches and automations.' %}
+              {% if entity is not string or entity.split('.')[0] not in ['light', 'switch', 'automation', 'script'] or '.' not in entity %}
+                {% set ns.error = 'Related controls support only lights, switches, automations and scripts.' %}
               {% elif entity == row.light or entity in related.seen %}
                 {% set ns.error = 'Related entities must be distinct and different from the primary light.' %}
+              {% endif %}
+              {% set related.seen = related.seen + [entity] %}
+            {% endif %}
+            {% if row.get(key ~ '_title', '') is not string %}
+              {% set ns.error = 'Related titles must be text.' %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+    {% if not ns.error and (lock_details is not sequence or lock_details is string or lock_details is mapping) %}
+      {% set ns.error = 'Lock details must be a list.' %}
+    {% elif not ns.error %}
+      {% set detail_rows = namespace(seen=[]) %}
+      {% for row in lock_details %}
+        {% if row is not mapping or row.get('lock') is not string or not row.lock.startswith('lock.') %}
+          {% set ns.error = 'Each lock-detail row must select a lock.' %}
+        {% elif row.lock in detail_rows.seen %}
+          {% set ns.error = 'Duplicate primary lock in related controls.' %}
+        {% else %}
+          {% set detail_rows.seen = detail_rows.seen + [row.lock] %}
+          {% set related = namespace(seen=[]) %}
+          {% for key in ['related_1', 'related_2'] %}
+            {% set entity = row.get(key, '') %}
+            {% if entity not in ['', none, []] %}
+              {% if entity is not string or entity.split('.')[0] not in ['light', 'switch', 'automation', 'script'] or '.' not in entity %}
+                {% set ns.error = 'Lock related controls support only lights, switches, automations and scripts.' %}
+              {% elif entity == row.lock or entity in related.seen %}
+                {% set ns.error = 'Lock related entities must be distinct and cannot be locks.' %}
               {% endif %}
               {% set related.seen = related.seen + [entity] %}
             {% endif %}
@@ -2606,8 +4150,44 @@ variables:
         {% set tap = button_tap_actions[p][slot] %}
         {% if tap not in ['default', 'details'] %}
           {% set ns.error = 'Invalid button tap action.' %}
-        {% elif tap == 'details' and not buttons[p][slot].startswith('light.') %}
-          {% set ns.error = 'Open light details tap actions require a light entity.' %}
+        {% elif tap == 'details' and not (buttons[p][slot].startswith('light.') or buttons[p][slot].startswith('lock.')) %}
+          {% set ns.error = 'Open details tap actions require a light or lock entity.' %}
+        {% endif %}
+        {% set indicator = button_indicators[p][slot] %}
+        {% set active_states = button_active_states[p][slot] %}
+        {% if indicator not in ['', none, []] and (indicator is not string or not indicator | regex_match('^[a-z0-9_]+[.][a-z0-9_]+$')) %}
+          {% set ns.error = 'State indicators must select an entity.' %}
+        {% elif indicator in ['', none, []] and active_states != ['on'] %}
+          {% set ns.error = 'Custom active states require a state indicator.' %}
+        {% endif %}
+        {% if active_states is not sequence or active_states is string or active_states is mapping %}
+          {% set ns.error = 'Indicator active states must be a list of strings.' %}
+        {% else %}
+          {% for active_state in active_states %}
+            {% if active_state is not string or not active_state %}
+              {% set ns.error = 'Indicator active states must be non-empty strings.' %}
+            {% else %}
+              {% set size = namespace(bytes=0) %}
+              {% for character in active_state %}
+                {% set encoded = character | urlencode %}
+                {% set size.bytes = size.bytes + (encoded | length) - 2 * ((encoded.split('%') | length) - 1) %}
+              {% endfor %}
+              {% if size.bytes > 1024 %}
+                {% set ns.error = 'Indicator active states cannot exceed 1024 UTF-8 bytes.' %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        {% if indicator is string and indicator and not ns.error %}
+          {% set raw_indicator_state = states(indicator) %}
+          {% set size = namespace(bytes=0) %}
+          {% for character in raw_indicator_state %}
+            {% set encoded = character | urlencode %}
+            {% set size.bytes = size.bytes + (encoded | length) - 2 * ((encoded.split('%') | length) - 1) %}
+          {% endfor %}
+          {% if size.bytes > 1024 %}
+            {% set ns.error = 'State indicator for Page ' ~ (p + 1) ~ ' button ' ~ (slot + 1) ~ ' exceeds 1024 UTF-8 bytes.' %}
+          {% endif %}
         {% endif %}
       {% endfor %}
       {% if effective_pages[p].slots %}
@@ -2691,7 +4271,7 @@ actions:
       - variables:
           dashboard_snapshot: >-
             {% set ns = namespace(pages=[], order=[], home_position=0, home_title='Homepage', hold=false,
-                                  lights=[], related=[], seen_lights=[], seen_related=[]) %}
+                                  lights=[], locks=[], related=[], seen_lights=[], seen_locks=[], seen_related=[]) %}
             {% for item in page_order %}
               {% if item.page == 'home' %}
                 {% set ns.home_position = ns.order | length %}
@@ -2716,9 +4296,33 @@ actions:
                   {% if not icon and state in ['on', 'off'] and entity.startswith('switch.') and state_attr(entity, 'device_class') == 'outlet' %}
                     {% set icon = 'mdi:power-plug-off' if state == 'off' else 'mdi:power-plug' %}
                   {% endif %}
-                  {% set row.buttons = row.buttons + [dict(entity=entity, name=name, state=state, icon=icon, tap_action=button_tap_actions[p][loop.index0])] %}
+                  {% set indicator_entity = button_indicators[p][loop.index0] %}
+                  {% set indicator = none %}
+                  {% if indicator_entity is string and indicator_entity %}
+                    {% set raw_indicator_state = states(indicator_entity) %}
+                    {% set bounded = namespace(value='', bytes=0, truncated=false) %}
+                    {% for character in raw_indicator_state %}
+                      {% if not bounded.truncated %}
+                        {% set encoded = character | urlencode %}
+                        {% set character_bytes = (encoded | length) - 2 * ((encoded.split('%') | length) - 1) %}
+                        {% if bounded.bytes + character_bytes <= 1024 %}
+                          {% set bounded.value = bounded.value ~ character %}
+                          {% set bounded.bytes = bounded.bytes + character_bytes %}
+                        {% else %}
+                          {% set bounded.truncated = true %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                    {% set indicator_available = raw_indicator_state not in ['unknown', 'unavailable'] %}
+                    {% set indicator = dict(state=bounded.value,
+                        active=(indicator_available and raw_indicator_state in button_active_states[p][loop.index0]),
+                        available=indicator_available) %}
+                  {% endif %}
+                  {% set row.buttons = row.buttons + [dict(entity=entity, name=name, state=state, icon=icon,
+                      tap_action=button_tap_actions[p][loop.index0], indicator=indicator)] %}
                 {% else %}
-                  {% set row.buttons = row.buttons + [dict(entity='', name='', state='', icon='', tap_action='default')] %}
+                  {% set row.buttons = row.buttons + [dict(entity='', name='', state='', icon='',
+                      tap_action='default', indicator=none)] %}
                 {% endif %}
               {% endfor %}
               {% set temp = temperatures[p] %}
@@ -2787,12 +4391,35 @@ actions:
                     hue=(hs[0] | float) if hs_valid else -1, saturation=(hs[1] | float) if hs_valid else -1,
                     related=binding.refs, related_titles=binding.titles)] %}
               {% endfor %}
+              {% for button in page.buttons if button.entity.startswith('lock.') and button.entity not in ns.seen_locks %}
+                {% set entity = button.entity %}
+                {% set ns.seen_locks = ns.seen_locks + [entity] %}
+                {% set binding = namespace(refs=[], titles=[]) %}
+                {% for row in lock_details if row.lock == entity %}
+                  {% for key in ['related_1', 'related_2'] %}
+                    {% set related = row.get(key, '') %}
+                    {% if related is string and related %}
+                      {% set binding.refs = binding.refs + [related] %}
+                      {% set binding.titles = binding.titles + [(row.get(key ~ '_title', '') | trim)[:80]] %}
+                      {% if related not in ns.seen_related %}
+                        {% set ns.seen_related = ns.seen_related + [related] %}
+                        {% set ns.related = ns.related + [dict(entity=related,
+                            name=(state_attr(related, 'friendly_name') or related)[:80],
+                            state=states(related)[:40], icon=state_attr(related, 'icon') or '')] %}
+                      {% endif %}
+                    {% endif %}
+                  {% endfor %}
+                {% endfor %}
+                {% set ns.locks = ns.locks + [dict(entity=entity, related=binding.refs,
+                    related_titles=binding.titles)] %}
+              {% endfor %}
             {% endfor %}
-            {{ dict(version=3, blueprint_release=blueprint_release, latest_release=latest_release,
+            {{ dict(version=4, blueprint_release=blueprint_release, latest_release=latest_release,
                     navigation_layout=navigation_layout, screensaver_enabled=screensaver_enabled,
                     homepage=dict(enabled=homepage_enabled, position=ns.home_position, title=ns.home_title),
                     localization=dict(time=time_format, date=date_format), wake_hold=ns.hold,
-                    reverse_active=reverse_active, light_details=ns.lights, detail_entities=ns.related,
+                    reverse_active=reverse_active, light_details=ns.lights, lock_details=ns.locks,
+                    detail_entities=ns.related,
                     page_order=ns.order, pages=ns.pages) }}
           transfer: "{{ now().isoformat() }}"
       - repeat:

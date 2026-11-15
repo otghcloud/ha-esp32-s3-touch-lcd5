@@ -13,10 +13,22 @@ inline bool valid_entity_id(const std::string &entity) {
   const auto dot = entity.find('.');
   if (dot == std::string::npos || dot + 1 == entity.size()) return false;
   const auto domain = entity.substr(0, dot);
-  if (domain != "light" && domain != "switch" && domain != "automation" && domain != "lock") return false;
+  if (domain != "light" && domain != "switch" && domain != "automation" && domain != "lock" &&
+      domain != "script") return false;
   return std::all_of(entity.begin() + dot + 1, entity.end(), [](char c) {
     return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_';
   });
+}
+inline bool read_indicator(JsonVariant value, IndicatorData &out) {
+  if (value.isUnbound()) return false;
+  if (value.isNull()) return true;
+  if (!value.is<JsonObject>() || !read_text(value["state"], out.state, 1024) ||
+      !value["available"].is<bool>() || !value["active"].is<bool>()) return false;
+  out.configured = true;
+  out.available = value["available"];
+  out.active = value["active"];
+  return out.available == (out.state != "unknown" && out.state != "unavailable") &&
+         (out.available || !out.active);
 }
 inline void update_appearance(ButtonData &data, const ButtonData *previous = nullptr) {
   if (previous && previous->entity == data.entity) {
@@ -33,8 +45,14 @@ inline void update_appearance(ButtonData &data, const ButtonData *previous = nul
     const bool on = data.state == "on", locked = data.state == "locked";
     data.display_state = data.entity.starts_with("lock.") ? (locked ? "LOCKED" : "UNLOCKED")
                          : data.entity.starts_with("automation.") ? (on ? "ENABLED" : "DISABLED")
+                         : data.entity.starts_with("script.") ? (on ? "RUNNING" : "IDLE")
                                                                  : (on ? "ON" : "OFF");
-    data.display_color = state_color(data);
+    data.display_color = state_color(data, true, false);
+  } else if (data.entity.starts_with("lock.")) {
+    data.display_state = data.state == "locking" ? "LOCKING" : data.state == "unlocking" ? "UNLOCKING" :
+                         data.state == "opening" ? "OPENING" : data.state == "jammed" ? "JAMMED" :
+                         data.state == "open" ? "OPEN" : data.state == "unavailable" ? "UNAVAILABLE" : "UNKNOWN";
+    data.display_color = state_color(data, true, false);
   }
 }
 inline const LightData *find_light(const DetailData &details, const std::string &entity) {
@@ -47,11 +65,30 @@ inline const ButtonData *find_related(const DetailData &details, const std::stri
     if (button.entity == entity) return &button;
   return nullptr;
 }
+inline const DetailBinding *find_detail(const DetailData &details, const std::string &entity) {
+  if (const auto *light = find_light(details, entity)) return light;
+  for (const auto &lock : details.locks)
+    if (lock.entity == entity) return &lock;
+  return nullptr;
+}
+inline bool read_related_binding(JsonObject item, DetailBinding &data, const DetailData &details) {
+  auto related = item["related"];
+  if (!related.is<JsonArray>() || related.size() > 2 ||
+      !item["related_titles"].is<JsonArray>() || item["related_titles"].size() != related.size()) return false;
+  for (size_t i = 0; i < related.size(); i++) {
+    if (!read_text(related[i], data.related[i], 128) || !find_related(details, data.related[i]) ||
+        data.related[i] == data.entity || (i == 1 && data.related[0] == data.related[1]) ||
+        !read_text(item["related_titles"][i], data.related_titles[i], 320)) return false;
+  }
+  return true;
+}
 inline bool read_detail_data(JsonObject root, DetailData &out, const std::vector<std::string> &reverse) {
   auto entities = root["detail_entities"];
   auto lights = root["light_details"];
+  auto locks = root["lock_details"];
   if (!entities.is<JsonArray>() || entities.size() > MAX_PAGES * MAX_BUTTONS * 2 ||
-      !lights.is<JsonArray>() || lights.size() > MAX_PAGES * MAX_BUTTONS)
+      !lights.is<JsonArray>() || lights.size() > MAX_PAGES * MAX_BUTTONS ||
+      !locks.is<JsonArray>() || locks.size() > MAX_PAGES * MAX_BUTTONS)
     return false;
   for (JsonObject item : entities.as<JsonArray>()) {
     ButtonData data;
@@ -102,15 +139,15 @@ inline bool read_detail_data(JsonObject root, DetailData &out, const std::vector
         (!data.temperature && (data.min_kelvin != 0 || data.max_kelvin != 0)) ||
         (data.temperature && (data.min_kelvin < 1 || data.max_kelvin > 100000 ||
                               data.min_kelvin >= data.max_kelvin))) return false;
-    auto related = item["related"];
-    if (!related.is<JsonArray>() || related.size() > 2) return false;
-    if (!item["related_titles"].is<JsonArray>() || item["related_titles"].size() != related.size()) return false;
-    for (size_t i = 0; i < related.size(); i++) {
-      if (!read_text(related[i], data.related[i], 128) || !find_related(out, data.related[i]) ||
-          data.related[i] == data.entity || (i == 1 && data.related[0] == data.related[1])) return false;
-      if (!read_text(item["related_titles"][i], data.related_titles[i], 320)) return false;
-    }
+    if (!read_related_binding(item, data, out)) return false;
     out.lights.push_back(std::move(data));
+  }
+  for (JsonObject item : locks.as<JsonArray>()) {
+    DetailBinding data;
+    if (!read_text(item["entity"], data.entity, 128) || !valid_entity_id(data.entity) ||
+        !data.entity.starts_with("lock.") || find_detail(out, data.entity) ||
+        !read_related_binding(item, data, out)) return false;
+    out.locks.push_back(std::move(data));
   }
   return true;
 }

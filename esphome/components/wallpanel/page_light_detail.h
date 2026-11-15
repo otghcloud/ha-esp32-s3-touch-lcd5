@@ -34,18 +34,40 @@ inline void detail_tile(const ButtonWidgets &tile, int x, int y, int width, int 
   lv_label_set_text(tile.name, name.c_str());
   lv_label_set_text(tile.icon, mdi_glyph(icon));
 }
+inline void render_detail_back(const ButtonWidgets &tile, const Fonts &fonts) {
+  detail_tile(tile, 640, 434, 48, 44, "", "mdi:arrow-left", fonts);
+  lv_obj_set_style_bg_opa(tile.button, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_border_width(tile.button, 0, 0);
+  lv_obj_set_style_radius(tile.button, 0, 0);
+  place_label(tile.icon, 8, 6, 32, 32, fonts.ui, LV_TEXT_ALIGN_CENTER);
+  lv_obj_set_style_text_color(tile.icon, lv_color_hex(0x111111), 0);
+}
+inline void render_detail_related(const std::array<ButtonWidgets, MAX_BUTTONS> &tiles, const Fonts &fonts,
+                                  const DetailBinding *binding, const DetailData &details,
+                                  bool online, int x, int width) {
+  for (size_t i = 0; i < 2; i++) {
+    const auto *related = binding ? find_related(details, binding->related[i]) : nullptr;
+    const auto &tile = tiles[5 + i];
+    visible(tile.button, related != nullptr);
+    if (!related) continue;
+    detail_tile(tile, x, 94 + int(i) * 170, width, 150,
+                binding->related_titles[i].empty() ? related->name : binding->related_titles[i],
+                related->icon.empty() ? default_icon(*related) : related->icon.c_str(), fonts);
+    style_entity_tile(tile, *related, online);
+    visible(tile.state, true);
+    place_label(tile.state, 6, 108, width - 12, 28, fonts.small, LV_TEXT_ALIGN_CENTER);
+    lv_label_set_text(tile.state, state_text(*related));
+    visible(tile.unavailable, !online || !known_state(*related));
+    place_label(tile.unavailable, 4, 128, width - 8, 20, fonts.small, LV_TEXT_ALIGN_CENTER);
+  }
+}
 inline void render_light_detail(const DetailWidgets &widgets, const std::array<ButtonWidgets, MAX_BUTTONS> &tiles,
                                 const Fonts &fonts, const std::string &title, const ButtonData &primary, const LightData *light,
                                 const DetailData &details, DetailMode mode, bool online) {
   lv_label_set_text(widgets.title, title.c_str());
   detail_tile(tiles[0], 24, 64, 90, 86, "State", default_icon(primary), fonts);
-  style_entity_tile(tiles[0], primary, online);
-  detail_tile(tiles[1], 640, 434, 48, 44, "", "mdi:arrow-left", fonts);
-  lv_obj_set_style_bg_opa(tiles[1].button, LV_OPA_TRANSP, 0);
-  lv_obj_set_style_border_width(tiles[1].button, 0, 0);
-  lv_obj_set_style_radius(tiles[1].button, 0, 0);
-  place_label(tiles[1].icon, 8, 6, 32, 32, fonts.ui, LV_TEXT_ALIGN_CENTER);
-  lv_obj_set_style_text_color(tiles[1].icon, lv_color_hex(0x111111), 0);
+  style_entity_tile(tiles[0], primary, online, false);
+  render_detail_back(tiles[1], fonts);
   for (size_t i = 0; i < 3; i++) {
     const auto candidate = static_cast<DetailMode>(i);
     visible(tiles[2 + i].button, supports_mode(light, candidate));
@@ -56,20 +78,7 @@ inline void render_light_detail(const DetailWidgets &widgets, const std::array<B
     lv_obj_set_style_border_color(tiles[2 + i].button,
                                   lv_color_hex(mode == candidate ? 0xFFD166 : 0x344154), 0);
   }
-  for (size_t i = 0; i < 2; i++) {
-    const auto *related = light ? find_related(details, light->related[i]) : nullptr;
-    visible(tiles[5 + i].button, related != nullptr);
-    if (!related) continue;
-    detail_tile(tiles[5 + i], 610, 94 + int(i) * 170, 170, 150,
-                light->related_titles[i].empty() ? related->name : light->related_titles[i],
-                related->icon.empty() ? default_icon(*related) : related->icon.c_str(), fonts);
-    style_entity_tile(tiles[5 + i], *related, online);
-    visible(tiles[5 + i].state, true);
-    place_label(tiles[5 + i].state, 6, 108, 158, 28, fonts.small, LV_TEXT_ALIGN_CENTER);
-    lv_label_set_text(tiles[5 + i].state, related->display_state);
-    visible(tiles[5 + i].unavailable, !online || !known_state(*related));
-    place_label(tiles[5 + i].unavailable, 4, 128, 162, 20, fonts.small, LV_TEXT_ALIGN_CENTER);
-  }
+  render_detail_related(tiles, fonts, light, details, online, 610, 170);
   const bool enabled = supports_mode(light, mode) && online && known_state(primary);
   visible(widgets.slider, supports_mode(light, mode) && mode != DetailMode::COLOUR);
   visible(widgets.wheel, supports_mode(light, mode) && mode == DetailMode::COLOUR);
@@ -79,6 +88,25 @@ inline void render_light_detail(const DetailWidgets &widgets, const std::array<B
   lv_obj_set_ext_click_area(widgets.slider, DETAIL_SLIDER_TOUCH_PADDING);
   lv_obj_set_style_opa(widgets.wheel, enabled ? LV_OPA_COVER : LV_OPA_50, 0);
 }
+inline void render_lock_detail(const DetailWidgets &widgets, const std::array<ButtonWidgets, MAX_BUTTONS> &tiles,
+                               const Fonts &fonts, const std::string &title, const ButtonData &primary,
+                               const DetailData &details, bool online) {
+  lv_label_set_text(widgets.title, title.c_str());
+  lv_label_set_text(widgets.status, online ? state_text(primary, false) : "Home Assistant disconnected");
+  visible(widgets.status, true);
+  for (auto *editor : {widgets.slider, widgets.value, widgets.wheel, widgets.marker}) visible(editor, false);
+  for (size_t i = 2; i < 5; i++) visible(tiles[i].button, false);
+  const char *action = primary.state == "locked" ? "Unlock" : primary.state == "unlocked" ? "Lock" : "Unavailable";
+  detail_tile(tiles[0], 24, 94, 352, 320, action, default_icon(primary), fonts);
+  style_entity_tile(tiles[0], primary, online, false);
+  place_label(tiles[0].icon, 140, 44, 72, 72, fonts.icons, LV_TEXT_ALIGN_CENTER);
+  place_label(tiles[0].name, 10, 155, 332, 40, fonts.medium, LV_TEXT_ALIGN_CENTER);
+  place_label(tiles[0].state, 10, 215, 332, 34, fonts.medium, LV_TEXT_ALIGN_CENTER);
+  lv_label_set_text(tiles[0].state, state_text(primary, false));
+  visible(tiles[0].state, true);
+  render_detail_back(tiles[1], fonts);
+  render_detail_related(tiles, fonts, find_detail(details, primary.entity), details, online, 420, 360);
+}
 inline void render_detail_value(const DetailWidgets &widgets, DetailMode mode, const LightData *light,
                                 float first, float second, bool hide_missing = false) {
   if (!light || !supports_mode(light, mode)) {
@@ -87,6 +115,10 @@ inline void render_detail_value(const DetailWidgets &widgets, DetailMode mode, c
   }
   const bool missing = first < 0 || (mode == DetailMode::COLOUR && second < 0);
   visible(widgets.value, !missing || !hide_missing);
+  lv_obj_update_layout(widgets.container);
+  auto *editor = mode == DetailMode::COLOUR ? widgets.wheel : widgets.slider;
+  lv_obj_set_x(widgets.value, lv_obj_get_x(editor) +
+                              (lv_obj_get_width(editor) - lv_obj_get_width(widgets.value)) / 2);
   char text[64];
   if (mode == DetailMode::COLOUR) {
     if (missing) std::snprintf(text, sizeof(text), "Choose colour");

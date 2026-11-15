@@ -163,8 +163,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     }
     esphome::json::parse_json(payload, [this](JsonObject root) {
       const int version = root["version"].is<int>() ? root["version"].as<int>() : 0;
-      if (version != 3 || !root["pages"].is<JsonArray>() || root["pages"].size() != MAX_PAGES) {
-        ESP_LOGE("dashboard", "Expected protocol version 3 with %u pages", unsigned(MAX_PAGES));
+      if (version != 4 || !root["pages"].is<JsonArray>() || root["pages"].size() != MAX_PAGES) {
+        ESP_LOGE("dashboard", "Expected protocol version 4 with %u pages", unsigned(MAX_PAGES));
         return false;
       }
       std::string blueprint_release, latest_release;
@@ -272,6 +272,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
               !read_string(button["name"], data.name, 320) ||
               !read_string(button["state"], data.state, 40) ||
               !read_string(button["icon"], data.icon, 128) ||
+              !read_indicator(button["indicator"], data.indicator) ||
+              (data.entity.empty() && data.indicator.configured) ||
               (!data.entity.empty() && !valid_entity(data.entity)) ||
               !button["tap_action"].is<const char *>()) {
             ESP_LOGE("dashboard", "Invalid button %u on page %u; configuration unchanged",
@@ -281,7 +283,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
           const std::string tap_action = button["tap_action"].as<const char *>();
           populated += !data.entity.empty();
           if ((tap_action != "default" && tap_action != "details") ||
-              (tap_action == "details" && !data.entity.starts_with("light.")) ||
+              (tap_action == "details" && !supports_details(data)) ||
               populated > capacity || (!next[p].compact && !data.entity.empty() && b >= capacity)) {
             ESP_LOGE("dashboard", "Invalid tap action or grid position on page %u button %u",
                      unsigned(p + 1), unsigned(b + 1));
@@ -300,18 +302,22 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       }
       DetailData details;
       if (!read_detail_data(root, details, reverse)) {
-        ESP_LOGE("dashboard", "Invalid light-detail metadata; configuration unchanged");
+        ESP_LOGE("dashboard", "Invalid detail metadata; configuration unchanged");
         return false;
       }
-      for (const auto &light : details.lights) {
-        bool found = false;
-        for (const auto &page : next)
-          for (const auto &button : page.buttons)
-            found |= button.entity == light.entity;
-        if (!found) {
-          ESP_LOGE("dashboard", "Detail light is absent from active page slots");
-          return false;
+      const auto active_bindings = [&](const auto &bindings) {
+        for (const auto &binding : bindings) {
+          bool found = false;
+          for (const auto &page : next)
+            for (const auto &button : page.buttons)
+              found |= button.entity == binding.entity;
+          if (!found) return false;
         }
+        return true;
+      };
+      if (!active_bindings(details.lights) || !active_bindings(details.locks)) {
+        ESP_LOGE("dashboard", "Detail entity is absent from active page slots");
+        return false;
       }
       if (page_count > grid(navigation_layout).capacity()) {
         ESP_LOGE("dashboard", "Navigation layout cannot fit %u populated pages; configuration unchanged",
@@ -323,6 +329,12 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
                             homepage.position != homepage_.position || homepage.title != homepage_.title;
       const auto *old_light = find_light(details_, detail_entity_);
       const auto *new_light = find_light(details, detail_entity_);
+      const auto *old_binding = find_detail(details_, detail_entity_);
+      const auto *new_binding = find_detail(details, detail_entity_);
+      layout_changed |= (old_binding == nullptr) != (new_binding == nullptr);
+      if (old_binding && new_binding)
+        layout_changed |= old_binding->related != new_binding->related ||
+                          old_binding->related_titles != new_binding->related_titles;
       layout_changed |= (old_light == nullptr) != (new_light == nullptr);
       if (old_light && new_light)
         layout_changed |= old_light->known != new_light->known || old_light->dimmable != new_light->dimmable ||
@@ -336,7 +348,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         for (size_t b = 0; b < MAX_BUTTONS; b++) {
           auto &data = next[p].buttons[b];
           const auto &previous = pages_[p].buttons[b];
-          layout_changed |= data.entity != previous.entity || data.tap_action != previous.tap_action;
+          layout_changed |= data.entity != previous.entity || data.tap_action != previous.tap_action ||
+                            (data.entity.starts_with("lock.") && data.state != previous.state);
           update_appearance(data, &previous);
         }
       }
@@ -358,7 +371,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       latest_release_parts_ = latest_parts;
       pages_ = std::move(next);
       details_ = std::move(details);
-      if (view_ == View::LIGHT_DETAIL) {
+      if (view_ == View::DETAIL) {
         if (!primary_detail()) view_ = content_view();
         else {
           if (!known_state(*primary_detail())) {
@@ -453,7 +466,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       for (auto &page : pages_) {
         for (auto &button : page.buttons) {
           if (known_state(button))
-            button.display_color = state_color(button, online_);
+            button.display_color = state_color(button, online_, false);
         }
       }
       render();
@@ -462,7 +475,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
 
   void navigate(int direction) {
     if (!ready_ || updating_ || screensaver_active_ || view_ == View::NAVIGATION ||
-        view_ == View::SETTINGS || view_ == View::LIGHT_DETAIL)
+        view_ == View::SETTINGS || view_ == View::DETAIL)
       return;
     const auto order = content_order();
     int rank = std::find(order.begin(), order.end(), current_) - order.begin();
@@ -517,10 +530,11 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     touch_target_ = ready_ && !screensaver_active_ ? hit_target(x, y) : TouchTarget{};
     touch_entity_ = touch_target_.kind == TargetKind::ENTITY
                         ? pages_[current_].buttons[touch_target_.index].entity : "";
-    hold_candidate_ = touch_target_.kind == TargetKind::ENTITY && touch_entity_.starts_with("light.");
+    hold_candidate_ = touch_target_.kind == TargetKind::ENTITY &&
+                      supports_details(pages_[current_].buttons[touch_target_.index]);
     if (touch_target_.kind == TargetKind::RELATED) {
-      const auto *light = find_light(details_, detail_entity_);
-      touch_entity_ = light ? light->related[touch_target_.index] : "";
+      const auto *binding = find_detail(details_, detail_entity_);
+      touch_entity_ = binding ? binding->related[touch_target_.index] : "";
     }
     if (touch_target_.kind == TargetKind::EDIT) {
       detail_editing_ = true;
@@ -555,9 +569,9 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     gesture_.update(id, x, y);
     if (hold_candidate_ && !gesture_.hold_stationary()) {
       if (gesture_.valid())
-        ESP_LOGD("dashboard", "Light hold cancelled: movement exceeded %dpx", TouchGesture::HOLD_SLOP_PX);
+        ESP_LOGD("dashboard", "Detail hold cancelled: movement exceeded %dpx", TouchGesture::HOLD_SLOP_PX);
       else
-        ESP_LOGD("dashboard", "Light hold cancelled: owner ID %d replaced by ID %d at (%d,%d)",
+        ESP_LOGD("dashboard", "Detail hold cancelled: owner ID %d replaced by ID %d at (%d,%d)",
                  gesture_.id(), id, x, y);
       hold_candidate_ = false;
     }
@@ -567,7 +581,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   void check_touch_hold(uint32_t now = esphome::millis()) {
     if (!ready_ || updating_ || screensaver_active_ || !hold_candidate_) return;
     if (view_ != View::BUTTONS || touch_revision_ != layout_revision_) {
-      ESP_LOGD("dashboard", "Light hold cancelled: view or layout changed");
+      ESP_LOGD("dashboard", "Detail hold cancelled: view or layout changed");
       hold_candidate_ = false;
       return;
     }
@@ -579,7 +593,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
 
   TouchAction end_touch() {
-    if (hold_candidate_) ESP_LOGD("dashboard", "Light hold released before opening");
+    if (hold_candidate_) ESP_LOGD("dashboard", "Detail hold released before opening");
     hold_candidate_ = false;
     const bool valid_edit = detail_editing_ && gesture_.valid();
     detail_editing_ = false;
@@ -599,7 +613,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       return valid_edit ? TouchAction::TAP : TouchAction::NONE;
     }
     if (action == TouchAction::NEXT || action == TouchAction::PREVIOUS) {
-      if (view_ == View::NAVIGATION || view_ == View::SETTINGS || view_ == View::LIGHT_DETAIL)
+      if (view_ == View::NAVIGATION || view_ == View::SETTINGS || view_ == View::DETAIL)
         return TouchAction::NONE;
       navigate(action == TouchAction::NEXT ? 1 : -1);
     } else if (action == TouchAction::TAP && touch_target_ == hit_target(gesture_.x(), gesture_.y())) {
@@ -629,8 +643,8 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         if (primary) press_data(*primary);
       } else if (touch_target_.kind == TargetKind::RELATED) {
         const auto *data = find_related(details_, touch_entity_);
-        const auto *light = find_light(details_, detail_entity_);
-        if (data && light && light->related[touch_target_.index] == touch_entity_) press_data(*data);
+        const auto *binding = find_detail(details_, detail_entity_);
+        if (data && binding && binding->related[touch_target_.index] == touch_entity_) press_data(*data);
       } else if (touch_target_.kind == TargetKind::PAGE) {
         select_page(touch_target_.index);
       } else if (touch_target_.kind == TargetKind::ENTITY &&
@@ -672,7 +686,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     const auto domain = data.entity.substr(0, data.entity.find('.'));
     const std::string action = domain == "lock"
                                    ? (data.state == "locked" ? "lock.unlock" : "lock.lock")
-                                   : domain + ".toggle";
+                                   : domain == "script" ? "script.turn_on" : domain + ".toggle";
     call_homeassistant_service(action, {{"entity_id", data.entity}});
   }
 
@@ -720,18 +734,18 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   }
   void open_details(size_t page, size_t slot) {
     const auto &button = pages_[page].buttons[slot];
-    if (!online_ || !known_state(button) || !button.entity.starts_with("light.")) {
-      ESP_LOGW("dashboard", "Cannot open light details without an available light");
+    if (!online_ || !known_state(button) || !supports_details(button)) {
+      ESP_LOGW("dashboard", "Cannot open details without an available light or lock");
       return;
     }
     detail_entity_ = button.entity;
-    ESP_LOGD("dashboard", "Opening light details for '%s'", detail_entity_.c_str());
+    ESP_LOGD("dashboard", "Opening details for '%s'", detail_entity_.c_str());
     detail_page_ = page;
     detail_button_ = slot;
     detail_mode_ = initial_detail_mode(find_light(details_, detail_entity_));
     detail_editing_ = detail_pending_ = detail_error_ = hold_candidate_ = false;
     gesture_.finish();
-    view_ = View::LIGHT_DETAIL;
+    view_ = View::DETAIL;
     layout_revision_++;
     render();
   }
@@ -861,7 +875,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       return {TargetKind::SETTINGS, 0};
     if (hit_widget(navigation_.menu, x, y))
       return {TargetKind::MENU, 0};
-    if (view_ == View::LIGHT_DETAIL) {
+    if (view_ == View::DETAIL) {
       if (hit_widget(buttons_[1].button, x, y)) return {TargetKind::BACK, 0};
       if (hit_widget(buttons_[0].button, x, y)) return {TargetKind::POWER, 0};
       for (size_t i = 0; i < 3; i++)
@@ -930,7 +944,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     visible(homepage_container_, view_ == View::HOMEPAGE && homepage_.enabled);
     visible(settings_container_, view_ == View::SETTINGS);
     if (view_ == View::SETTINGS) refresh_settings_ip();
-    visible(detail_widgets_.container, view_ == View::LIGHT_DETAIL);
+    visible(detail_widgets_.container, view_ == View::DETAIL);
     if (homepage_title_)
       render_homepage(homepage_title_, homepage_);
     if (page_count > 0)
@@ -968,13 +982,18 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
       lv_obj_set_style_bg_opa(dots_[d], d == current_rank ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
     }
     visible(buttons_container_, view_ == View::NAVIGATION || view_ == View::SETTINGS ||
-                                view_ == View::LIGHT_DETAIL || (view_ == View::BUTTONS && route_enabled(current_)));
+                                view_ == View::DETAIL || (view_ == View::BUTTONS && route_enabled(current_)));
     for (const auto &button : buttons_)
       visible(button.button, false);
     const Fonts fonts{icons_, dense_icons_, medium_, small_, ui_icons_};
-    if (view_ == View::LIGHT_DETAIL) {
+    if (view_ == View::DETAIL) {
       const auto *primary = primary_detail();
       if (!primary) return;
+      if (primary->entity.starts_with("lock.")) {
+        render_lock_detail(detail_widgets_, buttons_, fonts, page_title(detail_page_) + " - " + primary->name,
+                           *primary, details_, online_);
+        return;
+      }
       const auto *light = find_light(details_, detail_entity_);
       render_light_detail(detail_widgets_, buttons_, fonts, page_title(detail_page_) + " - " + primary->name,
                           *primary, light, details_, detail_mode_, online_);

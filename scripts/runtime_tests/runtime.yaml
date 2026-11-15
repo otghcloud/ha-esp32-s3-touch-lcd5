@@ -139,7 +139,7 @@ esphome:
             lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN);
           }
           auto initialize_snapshot = [](JsonObject root) {
-            root["version"] = 3;
+            root["version"] = 4;
             root["blueprint_release"] = wallpanel::PROJECT_VERSION;
             root["latest_release"] = "";
             root["navigation_layout"] = "2x2";
@@ -154,6 +154,7 @@ esphome:
             for (size_t p = 0; p < wallpanel::MAX_PAGES; p++) order.add(p);
             root["reverse_active"].to<JsonArray>();
             root["light_details"].to<JsonArray>();
+            root["lock_details"].to<JsonArray>();
             root["detail_entities"].to<JsonArray>();
           };
           auto build_snapshot = [&](const esphome::json::json_build_t &build) {
@@ -179,6 +180,7 @@ esphome:
                 for (int b = 0; b < (mode == 10 ? 19 : 18); b++) {
                   JsonObject button = buttons.add<JsonObject>();
                   button["tap_action"] = "default";
+                  button["indicator"] = nullptr;
                   bool populated = mode != 3 && ((p == 0 && b == 0 && mode != 2) || (p == 2 && b == 3));
                   button["entity"] = populated ? (mode == 5 ? "cover.invalid" : mode == 6 ? "automation.test"
                     : mode == 7 || mode == 9 ? "lock.test" : mode == 8 ? "switch.test" : "light.test") : "";
@@ -533,6 +535,7 @@ esphome:
                 for (size_t b = 0; b < wallpanel::MAX_BUTTONS; b++) {
                   auto button = buttons.add<JsonObject>();
                   button["tap_action"] = "default";
+                  button["indicator"] = nullptr;
                   button["entity"] = b < populated && b < capacity ? "light.p" + std::to_string(p) + "_b" + std::to_string(b) : "";
                   button["name"] = "Control " + std::to_string(b + 1);
                   button["state"] = "on";
@@ -554,7 +557,7 @@ esphome:
           for (const char *key : {"version", "blueprint_release", "latest_release", "pages",
                                   "navigation_layout", "screensaver_enabled",
                                   "homepage", "localization", "wake_hold", "reverse_active",
-                                  "page_order", "light_details", "detail_entities"}) {
+                                  "page_order", "light_details", "lock_details", "detail_entities"}) {
             for (bool null_value : {false, true}) {
               receive(transform(snapshot(0), [&](JsonObject root) {
                 root["pages"][0]["title"] = "INVALID";
@@ -565,7 +568,7 @@ esphome:
                       "missing or null protocol fields reject the entire snapshot");
             }
           }
-          for (int version : {0, 1, 2, 4}) {
+          for (int version : {0, 1, 2, 3, 5}) {
             receive(transform(snapshot(0), [&](JsonObject root) {
               root["version"] = version;
               root["pages"][0]["title"] = "INVALID";
@@ -585,7 +588,7 @@ esphome:
             require(std::string(lv_label_get_text(id(title_0))) == "Office",
                     "page metadata is required even for the default layout and icon");
           }
-          for (const char *key : {"icon", "tap_action"}) {
+          for (const char *key : {"icon", "tap_action", "indicator"}) {
             receive(transform(snapshot(0), [&](JsonObject root) {
               root["pages"][0]["title"] = "INVALID";
               root["pages"][0]["buttons"][0].remove(key);
@@ -805,14 +808,31 @@ esphome:
                       "all grid layouts use white only for available active controls");
             }
           }
-          for (auto entry : {std::pair<const char *, uint32_t>{"locked", 0x68D391}, {"unlocked", 0xA12B2B},
-                             {"jammed", 0xF87171}, {"locking", 0xFFD166}, {"open", 0xF87171}}) {
-            receive(transform(modern("6x3"), [&](JsonObject root) {
-              root["pages"][0]["buttons"][0]["entity"] = "lock.test";
-              root["pages"][0]["buttons"][0]["state"] = entry.first;
-            }));
-            require(lv_color_eq(lv_obj_get_style_text_color(id(button_0_0_icon), LV_PART_MAIN), lv_color_hex(entry.second)),
-                    "lock icon reflects locked, unlocked, jammed and transition states");
+          for (const char *layout : {"2x2", "4x2", "6x3"}) {
+            for (bool reverse : {false, true}) {
+              for (auto entry : {std::pair<const char *, uint32_t>{"locked", 0x68D391}, {"unlocked", 0xF87171},
+                                 {"jammed", 0xF87171}, {"locking", 0xFFD166}, {"open", 0xF87171},
+                                 {"unavailable", 0xAAB4C5}}) {
+                receive(transform(modern(layout), [&](JsonObject root) {
+                  root["pages"][0]["buttons"][0]["entity"] = "lock.test";
+                  root["pages"][0]["buttons"][0]["state"] = entry.first;
+                  if (reverse) root["reverse_active"].add("lock.test");
+                }));
+                const std::string state = entry.first;
+                const bool actionable = state == "locked" || state == "unlocked";
+                const bool active = actionable && ((state == "unlocked") != reverse);
+                const uint32_t expected = active ? (state == "locked" ? 0x176D3F : 0xA12B2B) : entry.second;
+                for (bool pressed : {false, true}) {
+                  if (pressed) lv_obj_add_state(id(button_0_0), LV_STATE_PRESSED);
+                  else lv_obj_remove_state(id(button_0_0), LV_STATE_PRESSED);
+                  require(lv_color_eq(lv_obj_get_style_text_color(id(button_0_0_icon), LV_PART_MAIN),
+                                      lv_color_hex(expected)) &&
+                          lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED) == !actionable,
+                          "lock colours survive every layout, reversal, fill and pressed/disabled state");
+                }
+                lv_obj_remove_state(id(button_0_0), LV_STATE_PRESSED);
+              }
+            }
           }
           id(dashboard).check_connection();
           require(lv_color_eq(lv_obj_get_style_text_color(id(button_0_0_icon), LV_PART_MAIN), lv_color_hex(0xAAB4C5)) &&
@@ -857,7 +877,7 @@ esphome:
             root["pages"][0]["buttons"][0]["state"] = "unavailable";
           }));
           require(icon_is(id(button_0_0_icon), "mdi:lock") &&
-                  std::string(lv_label_get_text(id(button_0_0_state))) == "UNKNOWN",
+                  std::string(lv_label_get_text(id(button_0_0_state))) == "UNAVAILABLE",
                   "replacing an unavailable entity cannot inherit the prior entity's appearance");
           receive(modern("6x3"));
           for (int invalid = 0; invalid < 7; invalid++) {
@@ -872,7 +892,7 @@ esphome:
               root["pages"][0]["title"] = "Invalid update";
             }));
             require(std::string(lv_label_get_text(id(title_0))) == "Modern page 1",
-                    "invalid protocol-3 snapshots are rejected atomically");
+                    "invalid protocol-4 snapshots are rejected atomically");
           }
           receive(std::string(wallpanel::MAX_PAYLOAD_BYTES + 1, 'x'));
           require(std::string(lv_label_get_text(id(title_0))) == "Modern page 1", "oversized snapshot preserves UI");
@@ -1407,6 +1427,14 @@ esphome:
           require(within(id(button_0_0), 24, 64, 113, 149) &&
                   std::string(lv_label_get_text(id(button_0_0_name))) == "State" &&
                   hidden(id(detail_status)), "State replaces redundant normal ON/OFF status at the top");
+          auto value_centred = [&](lv_obj_t *editor) {
+            lv_obj_update_layout(lv_screen_active());
+            lv_area_t editor_area, value_area;
+            lv_obj_get_coords(editor, &editor_area);
+            lv_obj_get_coords(id(detail_value), &value_area);
+            return std::abs(editor_area.x1 + editor_area.x2 - value_area.x1 - value_area.x2) <= 1;
+          };
+          require(value_centred(id(detail_slider)), "brightness value is centred over its slider");
           require(std::string(lv_label_get_text(id(detail_title))) == "Office - Test Light",
                   "detail header combines the source page and configured item title");
           receive(transform(detail_snapshot, [](JsonObject root) {
@@ -1446,6 +1474,7 @@ esphome:
                   "one shared HS wheel fits the primary content area");
           require(std::string(lv_label_get_text(id(detail_value))) == "#FF0000",
                   "colour displays a full-value RGB hex code independent of light brightness");
+          require(value_centred(id(detail_wheel)), "colour value is centred over its wheel");
           const auto missing_readings = transform(detail_snapshot, [](JsonObject root) {
             root["pages"][0]["buttons"][0]["state"] = "off";
             auto light = root["light_details"][0];
@@ -1470,6 +1499,7 @@ esphome:
           tap(id(button_0_3));
           require(std::string(lv_label_get_text(id(detail_value))) == "Choose temperature",
                   "missing temperature has a useful prompt");
+          require(value_centred(id(detail_slider)), "temperature prompt is centred over its slider");
           receive(detail_snapshot);
           tap(id(button_0_4));
           for (int hue : {120, 240}) {
@@ -1534,6 +1564,158 @@ esphome:
           require(!lv_color_eq(lv_obj_get_style_bg_color(id(button_0_0), LV_PART_MAIN), lv_color_hex(0xFFFFFF)) &&
                   lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED),
                   "reverse active never whitens or enables unknown entities");
+          const auto indicated = transform(snapshot(0), [](JsonObject root) {
+            auto button = root["pages"][0]["buttons"][0];
+            button["entity"] = "script.start_tv";
+            button["state"] = "off";
+            button["indicator"]["state"] = "playing";
+            button["indicator"]["active"] = true;
+            button["indicator"]["available"] = true;
+          });
+          receive(indicated);
+          require(std::string(lv_label_get_text(id(button_0_0_state))) == "playing" &&
+                  lv_color_eq(lv_obj_get_style_bg_color(id(button_0_0), LV_PART_MAIN), lv_color_hex(0xFFFFFF)) &&
+                  !lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED),
+                  "independent raw indicator state owns its text and appearance, not script availability");
+          receive(transform(indicated, [](JsonObject root) {
+            root["pages"][0]["buttons"][0]["state"] = "unavailable";
+          }));
+          require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED),
+                  "active indicator cannot enable an unavailable actor");
+          receive(transform(indicated, [](JsonObject root) {
+            auto indicator = root["pages"][0]["buttons"][0]["indicator"];
+            indicator["state"] = "unavailable";
+            indicator["active"] = false;
+            indicator["available"] = false;
+          }));
+          require(!lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED) &&
+                  std::string(lv_label_get_text(id(button_0_0_state))) == "UNAVAILABLE" &&
+                  !lv_color_eq(lv_obj_get_style_bg_color(id(button_0_0), LV_PART_MAIN), lv_color_hex(0xFFFFFF)),
+                  "unavailable indicator is explicit but does not disable an available script");
+          for (const char *state : {"on", "off"}) {
+            receive(transform(indicated, [state](JsonObject root) {
+              auto button = root["pages"][0]["buttons"][0];
+              button["indicator"] = nullptr;
+              button["state"] = state;
+            }));
+            require(std::string(lv_label_get_text(id(button_0_0_state))) ==
+                      (std::string(state) == "on" ? "RUNNING" : "IDLE"),
+                    "scripts without indicators show running or idle");
+          }
+          receive(snapshot(0));
+          for (int invalid = 0; invalid < 7; invalid++) {
+            receive(transform(indicated, [invalid](JsonObject root) {
+              root["pages"][0]["title"] = "INVALID";
+              auto button = root["pages"][0]["buttons"][0];
+              auto indicator = button["indicator"];
+              if (invalid == 0) indicator.remove("state");
+              if (invalid == 1) indicator["available"] = 1;
+              if (invalid == 2) indicator["active"] = "true";
+              if (invalid == 3) indicator["state"] = "unavailable";
+              if (invalid == 4) indicator["state"] = std::string(1025, 'x');
+              if (invalid == 5) button["indicator"] = false;
+              if (invalid == 6) button["entity"] = "";
+            }));
+            require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                    "malformed and inconsistent indicators reject the entire snapshot");
+          }
+          const auto lock_snapshot = transform(snapshot(7), [](JsonObject root) {
+            auto binding = root["lock_details"].add<JsonObject>();
+            binding["entity"] = "lock.test";
+            binding["related"].add("switch.auto_lock");
+            binding["related"].add("script.arrive");
+            binding["related_titles"].add("Auto-lock");
+            binding["related_titles"].add("Arrive");
+            auto related = root["detail_entities"].as<JsonArray>();
+            for (const char *entity : {"switch.auto_lock", "script.arrive"}) {
+              auto item = related.add<JsonObject>();
+              item["entity"] = entity;
+              item["name"] = "Related";
+              item["state"] = "off";
+              item["icon"] = "";
+            }
+            auto indicator = root["pages"][0]["buttons"][0]["indicator"];
+            indicator["state"] = "unlocked";
+            indicator["available"] = true;
+            indicator["active"] = true;
+          });
+          receive(lock_snapshot);
+          hold_icon();
+          id(dashboard).check_touch_hold(1600);
+          require(!hidden(id(light_detail)) && hidden(id(detail_slider)) &&
+                  hidden(id(detail_wheel)) && hidden(id(detail_marker)) && hidden(id(detail_value)) &&
+                  hidden(id(button_0_2)) && hidden(id(button_0_3)) && hidden(id(button_0_4)),
+                  "lock details reuse the container without any stale light editors or mode buttons");
+          require(within(id(button_0_0), 24, 94, 375, 413) &&
+                  std::string(lv_label_get_text(id(button_0_0_name))) == "Unlock" &&
+                  std::string(lv_label_get_text(id(button_0_0_state))) == "LOCKED" &&
+                  lv_color_eq(lv_obj_get_style_text_color(id(button_0_0_icon), LV_PART_MAIN), lv_color_hex(0x68D391)),
+                  "left lock control uses actual locked state and colour, never an independent indicator");
+          require(within(id(button_0_5), 420, 94, 779, 243) &&
+                  within(id(button_0_6), 420, 264, 779, 413) &&
+                  std::string(lv_label_get_text(id(button_0_5_name))) == "Auto-lock" &&
+                  std::string(lv_label_get_text(id(button_0_6_state))) == "IDLE",
+                  "two right-hand related controls include scripts and configured titles");
+          for (const char *state : {"locking", "unlocking", "opening", "jammed", "open", "unknown", "unavailable"}) {
+            receive(transform(lock_snapshot, [state](JsonObject root) {
+              root["pages"][0]["buttons"][0]["state"] = state;
+            }));
+            const std::string shown = lv_label_get_text(id(button_0_0_state));
+            require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED) && shown != "LOCKED" &&
+                    shown != "UNLOCKED" && !shown.empty(),
+                    "intermediate and unavailable lock states display truthfully and cannot issue guessed operations");
+          }
+          receive(transform(lock_snapshot, [](JsonObject root) {
+            root["pages"][0]["buttons"][0]["state"] = "unlocked";
+          }));
+          require(std::string(lv_label_get_text(id(button_0_0_name))) == "Lock" &&
+                  lv_color_eq(lv_obj_get_style_text_color(id(button_0_0_icon), LV_PART_MAIN), lv_color_hex(0xA12B2B)),
+                  "unlocked detail control offers Lock with readable red on white");
+          id(dashboard).check_connection();
+          require(lv_obj_has_state(id(button_0_0), LV_STATE_DISABLED) &&
+                  std::string(lv_label_get_text(id(detail_status))) == "Home Assistant disconnected",
+                  "offline lock details remain readable and disabled");
+          receive(lock_snapshot);
+          tap(id(button_0_1));
+          const auto alternating_objects = count_objects(count_objects, lv_screen_active());
+          for (int repeat = 0; repeat < 10; repeat++) {
+            receive(detail_snapshot);
+            hold_icon();
+            id(dashboard).check_touch_hold(1600);
+            require(!hidden(id(detail_slider)) && value_centred(id(detail_slider)),
+                    "light geometry resets after lock details");
+            tap(id(button_0_1));
+            receive(lock_snapshot);
+            hold_icon();
+            id(dashboard).check_touch_hold(1600);
+            tap(id(button_0_1));
+          }
+          require(count_objects(count_objects, lv_screen_active()) == alternating_objects,
+                  "alternating light and lock details does not allocate widgets");
+          receive(lock_snapshot);
+          hold_icon();
+          id(dashboard).check_touch_hold(1600);
+          receive(transform(lock_snapshot, [](JsonObject root) {
+            root["pages"][0]["buttons"][0]["entity"] = "";
+            root["pages"][0]["buttons"][0]["indicator"] = nullptr;
+          }));
+          require(hidden(id(light_detail)), "removing the exact lock source closes details despite a duplicate elsewhere");
+          receive(lock_snapshot);
+          id(dashboard).navigate(-1);
+          require(!hidden(id(page_0)), "restoring the source permits navigation back from the duplicate page");
+          for (int invalid = 0; invalid < 5; invalid++) {
+            receive(transform(lock_snapshot, [invalid](JsonObject root) {
+              root["pages"][0]["title"] = "INVALID";
+              auto binding = root["lock_details"][0];
+              if (invalid == 0) binding["entity"] = "light.test";
+              if (invalid == 1) root["lock_details"].add(binding);
+              if (invalid == 2) binding["related"][0] = "switch.absent";
+              if (invalid == 3) binding.remove("related_titles");
+              if (invalid == 4) binding["entity"] = "lock.absent";
+            }));
+            require(std::string(lv_label_get_text(id(title_0))) == "Office",
+                    "malformed lock bindings cannot replace the dashboard");
+          }
           receive(snapshot(0));
           hold_icon();
           id(dashboard).check_touch_hold(1600);
