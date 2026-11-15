@@ -9,7 +9,7 @@ blueprint:
     Create only one configuration automation per panel.
     Use the firmware and blueprint from the same project release.
   domain: automation
-  source_url: https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/tags/v0.0.1/wallpanel_blueprint.yaml
+  source_url: https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/tags/v2.0.0/wallpanel_blueprint.yaml
   homeassistant:
     min_version: 2025.7.0
   input:
@@ -3858,7 +3858,7 @@ max_exceeded: silent
 
 variables:
   panel_device: !input panel_device
-  blueprint_release: "0.0.1"
+  blueprint_release: "2.0.0"
   release_sensor: !input release_sensor
   firmware_release: >-
     {% set ns = namespace(value='') %}
