@@ -19,19 +19,19 @@ inline bool send_light_command(const ButtonData &primary, const LightData *light
       : std::to_string(int(std::lround(first)));
   const std::string value = "{{ " + literal + " }}";
   esphome::api::HomeassistantActionRequest request;
-  // ESPHome 2026.11 wraps these StringRefs in ProgmemStringRef.
-  using ActionString = decltype(request.service);
-  request.service = ActionString{esphome::StringRef(off ? "light.turn_off" : "light.turn_on")};
+  using esphome::ProgmemStringRef;
+  request.service = off ? ProgmemStringRef::from_lit("light.turn_off") : ProgmemStringRef::from_lit("light.turn_on");
   request.data.init(1);
   auto &entity = request.data.emplace_back();
-  entity.key = ActionString{esphome::StringRef("entity_id")};
-  entity.value = ActionString{esphome::StringRef(primary.entity)};
+  entity.key = ProgmemStringRef::from_lit("entity_id");
+  entity.value = ProgmemStringRef{esphome::StringRef(primary.entity)};
   if (!off) {
     request.data_template.init(1);
     auto &parameter = request.data_template.emplace_back();
-    parameter.key = ActionString{esphome::StringRef(mode == DetailMode::COLOUR ? "hs_color" :
-                                    mode == DetailMode::TEMPERATURE ? "color_temp_kelvin" : "brightness_pct")};
-    parameter.value = ActionString{esphome::StringRef(value)};
+    parameter.key = mode == DetailMode::COLOUR ? ProgmemStringRef::from_lit("hs_color") :
+                    mode == DetailMode::TEMPERATURE ? ProgmemStringRef::from_lit("color_temp_kelvin") :
+                                                      ProgmemStringRef::from_lit("brightness_pct");
+    parameter.value = ProgmemStringRef{esphome::StringRef(value)};
   }
   esphome::api::global_api_server->send_homeassistant_action(request);
   return true;

@@ -6,7 +6,7 @@ For the short installation guide and everyday controls, start with [README.md](.
 
 The [installation guide](./README.md#1-install-the-firmware) uses matching published release assets. The release's example pins the package and dashboard component to the same immutable tag. If upgrading ESPHome from 2026.10 to 2026.11, use a Wallpanel revision with the light-action compatibility fix in both references; refreshing a pre-fix tag such as `v2.0.0` will not pick it up. Initial builds need internet access for dependencies, Roboto and Material Design icons. Keep Wi-Fi/API credentials in private ESPHome secrets.
 
-The firmware and native tests use the dedicated visibility APIs in LVGL 9.6 (ESPHome 2026.11), with a flag-based fallback for LVGL 9.5 (ESPHome 2026.10).
+The firmware and native tests require ESPHome 2026.11.0 or newer and use LVGL's dedicated visibility APIs.
 
 Home Assistant's **Device info** identifies the panel as **HA Panel LCD5** by **OTGH Cloud**, using `esphome.project` in [`esphome/core.yaml`](./esphome/core.yaml). The initial release baseline is **0.0.1**. Keep the firmware project version aligned with its release tag (for example, `0.0.1` for `v0.0.1`). Firmware and blueprint belong to the same release; the dashboard protocol's independent version number is **4**.
 

@@ -5,11 +5,7 @@
 
 namespace wallpanel {
 inline void visible(lv_obj_t *widget, bool show) {
-#if LVGL_VERSION_MAJOR > 9 || LV_VERSION_CHECK(9, 6, 0)
   lv_obj_set_hidden(widget, !show);
-#else
-  lv_obj_set_flag(widget, LV_OBJ_FLAG_HIDDEN, !show);
-#endif
 }
 inline void position_button(lv_obj_t *button, Layout layout, size_t count, size_t rank) {
   const auto profile = grid(layout);
