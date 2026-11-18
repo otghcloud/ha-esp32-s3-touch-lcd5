@@ -3858,7 +3858,7 @@ max_exceeded: silent
 
 variables:
   panel_device: !input panel_device
-  blueprint_release: "0.0.1"
+  blueprint_release: "2.1.0"
   firmware_release: >-
     {% set ns = namespace(value='') %}
     {% for entity in device_entities(panel_device) %}
