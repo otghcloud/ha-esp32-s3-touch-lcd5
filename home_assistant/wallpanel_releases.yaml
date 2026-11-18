@@ -1,9 +1,0 @@
-rest:
-  - resource: https://github.com/otghcloud/ha-esp32-s3-touch-lcd5/releases/latest/download/version.json
-    scan_interval: 21600
-    timeout: 10
-    verify_ssl: true
-    sensor:
-      - name: Wallpanel latest release
-        unique_id: wallpanel_latest_release
-        value_template: "{{ value_json.version }}"

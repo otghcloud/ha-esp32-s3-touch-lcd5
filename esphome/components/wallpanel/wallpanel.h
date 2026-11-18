@@ -62,11 +62,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
     if (blueprint_release_.empty()) return "Waiting for Home Assistant";
     if (blueprint_release_ != PROJECT_VERSION)
       return "Firmware/blueprint mismatch: " + blueprint_release_;
-    if (latest_release_.empty()) return "Latest release unavailable";
-    if (latest_release_parts_ > PROJECT_VERSION_PARTS)
-      return "Update available: " + latest_release_;
-    if (latest_release_parts_ < PROJECT_VERSION_PARTS) return "Ahead of latest stable";
-    return "Up to date";
+    return "Firmware and blueprint match";
   }
   void begin_update() {
     if (!ready_ || updating_) return;
@@ -367,8 +363,6 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
         ESP_LOGW("dashboard", "Blueprint release %s differs from firmware %s",
                  blueprint_release.c_str(), PROJECT_VERSION);
       blueprint_release_ = std::move(blueprint_release);
-      latest_release_ = std::move(latest_release);
-      latest_release_parts_ = latest_parts;
       pages_ = std::move(next);
       details_ = std::move(details);
       if (view_ == View::DETAIL) {
@@ -1097,8 +1091,7 @@ class Dashboard : public esphome::Component, public esphome::api::CustomAPIDevic
   lv_obj_t *waiting_{nullptr};
   lv_obj_t *connection_{nullptr};
   size_t current_{0};
-  std::string blueprint_release_, latest_release_;
-  std::array<uint32_t, 3> latest_release_parts_{};
+  std::string blueprint_release_;
   size_t wake_page_{0};
   uint32_t last_update_{0};
   uint32_t layout_revision_{0};

@@ -72,7 +72,7 @@ class BlueprintTests(unittest.TestCase):
     def variables(self):
         result = resolve(self.blueprint["variables"], self.inputs)
         result["endpoint"] = self.env.from_string(result["endpoint"]).render(**result).strip()
-        for key in ("firmware_release", "latest_release", "release_notice"):
+        for key in ("firmware_release", "release_notice"):
             result[key] = self.env.from_string(result[key]).render(**result).strip()
         for key in ("effective_pages", "watched_entities", "ignored_slots"):
             result[key] = ast.literal_eval(self.env.from_string(result[key]).render(**result).strip())
@@ -360,35 +360,29 @@ class BlueprintTests(unittest.TestCase):
         self.device_entities.append(firmware)
         current = self.variables()["blueprint_release"]
         self.states[firmware] = f"wallpanel/{current}"
-        self.states[release] = current
+        self.states[release] = "4294967295.4294967295.4294967295"
         self.assertEqual(self.variables()["release_notice"], "")
-        self.assertIn(release, self.variables()["watched_entities"])
-        self.assertEqual(self.snapshot()["latest_release"], current)
-        latest = "4294967295.4294967295.4294967295"
-        self.states[release] = latest
-        if current == latest:
-            self.assertEqual(self.variables()["release_notice"], "")
-        else:
-            self.assertIn(f"{latest} is available", self.variables()["release_notice"])
-        self.states[firmware] = "wallpanel/0.0.0"
-        self.assertIn("does not match blueprint", self.variables()["release_notice"])
+        self.assertNotIn(release, self.variables()["watched_entities"])
+        self.assertEqual(self.snapshot()["latest_release"], "")
+        self.blueprint["variables"]["blueprint_release"] = "2.9.0"
+        self.states[firmware] = "wallpanel/2.10.0"
+        self.assertIn("re-import", self.variables()["release_notice"])
+        self.assertIn("2.10.0", self.variables()["release_notice"])
         self.assertEqual(self.variables()["configuration_error"], "")
-        self.assertEqual(self.snapshot()["blueprint_release"], current)
+        self.assertEqual(self.snapshot()["blueprint_release"], "2.9.0")
+        for older_or_matching in ("2.8.0", "2.9.0"):
+            self.states[firmware] = f"wallpanel/{older_or_matching}"
+            self.assertEqual(self.variables()["release_notice"], "")
         for invalid in ("unknown", "unavailable", "1.2", "01.2.3", "1.0.0-beta.1", "1.2.4294967296"):
             with self.subTest(invalid=invalid):
-                self.states[release] = invalid
-                self.assertEqual(self.snapshot()["latest_release"], "")
-        self.states[release] = latest
-        self.states[firmware] = f"wallpanel/{current}"
-        notice = self.variables()["release_notice"]
-        self.assertNotIn("does not match", notice)
-        self.assertEqual("is available" in notice, current != latest)
+                self.states[firmware] = f"wallpanel/{invalid}"
+                self.assertEqual(self.variables()["release_notice"], "")
         guard = self.env.from_string(self.blueprint["actions"][1]["if"])
         variables = self.variables()
         self.assertEqual(guard.render(**variables).strip(), "True")
         for trigger_id, entity, expected in (
                 ("refresh", release, "False"), ("state", "light.other", "False"),
-                ("state", release, "True"), ("state", firmware, "True")):
+                ("state", release, "False"), ("state", firmware, "True")):
             trigger = SimpleNamespace(
                 id=trigger_id, event=SimpleNamespace(data=SimpleNamespace(entity_id=entity))
             )

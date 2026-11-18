@@ -80,7 +80,6 @@ def validate_commits(root, event):
 
 def generated_files(root, version):
     parse_version(version)
-    parts = ", ".join(version.split("."))
     blueprint = root / "wallpanel_blueprint.yaml"
     text, count = re.subn(
         r'^  blueprint_release: "[^"]*"$', f'  blueprint_release: "{version}"',
@@ -91,18 +90,17 @@ def generated_files(root, version):
     text, count = re.subn(
         r"^  source_url: .+$",
         "  source_url: https://raw.githubusercontent.com/otghcloud/"
-        f"ha-esp32-s3-touch-lcd5/refs/tags/v{version}/wallpanel_blueprint.yaml",
+        "ha-esp32-s3-touch-lcd5/refs/tags/latest/wallpanel_blueprint.yaml",
         text, flags=re.MULTILINE,
     )
     if count != 1:
         raise ValueError("Expected exactly one blueprint source_url")
     return {
         root / "VERSION": f"{version}\n",
-        root / "esphome/project_version.yaml": f'"{version}"\n',
+        root / "esphome/project_version.yaml": f'substitutions:\n  wallpanel_release_version: "{version}"\n',
         root / "esphome/components/wallpanel/release_version.h": (
-            '#pragma once\n#include <array>\n#include <cstdint>\n\nnamespace wallpanel {\n'
+            '#pragma once\n\nnamespace wallpanel {\n'
             f'inline constexpr char PROJECT_VERSION[] = "{version}";\n'
-            f'inline constexpr std::array<uint32_t, 3> PROJECT_VERSION_PARTS{{{parts}}};\n'
             '}  // namespace wallpanel\n'
         ),
         blueprint: text,
@@ -236,11 +234,10 @@ def package(root, destination, tag):
     assets[2].write_text(
         'substitutions:\n  device_name: wallpanel\n  friendly_name: Wallpanel\n'
         '  wifi_ssid: !secret panel_wifi_ssid\n  wifi_password: !secret panel_wifi_password\n'
-        f'  wallpanel_component_source: github://otghcloud/ha-esp32-s3-touch-lcd5@{tag}\n'
         'api:\n  encryption:\n    key: !secret panel_api_key\n'
         'packages:\n  wallpanel:\n'
         '    url: https://github.com/otghcloud/ha-esp32-s3-touch-lcd5\n'
-        f'    ref: {tag}\n    files: [ha-esp32-s3-touch-lcd5.yaml]\n'
+        '    ref: latest\n    refresh: 300s\n    files: [ha-esp32-s3-touch-lcd5.yaml]\n'
     )
     (destination / "SHA256SUMS").write_text("".join(
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n" for path in assets

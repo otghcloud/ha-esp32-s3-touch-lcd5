@@ -35,7 +35,7 @@ Generate an API key with `openssl rand -base64 32`, or reuse the key generated b
 Open the project's [Releases](https://github.com/otghcloud/ha-esp32-s3-touch-lcd5/releases).
 Download **example.yaml** and **wallpanel_blueprint.yaml** from the same release.
 Use **example.yaml** as your device configuration, adjusting `device_name` and `friendly_name`.
-It pins both firmware sources to that release and references the secrets above.
+It follows the `latest` stable tag and references the secrets above. Once you've set up the device, you can build newer stable releases without editing the YAML again.
 
 Validate, build and install using ESPHome Device Builder. Use a USB/factory installation for the first flash. Later updates can use OTA.
 
@@ -51,9 +51,8 @@ The screen initially says **Waiting for Home Assistant**. Configure the blueprin
 
 ## 3. Configure the dashboard
 
-Under **Settings > Automations & scenes > Blueprints > Import blueprint**, use the
-`source_url` inside the downloaded **wallpanel_blueprint.yaml**. It points to the
-same immutable release tag as the firmware example.
+Under **Settings > Automations & scenes > Blueprints > Import blueprint**, use
+the [stable blueprint URL](https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/tags/latest/wallpanel_blueprint.yaml).
 
 Create an automation from **Waveshare Touch LCD HA-Panel**:
 
@@ -102,12 +101,20 @@ Choose date/time formats and optional binary wake sensors in the blueprint. Wake
 
 ## Updating and troubleshooting
 
-- Use firmware and blueprint from the same release. Install updated firmware first, then replace the existing blueprint and reload automations. This batch uses protocol **4**, so earlier firmware/blueprints cannot be mixed; saved automation inputs remain, with defaults for the new options.
+**One-time migration from a version-pinned install:**
+
+1. In your ESPHome device YAML, change the Wallpanel package `ref` to `latest`, add `refresh: 300s`, and remove any version-pinned `wallpanel_component_source` substitution. Keep your device settings and secrets. Build and install after the first `latest` release is published.
+2. Replace the existing blueprint YAML at **the same path** under `/config/blueprints/automation/` with the [stable blueprint](https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/tags/latest/wallpanel_blueprint.yaml), then reload automations. This preserves existing automation inputs and switches the saved source URL to `latest`. Re-importing from the old URL would fetch the old release again.
+3. If you installed the old `wallpanel_releases` Home Assistant package, remove its include (or the file if you use a package directory) and restart Home Assistant. The blueprint no longer needs it.
+
+- **Later updates:** build/install in ESPHome as usual. Home Assistant notifies you when the panel's firmware is newer than its blueprint. Use **Re-import blueprint** from the blueprint's menu to update the existing copy. Home Assistant does not fetch blueprint updates automatically.
+- Matching protocol **4** firmware and blueprints can work across releases. Different protocol versions are rejected.
 - Display routing now follows the manufacturer's RGB pin assignments, correcting swapped red/blue throughout the panel. Locked is green and unlocked is red; active light icons and wheel hues also regain their intended colours.
 - The device's diagnostic **Firmware release** and **Release status** identify version mismatches.
-- Optional [release notifications](./DEVELOPER.md#release-notifications) warn about newer stable releases. Nothing installs automatically.
+- [Release notifications](./DEVELOPER.md#release-notifications) compare the installed firmware and blueprint without a separate package. Nothing installs automatically.
 - OTA updates blank the backlight until reboot. If an upload fails or aborts, its previous state is restored.
 - **Waiting for Home Assistant:** check the integration, enabled Dashboard endpoint and dashboard automation, then run the automation once.
+- **Dashboard endpoint clutter:** in the entity's Home Assistant settings, turn off **Visible**, not **Enabled**. The blueprint still needs the hidden entity's value to route updates.
 - **Controls missing:** check page Enabled switches and layout capacities, including Navigation. Manual layouts ignore higher slots; Auto uses all configured slots.
 - **Changes not appearing:** allow the package cache to refresh, then clean/rebuild firmware if necessary.
 - **Frequent Activity entries:** dashboard automation runs are normal. See the [Activity filter instructions](./DEVELOPER.md#activity-and-diagnostic-logging) to hide just that automation.

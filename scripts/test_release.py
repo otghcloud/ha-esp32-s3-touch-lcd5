@@ -43,7 +43,7 @@ class ReleaseTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 release.parse_version(value)
 
-    def test_sync_detects_drift_and_packages_pinned_assets_with_checksums(self):
+    def test_sync_detects_drift_and_packages_latest_channel_assets_with_checksums(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "VERSION").write_text("0.1.0\n")
@@ -62,10 +62,11 @@ class ReleaseTests(unittest.TestCase):
             release.package(root, output, "v0.1.0")
             self.assertEqual(json.loads((output / "version.json").read_text())["version"], "0.1.0")
             example = (output / "example.yaml").read_text()
-            self.assertIn("@v0.1.0", example)
-            self.assertIn("ref: v0.1.0", example)
+            self.assertNotIn("wallpanel_component_source:", example)
+            self.assertIn("ref: latest", example)
+            self.assertIn("refresh: 300s", example)
             self.assertNotIn("ref: main", example)
-            self.assertIn("/refs/tags/v0.1.0/", (output / "wallpanel_blueprint.yaml").read_text())
+            self.assertIn("/refs/tags/latest/", (output / "wallpanel_blueprint.yaml").read_text())
             for line in (output / "SHA256SUMS").read_text().splitlines():
                 digest, name = line.split("  ")
                 self.assertEqual(hashlib.sha256((output / name).read_bytes()).hexdigest(), digest)
@@ -110,7 +111,7 @@ class ReleaseTests(unittest.TestCase):
             release.package(root, root / "build/assets", "v0.1.0")
             self.assertEqual(release.synchronize(root, True), "0.1.0")
             self.assertEqual(release.git(root, "show", "main:VERSION"), "0.0.1")
-            self.assertIn("/refs/tags/v0.1.0/", (root / "wallpanel_blueprint.yaml").read_text())
+            self.assertIn("/refs/tags/latest/", (root / "wallpanel_blueprint.yaml").read_text())
             self.assertEqual(
                 set(release.git(root, "diff", "--name-only", "HEAD^", "HEAD").splitlines()),
                 set(release.METADATA_PATHS),
