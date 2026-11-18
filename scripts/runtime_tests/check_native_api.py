@@ -151,11 +151,8 @@ async def check():
             await tap(720, 335)
             await expect_entity(snapshot["pages"][0]["buttons"][17]["entity"])
 
-            latest_release = "4294967295.4294967295.4294967295"
-            await send({**snapshot, "latest_release": latest_release}, "new-stable-release")
-            await expect_release_status(
-                "Up to date" if snapshot["blueprint_release"] == latest_release else f"Update available: {latest_release}"
-            )
+            await send({**snapshot, "latest_release": "4294967295.4294967295.4294967295"}, "legacy-release-field")
+            await expect_release_status("Firmware and blueprint match")
             await send({**snapshot, "blueprint_release": "0.0.0"}, "blueprint-release-mismatch")
             await expect_release_status("Firmware/blueprint mismatch: 0.0.0")
 
@@ -542,7 +539,7 @@ async def check():
             heap_marker = "\U0001f600" * 79 + "\U0001f680"
             heap_snapshot["pages"][0]["buttons"][17]["name"] = heap_marker
             await send(heap_snapshot, "restore-worst-case")
-            await expect_release_status("Latest release unavailable")
+            await expect_release_status("Firmware and blueprint match")
             warm = await wait_probe(lambda value: value["last_name"] == heap_marker and not value["twelve_hour"])
             await asyncio.sleep(5.2)
             quiet = await wait_probe(lambda value: value["tick"] > warm["tick"] + 5100)

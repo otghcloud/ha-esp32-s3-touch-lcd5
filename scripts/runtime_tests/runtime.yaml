@@ -616,15 +616,13 @@ esphome:
                     "invalid compaction, tap actions and reserved positions reject atomically");
           }
           const auto unchanged_snapshot = modern("4x2");
-          require(id(dashboard).release_status() == "Latest release unavailable",
-                  "unconfigured release checks do not claim firmware is current");
+          require(id(dashboard).release_status() == "Firmware and blueprint match",
+                  "matching versions do not need an external release sensor");
           receive(transform(snapshot(0), [](JsonObject root) {
             root["latest_release"] = "4294967295.4294967295.4294967295";
           }));
-          require(id(dashboard).release_status() ==
-                  (std::string(wallpanel::PROJECT_VERSION) == "4294967295.4294967295.4294967295" ?
-                   "Up to date" : "Update available: 4294967295.4294967295.4294967295"),
-                  "newer stable release is flagged, independent of the version being built");
+          require(id(dashboard).release_status() == "Firmware and blueprint match",
+                  "a legacy release lookup does not affect the compatibility status");
           receive(transform(snapshot(0), [](JsonObject root) {
             root["blueprint_release"] = "0.0.0";
             root["latest_release"] = wallpanel::PROJECT_VERSION;
@@ -634,7 +632,8 @@ esphome:
           receive(transform(snapshot(0), [](JsonObject root) {
             root["latest_release"] = wallpanel::PROJECT_VERSION;
           }));
-          require(id(dashboard).release_status() == "Up to date", "same stable release is current");
+          require(id(dashboard).release_status() == "Firmware and blueprint match",
+                  "matching versions clear the mismatch");
           for (const char *invalid : {"1.2", "01.2.3", "1.2.3.4", "1.0.0-beta.1", "1.2.4294967296"}) {
             receive(transform(snapshot(0), [&](JsonObject root) {
               root["latest_release"] = invalid;

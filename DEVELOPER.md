@@ -4,7 +4,7 @@ For the short installation guide and everyday controls, start with [README.md](.
 
 ## Firmware and deployment
 
-The [installation guide](./README.md#1-install-the-firmware) uses matching published release assets. The release's example pins the package and dashboard component to the same immutable tag. If upgrading ESPHome from 2026.10 to 2026.11, use a Wallpanel revision with the light-action compatibility fix in both references; refreshing a pre-fix tag such as `v2.0.0` will not pick it up. Initial builds need internet access for dependencies, Roboto and Material Design icons. Keep Wi-Fi/API credentials in private ESPHome secrets.
+The [installation guide](./README.md#1-install-the-firmware) follows the `latest` stable tag with a five-minute refresh interval. The package selects the dashboard component from its own numbered release, so the two cannot drift when `latest` moves. ESPHome only refreshes when building; it does not install firmware automatically. Initial builds need internet access for dependencies, Roboto and Material Design icons. Keep Wi-Fi/API credentials in private ESPHome secrets.
 
 The firmware and native tests require ESPHome 2026.11.0 or newer and use LVGL's dedicated visibility APIs.
 
@@ -12,7 +12,7 @@ Home Assistant's **Device info** identifies the panel as **HA Panel LCD5** by **
 
 ### Release process and CI
 
-The [release workflow](./.github/workflows/release.yml) owns version generation. **Do not edit `VERSION`, bump generated version fields, or create release tags manually.** Stable tags are the version history; [`VERSION`](./VERSION), the ESPHome project-version include, runtime version header, blueprint release variable and tag-pinned `source_url` are generated together for each release.
+The [release workflow](./.github/workflows/release.yml) owns version generation. **Do not edit `VERSION`, bump generated version fields, or create numbered release tags manually.** Numbered tags are the version history; [`VERSION`](./VERSION), the ESPHome project-version include, runtime version header and blueprint release variable are generated together for each release. The blueprint source URL is stable across releases.
 
 Use **Conventional Commits** for PR titles and every new non-merge commit:
 
@@ -39,9 +39,9 @@ The workflow pins the dispatch's main commit and calculates the version from all
 
 The workflow generates grouped release notes directly from commit messages (including breaking-change bodies), prepares assets and SHA-256 checksums, uploads a complete draft, then publishes it as latest. It does not publish on merge or on a manually pushed tag. Release runs are serialized; a newer tag appearing during validation fails the run rather than reusing a stale version.
 
-Tags/releases must never be moved or overwritten. A failed push/upload/publish may leave an unpublished tag or draft. Inspect the failed run and remove only that unpublished draft/tag before restarting; never delete or overwrite a published release. Fix published errors with another version.
+Never move or overwrite numbered release tags or published releases. The workflow advances the separate `latest` tag only after publishing the complete release. The workflow identity must be allowed to update this tag even if numbered tag updates are blocked by a ruleset. A failed push/upload/publish may leave an unpublished tag or draft; remove only that unpublished draft/tag before restarting. If publication succeeded but advancing `latest` failed, resolve the permission issue and advance only `latest` to the verified release commit, or publish a newer release.
 
-Release assets are the blueprint, a tag-pinned device example, `version.json` and `SHA256SUMS`, alongside GitHub's tagged source archives. Build firmware locally with your own Wi-Fi/API secrets. The CI firmware uses dummy credentials and is retained for seven days as **validation-only** artifacts with its MDI licence; it is not a distributable device image or an automatic OTA update.
+Release assets are the blueprint, a device example that follows `latest`, `version.json` and `SHA256SUMS`, alongside GitHub's tagged source archives. Build firmware locally with your own Wi-Fi/API secrets. The CI firmware uses dummy credentials and is retained for seven days as **validation-only** artifacts with its MDI licence; it is not a distributable device image or an automatic OTA update.
 
 The [CI workflow](./.github/workflows/checks.yml) runs on PRs to `main`, pushes to `main`, merge queues and manual dispatch, and is reused for releases. It validates metadata, generated assets, blueprint/release tests, Python/YAML/workflow lint, real LVGL/native API behaviour and a full ESP32 build. Protect `main` with PR-only updates (including admins), the GitHub Actions **Required checks** status with an up-to-date branch, resolved review conversations, linear history and no force pushes/deletion. Zero mandatory approvals allows solo maintenance without allowing direct pushes. No path filters omit checks on dependency PRs. [Dependabot](./.github/dependabot.yml) proposes weekly GitHub Actions and pinned Python/ESPHome updates; these receive the same complete checks, without automatic merging.
 
@@ -53,19 +53,9 @@ Conventional Commit/manual-release patterns follow [otghcloud/laravel-edgelink](
 
 ### Release notifications
 
-Firmware advertises a diagnostic **Firmware release** state such as `wallpanel/0.0.1`; its prefix lets the blueprint discover it even if the entity is renamed. **Release status** distinguishes waiting for configuration, mismatched firmware/blueprint versions, unavailable latest-release data, newer stable releases, matching releases and development builds ahead of stable. A protocol-compatible mismatch warns without blocking controls; unsupported protocol versions still reject the complete snapshot.
+Firmware advertises a diagnostic **Firmware release** state such as `wallpanel/2.0.1`. When the firmware is newer than the installed blueprint, Home Assistant creates one persistent notification per panel asking you to re-import the blueprint. A protocol-compatible mismatch does not block controls; unsupported protocol versions still reject the complete snapshot.
 
-For newer-release checks, install the shared [Home Assistant package](./home_assistant/wallpanel_releases.yaml) once, for example:
-
-```yaml
-homeassistant:
-  packages:
-    wallpanel_releases: !include packages/wallpanel_releases.yaml
-```
-
-Copy that file into `/config/packages/wallpanel_releases.yaml`, merge with your existing packages configuration, check HA configuration and restart. In each dashboard blueprint, select the resulting **Wallpanel latest release** sensor under **Release checks**. HA fetches the latest published stable manifest over verified HTTPS every six hours; panels do not make internet requests. Before the first release, or if the request fails, HA reports unavailable data rather than asserting that firmware is current. Malformed/unknown sensor versions are not used.
-
-The blueprint sends the latest known version with each snapshot and creates one persistent notification per panel for a mismatch or newer release. It updates/dismisses that notification on relevant version/device events or manual execution, not every heartbeat. No automatic firmware downloads or installation, watchdog changes or display-layout changes are introduced.
+**Release status** reports whether the installed firmware and blueprint versions match, not whether a newer build exists on GitHub. No REST package or panel internet access is needed. The legacy sensor input is ignored but remains accepted so saved automations still load. To switch an existing version-pinned install to `latest`, follow the [one-time migration](./README.md#updating-and-troubleshooting).
 
 ## Dashboard configuration
 
@@ -75,14 +65,14 @@ Pages and entities are configured at runtime by the [Home Assistant blueprint](.
 2. Open the device's ESPHome integration configuration and enable **Allow the device to perform Home Assistant actions**.
 3. Under **Settings > Automations & scenes > Blueprints > Import blueprint**, import:
 
-   Use the `source_url` from the blueprint in your chosen release. Before publication, copy the local `wallpanel_blueprint.yaml` to `/config/blueprints/automation/otghcloud/wallpanel_blueprint.yaml` and reload automations.
+   Use the [stable blueprint URL](https://raw.githubusercontent.com/otghcloud/ha-esp32-s3-touch-lcd5/refs/tags/latest/wallpanel_blueprint.yaml). Before publication, copy the local `wallpanel_blueprint.yaml` to `/config/blueprints/automation/otghcloud/wallpanel_blueprint.yaml` and reload automations.
 
 4. Create an automation from **Waveshare Touch LCD HA-Panel** and select your panel device.
 5. Expand **Button page 01** through **Button page 08**. Each provides Enabled, layout, Compact and center buttons, page icon, optional temperature sensor and eighteen entity selectors with optional **Title** and **Tap action** settings. Auto is the default; manual grids remain available. Disable a page to hide it without clearing its inputs, or leave all active slots empty.
 6. Under **Navigation > Page order and titles**, edit each row to set its page title, then drag the rows into the desired display order. Page slots still identify the corresponding numbered configuration sections.
 7. Save and enable the automation. Run its actions once for an immediate update; future entity changes and reconnects update automatically. Keep only one configuration automation enabled per panel.
 
-The **Dashboard endpoint** diagnostic sensor must remain enabled. It lets the blueprint discover the correct ESPHome action even if you rename the device's friendly name or HA entities.
+The **Dashboard endpoint** diagnostic sensor must remain enabled. It lets the blueprint discover the correct ESPHome action even if you rename the device's friendly name or HA entities. You can turn off **Visible** in the entity's Home Assistant settings without disabling it. ESPHome cannot set that registry preference by default.
 
 Buttons use HA friendly names unless their **Title** field is filled in. Blank or whitespace-only titles retain the default name; titles without an entity do not create a button. Labels use at most 80 characters. Lights and switches toggle, automation buttons enable/disable (not trigger), and locks unlock when locked or lock when unlocked, without confirmation. Scripts always execute `script.turn_on`, even while already running; HA owns single/restart/queued/parallel behavior. Script state off/on displays IDLE/RUNNING. There is no script stop action or parameter editor.
 
@@ -310,7 +300,7 @@ The native child process disables glibc's tcache with `GLIBC_TUNABLES=glibc.mall
 
 The generator requires PyYAML; blueprint template tests also use Jinja2 (both are included with ESPHome). Protocol version 4 uses exactly eight page slots, each with layout/icon/compaction metadata and eighteen fixed numbered button slots regardless of grid size. Each page requires boolean `compact`; each button requires `tap_action` (`default` or `details`), an `icon` string (empty for its state-aware default), and `indicator`. The latter is explicitly null when unconfigured, otherwise `{state, active, available}` with raw state text and typed booleans. Actor state remains separate. Unavailable indicator states cannot claim availability or activity. Populated counts must fit the resolved grid; noncompact positions must also fit its capacity. Empty slots use the default tap action and null indicator. This preserves high-slot identity in small Auto grids. The required root `page_order` is a permutation of zero-based slot indices 0-7, separate from the `pages` array. The blueprint expands partial user orders to a complete permutation. The runtime validates the entire snapshot before changing the UI; unsupported protocols/entities and malformed payloads are logged and rejected without replacing the previous configuration.
 
-All root fields are required: `version`, `blueprint_release`, `latest_release`, `pages`, `navigation_layout`, `page_order`, `screensaver_enabled`, `homepage`, `localization`, `wake_hold`, `reverse_active`, `light_details`, `lock_details` and `detail_entities`. `blueprint_release` is a stable SemVer string; `latest_release` is another stable version or an empty string when unavailable/unconfigured. `homepage: {enabled, position, title}` uses insertion position 0-8 among ordered entity slots; `localization: {time, date}` uses allowlisted presets. Disabled features are represented explicitly with false flags and empty arrays, not missing fields. The separate `esphome.<device_name>_wake_display` action represents a fresh sensor activation; the blueprint sends it before the snapshot transfer so a later attribute/periodic update cannot cancel it mid-transfer. Local manual-sleep precedence is not stored in HA snapshots.
+All root fields are required: `version`, `blueprint_release`, `latest_release`, `pages`, `navigation_layout`, `page_order`, `screensaver_enabled`, `homepage`, `localization`, `wake_hold`, `reverse_active`, `light_details`, `lock_details` and `detail_entities`. `blueprint_release` is a stable SemVer string. The blueprint sends an empty `latest_release` for compatibility with older protocol 4 firmware; newer firmware validates but ignores that field. `homepage: {enabled, position, title}` uses insertion position 0-8 among ordered entity slots; `localization: {time, date}` uses allowlisted presets. Disabled features are represented explicitly with false flags and empty arrays, not missing fields. The separate `esphome.<device_name>_wake_display` action represents a fresh sensor activation; the blueprint sends it before the snapshot transfer so a later attribute/periodic update cannot cancel it mid-transfer. Local manual-sleep precedence is not stored in HA snapshots.
 
 `reverse_active` contains unique entity IDs; `light_details` contains unique primary-light capability/readings/bindings; `lock_details` contains unique `{entity, related, related_titles}` lock bindings; `detail_entities` contains deduplicated related entity/name/state/icon records. Detail readings include normalized `colour_mode`, brightness 0–255, HS values and Kelvin bounds/value; unavailable readings use -1 rather than a manufactured setting. Each light record includes `temperature_issue` and `related_titles`, even when false or empty. Up to two related references and titles belong to each primary binding. Unknown bulb capabilities remain explicit diagnostics rather than invented capabilities. Metadata is validated with the rest of the snapshot before an atomic replacement. Outgoing brightness/Kelvin values and HS lists use native HA `data_template` expressions; they are not quoted string-valued colour arrays.
 
@@ -320,7 +310,7 @@ The blueprint explicitly uses `to_json(ensure_ascii=True)`: HA otherwise preserv
 
 Automated validation includes a 251,924-byte Unicode snapshot with light metadata and 144 independent indicators across 62 native API chunks, within the 256 KiB cap. This case uses 80-emoji control titles and eight-emoji indicator states. The verified run's retained host heap decreased by 496 bytes after repeated maximum-size transfers, within the 16,384-byte growth limit. The production ESP32 build uses 6,389,252 bytes of flash and 129,924 bytes of static RAM. Oversized configurations log an actionable HA error and send no partial model; shorten labels or reduce related controls rather than raising the cap. Host heap/stack checks and firmware static RAM reports do not establish ESP32 runtime headroom: after installation, confirm successful boot, PSRAM/free heap, dense-label legibility, light/lock controls, correct RGB primaries and touch responsiveness, particularly with all 144 controls configured. Physical OTA stability and abort/error recovery also need panel confirmation.
 
-For local firmware development, set the `wallpanel_component_source` substitution to your local `esphome/components` directory (relative to the device YAML). Its default is `github://otghcloud/ha-esp32-s3-touch-lcd5@main`; if pinning a remote package to another revision, pin this source to the same revision.
+For local firmware development, set `wallpanel_component_source` to your local `esphome/components` directory (relative to the device YAML). An unpublished remote branch also needs an explicit component source pointing to that branch. Numbered releases that support the `latest` channel select their own component revision automatically, even when the package is pinned.
 
 ## Notes
 

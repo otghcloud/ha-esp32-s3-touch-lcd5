@@ -84,7 +84,7 @@ jobs:
           python3 scripts/release.py package --tag "$RELEASE_TAG"
           cd build/release
           sha256sum --check SHA256SUMS
-      - name: Push only the release tag, upload complete draft and publish
+      - name: Push the release tag, upload complete draft and publish
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -96,3 +96,6 @@ jobs:
             build/release/wallpanel_blueprint.yaml build/release/version.json \
             build/release/example.yaml build/release/SHA256SUMS
           gh release edit "$RELEASE_TAG" --draft=false --latest
+          # Only the floating channel can move, and only after publication.
+          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+            push origin "+refs/tags/${RELEASE_TAG}^{}:refs/tags/latest"

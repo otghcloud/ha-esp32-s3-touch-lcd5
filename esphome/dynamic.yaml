@@ -1,5 +1,8 @@
+packages:
+  wallpanel_version: !include project_version.yaml
+
 substitutions:
-  wallpanel_component_source: github://otghcloud/ha-esp32-s3-touch-lcd5@main
+  wallpanel_component_source: github://otghcloud/ha-esp32-s3-touch-lcd5@v${wallpanel_release_version}
 
 external_components:
   - source: ${wallpanel_component_source}

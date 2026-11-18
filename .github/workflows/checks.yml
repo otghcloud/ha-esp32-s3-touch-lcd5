@@ -80,7 +80,7 @@ jobs:
       - run: actionlint -color
       - run: python -m unittest discover -s scripts -p 'test_*.py'
       - run: ruff check --select E9,F63,F7,F82 --exclude .esphome scripts esphome/components
-      - run: yamllint .github .yamllint.yml ha-esp32-s3-touch-lcd5.yaml wallpanel_blueprint.yaml esphome/*.yaml home_assistant/*.yaml scripts/runtime_tests/runtime.yaml
+      - run: yamllint .github .yamllint.yml ha-esp32-s3-touch-lcd5.yaml wallpanel_blueprint.yaml esphome/*.yaml scripts/runtime_tests/runtime.yaml
       - run: git diff --exit-code
 
   native:
