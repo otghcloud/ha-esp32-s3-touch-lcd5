@@ -3,6 +3,7 @@ substitutions:
 
 esphome:
   name: dynamic-host
+  min_version: 2026.11.0
   compile_process_limit: 2
   on_boot:
   - priority: -101
@@ -14,7 +15,7 @@ esphome:
               std::exit(1);
             }
           };
-          auto hidden = [](lv_obj_t *obj) { return lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN); };
+          auto hidden = [](lv_obj_t *obj) { return lv_obj_is_hidden(obj); };
           ESP_LOGI("runtime_test", "Startup LVGL refresh requests: %u",
                    unsigned(id(test_lcd).startup_refresh_requests));
           require(id(test_lcd).startup_refresh_requests < 1500,
@@ -134,9 +135,9 @@ esphome:
           require(hidden(id(navigation)), "waiting menu cannot open");
           check_background();
           for (auto *page : {id(page_0), id(page_1), id(page_2), id(page_3)}) {
-            lv_obj_remove_flag(page, LV_OBJ_FLAG_HIDDEN);
+            wallpanel::visible(page, true);
             check_background();
-            lv_obj_add_flag(page, LV_OBJ_FLAG_HIDDEN);
+            wallpanel::visible(page, false);
           }
           auto initialize_snapshot = [](JsonObject root) {
             root["version"] = 4;

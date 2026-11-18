@@ -5,10 +5,7 @@
 
 namespace wallpanel {
 inline void visible(lv_obj_t *widget, bool show) {
-  if (show)
-    lv_obj_remove_flag(widget, LV_OBJ_FLAG_HIDDEN);
-  else
-    lv_obj_add_flag(widget, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_hidden(widget, !show);
 }
 inline void position_button(lv_obj_t *button, Layout layout, size_t count, size_t rank) {
   const auto profile = grid(layout);

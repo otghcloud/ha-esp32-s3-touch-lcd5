@@ -17,7 +17,7 @@ Pages and entities are configured through a Home Assistant blueprint, without re
 
 - Waveshare ESP32-S3-Touch-LCD-5 with 16 MB flash.
 - Home Assistant **2025.7 or newer**.
-- ESPHome Device Builder, or a standalone ESPHome installation.
+- ESPHome **2026.11.0 or newer**, via Device Builder or a standalone installation.
 - Internet access when building, to download dependencies and fonts.
 
 ## 1. Install the firmware
